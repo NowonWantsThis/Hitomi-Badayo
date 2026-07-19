@@ -1,0 +1,13 @@
+--- a/src/AppleTLSContext.cc
++++ b/src/AppleTLSContext.cc
+@@ -250,7 +250,9 @@ bool AppleTLSContext::tryAsFingerprint(const std::string& fingerprint)
+     return false;
+   }
+   CFArrayRef identities;
+-  OSStatus err = SecItemCopyMatching(query.get(), (CFTypeRef*)&identities);
++  // Hitomi Badayo never loads client identities from the user's Keychain. Keep
++  // the optional PKCS#12 file path, but make fingerprint lookup unavailable.
++  OSStatus err = errSecUnimplemented;
+   if (err != errSecSuccess) {
+     A2_LOG_ERROR("Query failed: " + errToString(err));
+     return false;

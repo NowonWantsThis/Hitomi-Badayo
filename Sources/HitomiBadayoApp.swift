@@ -1,0 +1,289 @@
+import SwiftUI
+
+#if !TESTING
+private extension NSWindow {
+    @objc func terminateHitomiBadayo(_ sender: Any?) {
+        AppTerminationCoordinator.terminate()
+    }
+}
+
+@MainActor
+final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
+    weak var manager: DownloadManager?
+    var shortcutController: AppShortcutController?
+    private var sheetObservers: [NSObjectProtocol] = []
+    private var menuObservers: [NSObjectProtocol] = []
+    private var menuPruneScheduled = false
+    private var isApplyingMainMenuLocalization = false
+    private weak var modalQuitItem: NSMenuItem?
+    private var standardQuitTarget: AnyObject?
+    private var standardQuitAction: Selector?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        shortcutController?.start()
+        let center = NotificationCenter.default
+        menuObservers = [
+            center.addObserver(
+                forName: NSMenu.didAddItemNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let menu = notification.object as? NSMenu else { return }
+                MainActor.assumeIsolated {
+                    self?.mainMenuDidChange(menu)
+                }
+            },
+            center.addObserver(
+                forName: NSMenu.didChangeItemNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let menu = notification.object as? NSMenu else { return }
+                MainActor.assumeIsolated {
+                    self?.mainMenuDidChange(menu)
+                }
+            },
+            center.addObserver(
+                forName: NSMenu.didBeginTrackingNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let menu = notification.object as? NSMenu else { return }
+                MainActor.assumeIsolated {
+                    self?.localizeTrackedMenu(menu)
+                }
+            },
+            center.addObserver(
+                forName: NSApplication.didBecomeActiveNotification,
+                object: NSApplication.shared,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.scheduleMainMenuPruning()
+                }
+            }
+        ]
+        scheduleMainMenuPruning()
+        sheetObservers = [
+            center.addObserver(
+                forName: NSWindow.willBeginSheetNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        self?.installModalQuitCommand()
+                    }
+                }
+            },
+            center.addObserver(
+                forName: NSWindow.didEndSheetNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        self?.restoreStandardQuitCommandIfPossible()
+                    }
+                }
+            }
+        ]
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        .terminateNow
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        sheetObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        sheetObservers.removeAll()
+        menuObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        menuObservers.removeAll()
+        shortcutController?.stop()
+        manager?.prepareForTermination()
+        PythonWebRendererService.shared.stop()
+        LoginBrowserWindowController.closeAll()
+    }
+
+    private func scheduleMainMenuPruning() {
+        guard !menuPruneScheduled else { return }
+        menuPruneScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.menuPruneScheduled = false
+                guard !self.isApplyingMainMenuLocalization else { return }
+                self.isApplyingMainMenuLocalization = true
+                defer { self.isApplyingMainMenuLocalization = false }
+                AppMainMenuPruner.simplify(
+                    NSApplication.shared.mainMenu,
+                    language: self.manager?.interfaceLanguage ?? .english
+                )
+            }
+        }
+    }
+
+    private func mainMenuDidChange(_ menu: NSMenu) {
+        guard !isApplyingMainMenuLocalization,
+              isMainMenuOrDescendant(menu) else { return }
+        scheduleMainMenuPruning()
+    }
+
+    private func localizeTrackedMenu(_ menu: NSMenu) {
+        guard !isApplyingMainMenuLocalization else { return }
+        isApplyingMainMenuLocalization = true
+        defer { isApplyingMainMenuLocalization = false }
+        let appName = NSApplication.shared.mainMenu?.items.first?.title ?? "Hitomi Badayo"
+        AppMainMenuPruner.localizeTrackedMenu(
+            menu,
+            language: manager?.interfaceLanguage ?? .english,
+            appName: appName
+        )
+    }
+
+    private func isMainMenuOrDescendant(_ candidate: NSMenu) -> Bool {
+        guard let mainMenu = NSApplication.shared.mainMenu else { return false }
+        return candidate === mainMenu || containsMenu(candidate, in: mainMenu)
+    }
+
+    private func containsMenu(_ candidate: NSMenu, in root: NSMenu) -> Bool {
+        for item in root.items {
+            guard let submenu = item.submenu else { continue }
+            if submenu === candidate || containsMenu(candidate, in: submenu) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func installModalQuitCommand() {
+        guard let sheet = NSApplication.shared.windows.compactMap(\.attachedSheet).first,
+              let quitItem = applicationQuitMenuItem() else {
+            return
+        }
+        if modalQuitItem == nil {
+            standardQuitTarget = quitItem.target as AnyObject?
+            standardQuitAction = quitItem.action
+            modalQuitItem = quitItem
+        }
+        quitItem.target = sheet
+        quitItem.action = #selector(NSWindow.terminateHitomiBadayo(_:))
+        quitItem.isEnabled = true
+    }
+
+    private func restoreStandardQuitCommandIfPossible() {
+        guard !NSApplication.shared.windows.contains(where: { $0.attachedSheet != nil }),
+              let quitItem = modalQuitItem else {
+            return
+        }
+        quitItem.target = standardQuitTarget
+        quitItem.action = standardQuitAction
+        modalQuitItem = nil
+        standardQuitTarget = nil
+        standardQuitAction = nil
+    }
+
+    private func applicationQuitMenuItem() -> NSMenuItem? {
+        guard let mainMenu = NSApplication.shared.mainMenu else { return nil }
+        for item in mainMenu.items {
+            if let quitItem = item.submenu?.items.first(where: {
+                $0.keyEquivalent.lowercased() == "q" &&
+                    $0.keyEquivalentModifierMask.contains(.command)
+            }) {
+                return quitItem
+            }
+        }
+        return nil
+    }
+
+    func application(_ sender: NSApplication, openFile filename: String) -> Bool {
+        let url = URL(fileURLWithPath: filename)
+        if url.pathExtension.caseInsensitiveCompare("hdt") == .orderedSame {
+            manager?.importOpenedTaskPackage(url)
+        } else {
+            manager?.enqueueOpenedURLs([url])
+        }
+        return true
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let taskPackages = urls.filter { $0.pathExtension.caseInsensitiveCompare("hdt") == .orderedSame }
+        let queueInputs = urls.filter { $0.pathExtension.caseInsensitiveCompare("hdt") != .orderedSame }
+        taskPackages.forEach { manager?.importOpenedTaskPackage($0) }
+        if !queueInputs.isEmpty {
+            manager?.enqueueOpenedURLs(queueInputs)
+        }
+    }
+}
+
+@main
+struct HitomiBadayoApp: App {
+    @NSApplicationDelegateAdaptor(HitomiBadayoApplicationDelegate.self) private var appDelegate
+    @StateObject private var manager: DownloadManager
+    private let statusBarController: StatusBarController
+    private let floatingMonitorController: FloatingMonitorController
+    private let outputPreviewWindowController: OutputPreviewWindowController
+    private let dockTileController: DockTileController
+    private let shortcutController: AppShortcutController
+
+    init() {
+        AppPaths.migrateLegacyApplicationSupportIfNeeded()
+        LegacyPreferencesMigrator.migrateIfNeeded()
+        HitomiBadayoApplication.install()
+        let manager = DownloadManager()
+        _manager = StateObject(wrappedValue: manager)
+        statusBarController = StatusBarController(manager: manager)
+        floatingMonitorController = FloatingMonitorController(manager: manager)
+        outputPreviewWindowController = OutputPreviewWindowController(manager: manager)
+        dockTileController = DockTileController(manager: manager)
+        shortcutController = AppShortcutController(manager: manager)
+        appDelegate.manager = manager
+        appDelegate.shortcutController = shortcutController
+        DispatchQueue.main.async { [shortcutController] in
+            shortcutController.start()
+        }
+    }
+
+    var body: some Scene {
+        WindowGroup("Hitomi Badayo") {
+            ContentView()
+                .environmentObject(manager)
+                .environment(\.locale, manager.interfaceLanguage.locale)
+                .preferredColorScheme(manager.preferredColorScheme)
+                .tint(manager.activeThemeTintColor)
+                .frame(
+                    minWidth: 620,
+                    minHeight: 420
+                )
+                .background(MainWindowFrameRestorer(
+                    opacity: manager.mainWindowOpacity,
+                    alwaysOnTop: manager.mainWindowAlwaysOnTop
+                ))
+        }
+        .windowStyle(.titleBar)
+        .defaultSize(width: 840, height: 880)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button {
+                    manager.showingAbout = true
+                } label: {
+                    Text(AppLocalization.text("About Hitomi Badayo", language: manager.interfaceLanguage))
+                }
+            }
+
+            CommandGroup(replacing: .appSettings) {
+                Button {
+                    manager.openSettingsWindow()
+                } label: {
+                    Text(AppLocalization.text("Settings...", language: manager.interfaceLanguage))
+                }
+                .keyboardShortcut(manager.keyboardShortcut(for: .settings))
+            }
+        }
+    }
+}
+#endif

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>ja</string>
+        <string>zh-Hans</string>
+        <string>zh-Hant</string>
+        <string>ko</string>
+    </array>
+	<key>CFBundleExecutable</key>
+	<string>HitomiBadayo</string>
+	<key>CFBundleDisplayName</key>
+	<string>Hitomi Badayo</string>
+    <key>CFBundleIconFile</key>
+    <string>HitomiBadayo</string>
+    <key>CFBundleIdentifier</key>
+    <string>io.github.nowonwantsthis.HitomiBadayo</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Hitomi Badayo</string>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>torrent</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>BitTorrent File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.bittorrent.torrent</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>hdt</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Hitomi Badayo Tasks</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>io.github.nowonwantsthis.hitomibadayo.task-package</string>
+            </array>
+        </dict>
+    </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>Hitomi Gallery URL</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>hitomi</string>
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+        </dict>
+    </array>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.3.9</string>
+	<key>CFBundleVersion</key>
+	<string>0.309</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright (c) 2026 Hitomi Badayo contributors.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+    <key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
+    <true/>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>Hitomi Badayo Queue Job</string>
+            <key>UTTypeIdentifier</key>
+            <string>io.github.nowonwantsthis.hitomibadayo.queue-job</string>
+        </dict>
+    </array>
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>BitTorrent File</string>
+            <key>UTTypeIdentifier</key>
+            <string>org.bittorrent.torrent</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>torrent</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.json</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>Hitomi Badayo Tasks</string>
+            <key>UTTypeIdentifier</key>
+            <string>io.github.nowonwantsthis.hitomibadayo.task-package</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>hdt</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
