@@ -64,6 +64,10 @@
 "진행률" = "Progress";
 "결과물" = "Output";
 "빠른 실행 도구 모음 사용자 지정" = "Customize Quick Access Toolbar";
+"드래그 & 드랍해서 바꾸세요:" = "Drag and drop to reorder:";
+"다크 모드" = "Dark Mode";
+"쿠키 불러오기..." = "Load Cookies...";
+"내장 웹브라우저" = "Built-in Web Browser";
 "창 투명도" = "Window Opacity";
 "단축키" = "Shortcuts";
 "붙여넣고 다운로드" = "Paste and Download";
@@ -273,6 +277,9 @@
 /* Archive, plugins, and advanced */
 "이미지" = "Images";
 "포맷 변환" = "Format Conversion";
+"압축 아이콘" = "Archive Icon";
+"누락된 압축 아이콘 숨기기" = "Hide Missing Archive Icons";
+"압축 파일이 이동되거나 삭제되면 목록에서 아이콘 숨김" = "Hide the icon when an archive is moved or deleted";
 "소스별 압축" = "Archive by Source";
 "소스 검색" = "Search Sources";
 "원본 파일 삭제" = "Delete Original Files";
@@ -650,3 +657,4 @@
 "Hide Others" = "Hide Others";
 "Show All" = "Show All";
 "Quit %@" = "Quit %@";
+"Open %@ archive" = "Open %@ archive";

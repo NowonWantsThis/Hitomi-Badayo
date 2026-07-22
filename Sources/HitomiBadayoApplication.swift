@@ -3,12 +3,40 @@ import ObjectiveC.runtime
 
 @objc(HitomiBadayoApplication)
 final class HitomiBadayoApplication: NSApplication {
+    private static var stableMainMenuKey: UInt8 = 0
     weak var shortcutController: AppShortcutController?
+
+    private var stableMainMenu: NSMenu? {
+        get {
+            objc_getAssociatedObject(self, &Self.stableMainMenuKey) as? NSMenu
+        }
+        set {
+            objc_setAssociatedObject(
+                self,
+                &Self.stableMainMenuKey,
+                newValue,
+                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+            )
+        }
+    }
 
     static func install() {
         let application = NSApplication.shared
         guard !(application is HitomiBadayoApplication) else { return }
         _ = object_setClass(application, HitomiBadayoApplication.self)
+    }
+
+    override var mainMenu: NSMenu? {
+        get { super.mainMenu }
+        set {
+            guard stableMainMenu == nil || newValue === stableMainMenu else { return }
+            super.mainMenu = newValue
+        }
+    }
+
+    func installStableMainMenu(_ menu: NSMenu) {
+        stableMainMenu = menu
+        super.mainMenu = menu
     }
 
     override func sendEvent(_ event: NSEvent) {

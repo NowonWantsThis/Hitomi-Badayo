@@ -15,7 +15,11 @@ enum QuickAccessCommand: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 
     var label: String {
-        AppLocalization.text(labelKey)
+        localizedLabel(language: AppLocalization.currentLanguage())
+    }
+
+    func localizedLabel(language: AppInterfaceLanguage) -> String {
+        AppLocalization.text(labelKey, language: language)
     }
 
     private var labelKey: String {
@@ -57,7 +61,7 @@ enum QuickAccessConfiguration {
     static let originalStorageKey = "ORDER_QA"
 
     static let defaultItems = QuickAccessCommand.allCases.map {
-        QuickAccessItem(command: $0, isEnabled: $0 == .save)
+        QuickAccessItem(command: $0, isEnabled: false)
     }
 
     static func normalized(_ items: [QuickAccessItem]) -> [QuickAccessItem] {
@@ -187,7 +191,10 @@ struct QuickAccessCustomizationView: View {
             HStack(spacing: 10) {
                 Image(systemName: "bolt.circle.fill")
                     .foregroundStyle(Color.accentColor)
-                Text("빠른 실행 도구 모음 사용자 지정")
+                Text(AppLocalization.text(
+                    "빠른 실행 도구 모음 사용자 지정",
+                    language: manager.interfaceLanguage
+                ))
                     .font(.headline)
                 Spacer()
                 Button {
@@ -206,7 +213,10 @@ struct QuickAccessCustomizationView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("드래그 & 드랍해서 바꾸세요:")
+                Text(AppLocalization.text(
+                    "드래그 & 드랍해서 바꾸세요:",
+                    language: manager.interfaceLanguage
+                ))
                     .font(.title3)
                     .fontWeight(.medium)
 
@@ -248,7 +258,7 @@ struct QuickAccessCustomizationView: View {
                 Button {
                     dismiss()
                 } label: {
-                    Text("확인")
+                    Text(AppLocalization.text("확인", language: manager.interfaceLanguage))
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
@@ -264,7 +274,8 @@ struct QuickAccessCustomizationView: View {
     }
 
     private func quickAccessRow(_ item: QuickAccessItem) -> some View {
-        HStack(spacing: 12) {
+        let commandLabel = item.command.localizedLabel(language: manager.interfaceLanguage)
+        return HStack(spacing: 12) {
             Button {
                 manager.setQuickAccessCommand(item.command, enabled: !item.isEnabled)
             } label: {
@@ -272,7 +283,7 @@ struct QuickAccessCustomizationView: View {
                     .font(.system(size: 19))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(item.command.label)
+            .accessibilityLabel(commandLabel)
             .accessibilityValue(AppLocalization.text(
                 item.isEnabled ? "켜짐" : "꺼짐",
                 language: manager.interfaceLanguage
@@ -283,7 +294,7 @@ struct QuickAccessCustomizationView: View {
                 .font(.system(size: 18))
                 .frame(width: 24)
 
-            Text(item.command.label)
+            Text(commandLabel)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Image(systemName: "line.3.horizontal")

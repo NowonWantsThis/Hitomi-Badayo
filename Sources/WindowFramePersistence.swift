@@ -47,9 +47,40 @@ enum MainWindowAppearance {
     }
 }
 
+enum MainWindowLayout {
+    static let minimumSize = NSSize(width: 620, height: 420)
+    static let defaultSize = NSSize(width: 660, height: 692)
+    static let titlebarHeight: CGFloat = 40
+}
+
+@MainActor
+enum MainWindowTitlebarSpacing {
+    private static let toolbarIdentifier = NSToolbar.Identifier("HitomiBadayo.MainWindowTitlebar")
+
+    static func apply(to window: NSWindow) {
+        guard window.styleMask.contains(.titled),
+              !window.styleMask.contains(.fullScreen) else { return }
+
+        if window.toolbar == nil {
+            let toolbar = NSToolbar(identifier: toolbarIdentifier)
+            toolbar.displayMode = .iconOnly
+            toolbar.sizeMode = .small
+            if #unavailable(macOS 15.0) {
+                toolbar.showsBaselineSeparator = false
+            }
+            toolbar.allowsUserCustomization = false
+            toolbar.autosavesConfiguration = false
+            window.toolbar = toolbar
+        }
+
+        window.toolbarStyle = .unifiedCompact
+        window.layoutIfNeeded()
+    }
+}
+
 enum MainWindowFramePersistence {
     static let storageKey = "mainWindowFrame"
-    static let minimumSize = NSSize(width: 920, height: 620)
+    static let minimumSize = MainWindowLayout.minimumSize
 
     static func storedFrame(defaults: UserDefaults = .standard) -> NSRect? {
         guard let raw = defaults.string(forKey: storageKey) else { return nil }
@@ -79,7 +110,7 @@ enum MainWindowFramePersistence {
     static func decodeFrame(_ raw: String) -> NSRect? {
         let values = raw
             .split(separator: ",", omittingEmptySubsequences: false)
-            .map { Double(String($0).trimmed) }
+            .map { Double(String($0).trimmingCharacters(in: .whitespacesAndNewlines)) }
         guard values.count == 4,
               let x = values[0],
               let y = values[1],
@@ -122,6 +153,30 @@ enum MainWindowFramePersistence {
 
     static func restoredFrameForCurrentScreens(_ frame: NSRect) -> NSRect {
         restoredFrame(frame, visibleFrames: NSScreen.screens.map(\.visibleFrame))
+    }
+
+    static func defaultFrame(in visibleFrame: NSRect) -> NSRect {
+        let desired = MainWindowLayout.defaultSize
+        guard visibleFrame.width > 0,
+              visibleFrame.height > 0 else {
+            return NSRect(origin: .zero, size: desired)
+        }
+
+        let scale = min(
+            1,
+            visibleFrame.width / desired.width,
+            visibleFrame.height / desired.height
+        )
+        let size = NSSize(
+            width: (desired.width * scale).rounded(.down),
+            height: (desired.height * scale).rounded(.down)
+        )
+        return NSRect(
+            x: (visibleFrame.midX - size.width / 2).rounded(),
+            y: (visibleFrame.midY - size.height / 2).rounded(),
+            width: size.width,
+            height: size.height
+        )
     }
 
     private static func frameWithMinimumSize(_ frame: NSRect) -> NSRect {
@@ -210,8 +265,14 @@ struct MainWindowFrameRestorer: NSViewRepresentable {
                 detach()
                 window = newWindow
                 terminationRequested = false
+                MainActor.assumeIsolated {
+                    MainWindowTitlebarSpacing.apply(to: newWindow)
+                }
                 restoreIfNeeded(newWindow)
                 observe(newWindow)
+            }
+            MainActor.assumeIsolated {
+                MainWindowTitlebarSpacing.apply(to: newWindow)
             }
             newWindow.alphaValue = CGFloat(MainWindowAppearance.normalizedOpacity(opacity))
             newWindow.level = alwaysOnTop ? .floating : .normal
@@ -219,12 +280,18 @@ struct MainWindowFrameRestorer: NSViewRepresentable {
 
         private func restoreIfNeeded(_ window: NSWindow) {
             let key = ObjectIdentifier(window).hashValue
-            guard !restoredWindowIDs.contains(key),
-                  let frame = MainWindowFramePersistence.storedFrame() else {
-                return
-            }
+            guard !restoredWindowIDs.contains(key) else { return }
             restoredWindowIDs.insert(key)
-            window.setFrame(MainWindowFramePersistence.restoredFrameForCurrentScreens(frame), display: true)
+
+            let frame: NSRect
+            if let stored = MainWindowFramePersistence.storedFrame() {
+                frame = MainWindowFramePersistence.restoredFrameForCurrentScreens(stored)
+            } else if let visibleFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
+                frame = MainWindowFramePersistence.defaultFrame(in: visibleFrame)
+            } else {
+                frame = NSRect(origin: window.frame.origin, size: MainWindowLayout.defaultSize)
+            }
+            window.setFrame(frame, display: true)
         }
 
         private func observe(_ window: NSWindow) {
@@ -237,7 +304,9 @@ struct MainWindowFrameRestorer: NSViewRepresentable {
             tokens = notifications.map { name in
                 center.addObserver(forName: name, object: window, queue: .main) { notification in
                     guard let observed = notification.object as? NSWindow else { return }
-                    MainWindowFramePersistence.save(observed.frame)
+                    MainActor.assumeIsolated {
+                        MainWindowFramePersistence.save(observed.frame)
+                    }
                 }
             }
             tokens.append(center.addObserver(

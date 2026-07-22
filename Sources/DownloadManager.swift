@@ -1334,6 +1334,7 @@ final class DownloadManager: ObservableObject {
     @Published var archiveCompletedFolders = false
     @Published var archiveFileFormat: ArchiveFileFormat = .zip
     @Published var deleteOriginalFolderAfterArchiving = false
+    @Published var hideArchiveIndicatorWhenFileMissing = true
     @Published private(set) var sourceArchiveModes: [String: SourceArchiveMode] = [:]
     @Published private(set) var sourceArchiveDeleteOriginal: [String: Bool] = [:]
     @Published var archiveSourceFilter = ""
@@ -2273,9 +2274,12 @@ final class DownloadManager: ObservableObject {
         ) ?? .zip
         let loadedDeleteOriginalFolderAfterArchiving =
             defaults.object(forKey: "deleteOriginalFolderAfterArchiving") as? Bool ?? false
+        let loadedHideArchiveIndicatorWhenFileMissing =
+            defaults.object(forKey: "hideArchiveIndicatorWhenFileMissing") as? Bool ?? true
         archiveCompletedFolders = loadedArchiveCompletedFolders
         archiveFileFormat = loadedArchiveFileFormat
         deleteOriginalFolderAfterArchiving = loadedDeleteOriginalFolderAfterArchiving
+        hideArchiveIndicatorWhenFileMissing = loadedHideArchiveIndicatorWhenFileMissing
         let loadedSourceArchiveSettings = Self.loadSourceArchiveSettings(
             defaults: defaults,
             legacyArchiveEnabled: loadedArchiveCompletedFolders,
@@ -14155,6 +14159,12 @@ final class DownloadManager: ObservableObject {
         addSummary = enabled ? "Delete \(DownloadSourceFolderProfile(id: normalized).displayName) folder after archive" : "Keep \(DownloadSourceFolderProfile(id: normalized).displayName) folder"
     }
 
+    func setHideArchiveIndicatorWhenFileMissing(_ enabled: Bool) {
+        hideArchiveIndicatorWhenFileMissing = enabled
+        persistArchiveSettings()
+        addSummary = enabled ? "Missing archive icons hidden" : "Recorded archive icons kept"
+    }
+
     func sourceFileNameTemplate(for sourceID: String) -> String {
         let normalized = DownloadSourceFolderProfile.normalizedSourceID(sourceID)
         guard NameTemplate.originalFileDefault(for: normalized) != nil else {
@@ -15473,6 +15483,52 @@ final class DownloadManager: ObservableObject {
         }
         NSWorkspace.shared.open(url)
         addSummary = "Output file opened"
+    }
+
+    func openArchiveOutput(for job: DownloadJob) {
+        if let artifact = JobArchiveArtifact.existing(for: job) {
+            NSWorkspace.shared.open(artifact.url)
+            addSummary = "\(artifact.format.label) archive opened"
+            return
+        }
+
+        if let fallback = Self.firstRetainedArchiveOutputURL(for: job) {
+            NSWorkspace.shared.open(fallback)
+            addSummary = "Archive missing; downloaded file opened"
+            return
+        }
+
+        addSummary = "No archive or downloaded file found"
+    }
+
+    nonisolated static func firstRetainedArchiveOutputURL(
+        for job: DownloadJob,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        var candidatePaths: [String] = []
+        if let archivedFolderPath = job.metadata["archived_folder_path"]?.trimmed,
+           !archivedFolderPath.isEmpty {
+            candidatePaths.append(archivedFolderPath)
+        }
+
+        let outputURL = URL(fileURLWithPath: job.outputPath.trimmed)
+        if ArchiveFileFormat(rawValue: outputURL.pathExtension.lowercased()) != nil {
+            candidatePaths.append(outputURL.deletingPathExtension().path)
+        }
+
+        var checkedPaths = Set<String>()
+        for path in candidatePaths {
+            let normalizedPath = URL(fileURLWithPath: path).standardizedFileURL.path
+            guard checkedPaths.insert(normalizedPath).inserted,
+                  let output = firstOutputOpenURL(
+                    forOutputPath: normalizedPath,
+                    fileManager: fileManager
+                  ) else {
+                continue
+            }
+            return output
+        }
+        return nil
     }
 
     func openFirstOutputFiles(startingAt job: DownloadJob) {
@@ -26696,6 +26752,7 @@ final class DownloadManager: ObservableObject {
         UserDefaults.standard.set(archiveCompletedFolders, forKey: "archiveCompletedFolders")
         UserDefaults.standard.set(archiveFileFormat.rawValue, forKey: "archiveFileFormat")
         UserDefaults.standard.set(deleteOriginalFolderAfterArchiving && archiveCompletedFolders, forKey: "deleteOriginalFolderAfterArchiving")
+        UserDefaults.standard.set(hideArchiveIndicatorWhenFileMissing, forKey: "hideArchiveIndicatorWhenFileMissing")
     }
 
     private func persistSourceArchiveSettings() {

@@ -17,6 +17,7 @@ SOURCE_STAGE="${STAGE}/HitomiBadayo"
 APP_STAGE="${STAGE}/macOS"
 APP_ARCHIVE="${OUTPUT_DIR}/Hitomi-Badayo-macOS.zip"
 SOURCE_ARCHIVE="${OUTPUT_DIR}/Hitomi-Badayo-source.zip"
+APP_BUNDLE_NAME="Hitomi Badayo.app"
 
 mkdir -p "${SOURCE_STAGE}" "${APP_STAGE}"
 for item in \
@@ -44,7 +45,7 @@ for item in \
     COPYFILE_DISABLE=1 /usr/bin/ditto "${ROOT}/${item}" "${SOURCE_STAGE}/${item}"
 done
 COPYFILE_DISABLE=1 /usr/bin/ditto "${ROOT}/LICENSE" "${APP_STAGE}/LICENSE"
-COPYFILE_DISABLE=1 /usr/bin/ditto "${APP}" "${APP_STAGE}/${APP:t}"
+COPYFILE_DISABLE=1 /usr/bin/ditto "${APP}" "${APP_STAGE}/${APP_BUNDLE_NAME}"
 COPYFILE_DISABLE=1 /usr/bin/ditto "${ROOT}/docs/INSTALLATION.md" "${APP_STAGE}/INSTALL.md"
 COPYFILE_DISABLE=1 /usr/bin/ditto "${ROOT}/docs/THIRD_PARTY_NOTICES.md" "${APP_STAGE}/THIRD_PARTY_NOTICES.md"
 COPYFILE_DISABLE=1 /usr/bin/ditto "${ROOT}/LICENSES" "${APP_STAGE}/LICENSES"
@@ -52,7 +53,7 @@ COPYFILE_DISABLE=1 /usr/bin/ditto "${ROOT}/LICENSES" "${APP_STAGE}/LICENSES"
 rm -f "${APP_ARCHIVE}" "${SOURCE_ARCHIVE}"
 (
     cd "${APP_STAGE}"
-    COPYFILE_DISABLE=1 /usr/bin/zip -qryX "${APP_ARCHIVE}" "${APP:t}" LICENSE INSTALL.md \
+    COPYFILE_DISABLE=1 /usr/bin/zip -qryX "${APP_ARCHIVE}" "${APP_BUNDLE_NAME}" LICENSE INSTALL.md \
         THIRD_PARTY_NOTICES.md LICENSES \
         -x '*/.DS_Store' '*/._*' '*/__MACOSX/*'
 )

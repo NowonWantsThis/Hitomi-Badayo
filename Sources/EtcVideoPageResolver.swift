@@ -30,6 +30,7 @@ final class EtcVideoPageResolver {
         case rumble = "Rumble"
         case rutube = "Rutube"
         case niconicoLive = "Niconico Live"
+        case pimpbunny = "PimpBunny"
         case streamable = "Streamable"
         case thisvid = "ThisVid"
         case tokyomotion = "TokyoMotion"
@@ -81,6 +82,8 @@ final class EtcVideoPageResolver {
                     " - Niconico Live", " | Niconico Live",
                     " - Nicovideo Live", " | Nicovideo Live"
                 ]
+            case .pimpbunny:
+                return [" - PimpBunny", " | PimpBunny", " - PimpBunny.com", " | PimpBunny.com"]
             case .streamable:
                 return [" - Streamable", " | Streamable", " - Streamable.com", " | Streamable.com"]
             case .thisvid:
@@ -153,6 +156,7 @@ final class EtcVideoPageResolver {
         if isRumbleHost(host) { return .rumble }
         if isRutubeHost(host) { return .rutube }
         if isNiconicoLiveHost(host) { return .niconicoLive }
+        if isPimpBunnyHost(host) { return .pimpbunny }
         if isStreamableHost(host) { return .streamable }
         if isThisVidHost(host) { return .thisvid }
         if isTokyoMotionHost(host) { return .tokyomotion }
@@ -292,6 +296,13 @@ final class EtcVideoPageResolver {
             guard lower.first == "watch",
                   parts.count >= 2,
                   isNiconicoLiveID(parts[1]) else {
+                return nil
+            }
+            return parts[1]
+        case .pimpbunny:
+            guard lower.first == "videos",
+                  parts.count >= 2,
+                  isValidSlug(parts[1]) else {
                 return nil
             }
             return parts[1]
@@ -625,7 +636,7 @@ final class EtcVideoPageResolver {
             } else {
                 components.queryItems = nil
             }
-        case .odysee, .okru, .rumble, .rutube, .niconicoLive, .twitcasting, .tver:
+        case .odysee, .okru, .rumble, .rutube, .niconicoLive, .pimpbunny, .twitcasting, .tver:
             if site == .tver {
                 components.path = "/episodes/\(id)"
             }
@@ -672,7 +683,7 @@ final class EtcVideoPageResolver {
             return canonicalVKURL(for: url)
         case .xhamster:
             return canonicalXHamsterURL(for: url)
-        case .bitchute, .kick, .odysee, .okru, .rumble, .rutube, .niconicoLive, .twitcasting, .tver:
+        case .bitchute, .kick, .odysee, .okru, .rumble, .rutube, .niconicoLive, .pimpbunny, .twitcasting, .tver:
             return canonicalCommonVideoURL(for: url)
         }
     }
@@ -765,6 +776,10 @@ final class EtcVideoPageResolver {
             candidate = originalYouPornFormatCandidate(fromHTML: html, pageURL: pageURL) ?? bestCandidate(candidates)
         case .youku:
             candidate = originalYoukuFormatCandidate(fromHTML: html, pageURL: pageURL) ?? bestCandidate(candidates)
+        case .pimpbunny:
+            candidate = pimpBunnyKVSFormatCandidate(fromHTML: html, pageURL: pageURL) ??
+                pimpBunnyStructuredContentCandidate(fromHTML: html, pageURL: pageURL) ??
+                pimpBunnyFormatCandidate(fromHTML: html, candidates: candidates)
         default:
             candidate = bestCandidate(candidates)
         }
@@ -1144,6 +1159,151 @@ final class EtcVideoPageResolver {
             }
             return lhs.url.absoluteString < rhs.url.absoluteString
         }
+    }
+
+    private static func pimpBunnyFormatCandidate(fromHTML html: String, candidates: [EtcVideoCandidate]) -> EtcVideoCandidate? {
+        let videoID = pimpBunnyVideoID(fromHTML: html)
+        let pageCandidates = candidates.filter { candidate in
+            let filename = candidate.url.lastPathComponent.lowercased()
+            guard !filename.contains("preview") else { return false }
+            guard let videoID else { return true }
+            return candidate.url.pathComponents.contains(videoID) ||
+                filename == "\(videoID).mp4" ||
+                filename.hasPrefix("\(videoID)_")
+        }
+        return bestCandidate(pageCandidates)
+    }
+
+    private static func pimpBunnyKVSFormatCandidate(fromHTML html: String, pageURL: URL) -> EtcVideoCandidate? {
+        let normalized = normalizeEscapes(decodeHTML(html))
+        guard let licenseCode = firstCapture(
+            pattern: #"\blicense_code\s*:\s*([\"'])(.*?)\1"#,
+            in: normalized,
+            groups: [2]
+        ) else {
+            return nil
+        }
+
+        let rawURLs = allCaptures(
+            pattern: #"\bvideo_(?:url|alt_url\d*)\s*:\s*([\"'])(.*?)\1"#,
+            in: normalized,
+            group: 2
+        )
+        var candidates: [EtcVideoCandidate] = []
+        for rawURL in rawURLs {
+            guard let decodedURL = pimpBunnyKVSURL(rawURL, licenseCode: licenseCode, pageURL: pageURL) else {
+                continue
+            }
+            let qualityLabel = firstCapture(pattern: #"([0-9]{3,4}p)"#, in: rawURL) ?? ""
+            appendCandidate(
+                rawURL: decodedURL.absoluteString,
+                label: qualityLabel,
+                pageURL: pageURL,
+                candidates: &candidates
+            )
+        }
+        return pimpBunnyFormatCandidate(fromHTML: html, candidates: candidates)
+    }
+
+    private static func pimpBunnyKVSURL(_ rawURL: String, licenseCode: String, pageURL: URL) -> URL? {
+        let normalized = normalizeEscapes(decodeHTML(rawURL)).trimmed
+        let prefix = "function/0/"
+        guard normalized.hasPrefix(prefix) else {
+            return absoluteURL(normalized, baseURL: pageURL)
+        }
+
+        let encodedURL = String(normalized.dropFirst(prefix.count))
+        guard var components = URLComponents(string: encodedURL),
+              components.scheme?.lowercased() == "https" || components.scheme?.lowercased() == "http" else {
+            return nil
+        }
+
+        var pathParts = components.percentEncodedPath
+            .split(separator: "/", omittingEmptySubsequences: false)
+            .map(String.init)
+        guard let getFileIndex = pathParts.firstIndex(where: { $0 == "get_file" }) else {
+            return nil
+        }
+        let hashIndex = getFileIndex + 2
+        guard pathParts.indices.contains(hashIndex), pathParts[hashIndex].count >= 32 else {
+            return nil
+        }
+
+        let licenseDigits = licenseCode.compactMap(\.wholeNumberValue)
+        guard !licenseDigits.isEmpty else { return nil }
+        let nonzeroLicense = licenseDigits.map { String($0 == 0 ? 1 : $0) }.joined()
+        let center = nonzeroLicense.count / 2
+        guard let front = Int64(nonzeroLicense.prefix(center + 1)),
+              let back = Int64(nonzeroLicense.dropFirst(center)) else {
+            return nil
+        }
+        let modifierDigits = String(4 * abs(front - back))
+            .prefix(center + 1)
+            .compactMap(\.wholeNumberValue)
+
+        var token: [Int] = []
+        for (index, modifier) in modifierDigits.enumerated() {
+            guard index + 3 < licenseDigits.count else { return nil }
+            for offset in 0..<4 {
+                token.append((licenseDigits[index + offset] + modifier) % 10)
+            }
+        }
+        guard token.count >= 32 else { return nil }
+
+        let hash = Array(pathParts[hashIndex].prefix(32))
+        var permutation = Array(0..<32)
+        var accumulator = 0
+        for source in stride(from: 31, through: 0, by: -1) {
+            accumulator += token[source]
+            let destination = (source + accumulator) % 32
+            permutation.swapAt(source, destination)
+        }
+
+        let decodedHash = String(permutation.map { hash[$0] })
+        pathParts[hashIndex] = decodedHash + pathParts[hashIndex].dropFirst(32)
+        components.percentEncodedPath = pathParts.joined(separator: "/")
+        return components.url
+    }
+
+    private static func pimpBunnyStructuredContentCandidate(fromHTML html: String, pageURL: URL) -> EtcVideoCandidate? {
+        let normalized = normalizeEscapes(decodeHTML(html))
+        let pattern = #"<script\b[^>]*type\s*=\s*[\"'][^\"']*ld\+json[^\"']*[\"'][^>]*>(.*?)</script>"#
+        for script in allCaptures(pattern: pattern, in: normalized) {
+            guard let object = jsonObject(from: script),
+                  let rawURL = pimpBunnyVideoContentURL(in: object) else {
+                continue
+            }
+            var candidates: [EtcVideoCandidate] = []
+            appendCandidate(rawURL: rawURL, label: "", pageURL: pageURL, candidates: &candidates)
+            if let candidate = bestCandidate(candidates) {
+                return candidate
+            }
+        }
+        return nil
+    }
+
+    private static func pimpBunnyVideoContentURL(in object: Any) -> String? {
+        if let dictionary = object as? [String: Any] {
+            let rawType = dictionary["@type"]
+            let types = (rawType as? [String]) ?? (rawType as? String).map { [$0] } ?? []
+            if types.contains(where: { $0.caseInsensitiveCompare("VideoObject") == .orderedSame }),
+               let contentURL = stringValue(dictionary["contentUrl"] ?? dictionary["content_url"])?.trimmed,
+               !contentURL.isEmpty {
+                return contentURL
+            }
+            for value in dictionary.values {
+                if let found = pimpBunnyVideoContentURL(in: value) {
+                    return found
+                }
+            }
+        } else if let array = object as? [Any] {
+            for value in array {
+                if let found = pimpBunnyVideoContentURL(in: value) {
+                    return found
+                }
+            }
+        }
+        return nil
     }
 
     private static func originalYouPornFormatCandidate(fromHTML html: String, pageURL: URL) -> EtcVideoCandidate? {
@@ -1782,6 +1942,8 @@ final class EtcVideoPageResolver {
         }
 
         switch site {
+        case .pimpbunny:
+            return pimpBunnyVideoID(fromHTML: html)
         case .youporn, .youku:
             guard let raw = stringValue(
                 named: ["id", "video_id", "videoId", "display_id", "displayId"],
@@ -1794,6 +1956,13 @@ final class EtcVideoPageResolver {
         default:
             return nil
         }
+    }
+
+    private static func pimpBunnyVideoID(fromHTML html: String) -> String? {
+        firstCapture(
+            pattern: #"\b(?:videoId|video_id|data-video-id)\s*(?:=|:)\s*[\"']?([0-9]+)"#,
+            in: html
+        ).flatMap(sanitizedMediaID)
     }
 
     private static func sanitizedMediaID(_ raw: String) -> String? {
@@ -2570,6 +2739,15 @@ final class EtcVideoPageResolver {
             host == "live2.nicovideo.jp" ||
             host == "live.nicovideo.test" ||
             host == "live2.nicovideo.test"
+    }
+
+    private static func isPimpBunnyHost(_ host: String) -> Bool {
+        host == "pimpbunny.com" ||
+            host == "www.pimpbunny.com" ||
+            host.hasSuffix(".pimpbunny.com") ||
+            host == "pimpbunny.test" ||
+            host == "www.pimpbunny.test" ||
+            host.hasSuffix(".pimpbunny.test")
     }
 
     private static func isStreamableHost(_ host: String) -> Bool {

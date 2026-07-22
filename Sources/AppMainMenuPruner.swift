@@ -1,5 +1,38 @@
 import AppKit
 
+final class StableApplicationMainMenu: NSMenu {
+    private(set) var isStructureLocked = false
+
+    func lockStructure() {
+        isStructureLocked = true
+    }
+
+    override func addItem(_ newItem: NSMenuItem) {
+        guard !isStructureLocked else { return }
+        super.addItem(newItem)
+    }
+
+    override func insertItem(_ newItem: NSMenuItem, at index: Int) {
+        guard !isStructureLocked else { return }
+        super.insertItem(newItem, at: index)
+    }
+
+    override func removeItem(_ item: NSMenuItem) {
+        guard !isStructureLocked else { return }
+        super.removeItem(item)
+    }
+
+    override func removeItem(at index: Int) {
+        guard !isStructureLocked else { return }
+        super.removeItem(at: index)
+    }
+
+    override func removeAllItems() {
+        guard !isStructureLocked else { return }
+        super.removeAllItems()
+    }
+}
+
 private final class LocalizedEditMenuActionForwarder: NSObject, NSMenuItemValidation {
     static let shared = LocalizedEditMenuActionForwarder()
 
@@ -28,11 +61,27 @@ enum AppMainMenuPruner {
     private static let windowActions: Set<String> = [
         "performMiniaturize:", "performZoom:", "toggleFullScreen:", "arrangeInFront:"
     ]
+    private static let editMenuSignature = [
+        "performUndo:", "performRedo:", "-", "cut:", "copy:", "paste:", "delete:", "selectAll:"
+    ]
+    private static let windowMenuSignature = [
+        "performMiniaturize:", "performZoom:", "toggleFullScreen:", "-", "arrangeInFront:"
+    ]
 
-    static func simplify(
-        _ mainMenu: NSMenu?,
-        language: AppInterfaceLanguage? = nil
-    ) {
+    static func isSimplified(_ mainMenu: NSMenu?) -> Bool {
+        guard let mainMenu, mainMenu.items.count == 3 else { return false }
+        return containsAction(in: mainMenu.items[1].submenu, matching: editActions) &&
+            containsAction(in: mainMenu.items[2].submenu, matching: windowActions)
+    }
+
+    static func hasRequiredMenus(_ mainMenu: NSMenu?) -> Bool {
+        guard let mainMenu, !mainMenu.items.isEmpty else { return false }
+        let hasEdit = mainMenu.items.contains { containsAction(in: $0.submenu, matching: editActions) }
+        let hasWindow = mainMenu.items.contains { containsAction(in: $0.submenu, matching: windowActions) }
+        return hasEdit && hasWindow
+    }
+
+    static func removeExtraneousRootItems(_ mainMenu: NSMenu?) {
         guard let mainMenu, let applicationItem = mainMenu.items.first else { return }
         let editItem = mainMenu.items.first { containsAction(in: $0.submenu, matching: editActions) }
         let windowItem = mainMenu.items.first { containsAction(in: $0.submenu, matching: windowActions) }
@@ -41,6 +90,33 @@ enum AppMainMenuPruner {
         for item in mainMenu.items where !retained.contains(where: { $0 === item }) {
             mainMenu.removeItem(item)
         }
+    }
+
+    static func makeStableMainMenu(from mainMenu: NSMenu?) -> StableApplicationMainMenu? {
+        guard let mainMenu else { return nil }
+        if let stable = mainMenu as? StableApplicationMainMenu {
+            stable.lockStructure()
+            return stable
+        }
+
+        let stable = StableApplicationMainMenu(title: mainMenu.title)
+        stable.autoenablesItems = mainMenu.autoenablesItems
+        for item in mainMenu.items {
+            mainMenu.removeItem(item)
+            stable.addItem(item)
+        }
+        stable.lockStructure()
+        return stable
+    }
+
+    static func simplify(
+        _ mainMenu: NSMenu?,
+        language: AppInterfaceLanguage? = nil
+    ) {
+        guard let mainMenu, let applicationItem = mainMenu.items.first else { return }
+        let editItem = mainMenu.items.first { containsAction(in: $0.submenu, matching: editActions) }
+        let windowItem = mainMenu.items.first { containsAction(in: $0.submenu, matching: windowActions) }
+        removeExtraneousRootItems(mainMenu)
 
         if let language {
             localize(
@@ -68,17 +144,23 @@ enum AppMainMenuPruner {
     ) {
         if let editItem {
             let title = AppLocalization.text("Edit", language: language)
-            editItem.title = title
-            let menu = NSMenu(title: title)
-            editItem.submenu = menu
-            rebuildEditMenu(menu, language: language)
+            if editItem.title != title {
+                editItem.title = title
+            }
+            let menu = submenu(for: editItem, title: title)
+            if menuSignature(menu) != editMenuSignature {
+                rebuildEditMenu(menu, language: language)
+            }
         }
         if let windowItem {
             let title = AppLocalization.text("Window", language: language)
-            windowItem.title = title
-            let menu = NSMenu(title: title)
-            windowItem.submenu = menu
-            rebuildWindowMenu(menu, language: language)
+            if windowItem.title != title {
+                windowItem.title = title
+            }
+            let menu = submenu(for: windowItem, title: title)
+            if menuSignature(menu) != windowMenuSignature {
+                rebuildWindowMenu(menu, language: language)
+            }
         }
 
         let appName = applicationItem.title.isEmpty ? "Hitomi Badayo" : applicationItem.title
@@ -189,10 +271,29 @@ enum AppMainMenuPruner {
                 for: item,
                 language: language,
                 appName: appName
-            ) {
+            ), item.title != title {
                 item.title = title
             }
             localizeItems(in: item.submenu, language: language, appName: appName)
+        }
+    }
+
+    private static func submenu(for item: NSMenuItem, title: String) -> NSMenu {
+        if let menu = item.submenu {
+            if menu.title != title {
+                menu.title = title
+            }
+            return menu
+        }
+        let menu = NSMenu(title: title)
+        item.submenu = menu
+        return menu
+    }
+
+    private static func menuSignature(_ menu: NSMenu) -> [String] {
+        menu.items.map { item in
+            if item.isSeparatorItem { return "-" }
+            return item.action.map(NSStringFromSelector) ?? ""
         }
     }
 

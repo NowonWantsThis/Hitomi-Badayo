@@ -13,7 +13,6 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
     var shortcutController: AppShortcutController?
     private var sheetObservers: [NSObjectProtocol] = []
     private var menuObservers: [NSObjectProtocol] = []
-    private var menuPruneScheduled = false
     private var isApplyingMainMenuLocalization = false
     private weak var modalQuitItem: NSMenuItem?
     private var standardQuitTarget: AnyObject?
@@ -24,26 +23,6 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
         let center = NotificationCenter.default
         menuObservers = [
             center.addObserver(
-                forName: NSMenu.didAddItemNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] notification in
-                guard let menu = notification.object as? NSMenu else { return }
-                MainActor.assumeIsolated {
-                    self?.mainMenuDidChange(menu)
-                }
-            },
-            center.addObserver(
-                forName: NSMenu.didChangeItemNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] notification in
-                guard let menu = notification.object as? NSMenu else { return }
-                MainActor.assumeIsolated {
-                    self?.mainMenuDidChange(menu)
-                }
-            },
-            center.addObserver(
                 forName: NSMenu.didBeginTrackingNotification,
                 object: nil,
                 queue: .main
@@ -52,18 +31,9 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated {
                     self?.localizeTrackedMenu(menu)
                 }
-            },
-            center.addObserver(
-                forName: NSApplication.didBecomeActiveNotification,
-                object: NSApplication.shared,
-                queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    self?.scheduleMainMenuPruning()
-                }
             }
         ]
-        scheduleMainMenuPruning()
+        installStableMainMenu()
         sheetObservers = [
             center.addObserver(
                 forName: NSWindow.willBeginSheetNotification,
@@ -109,28 +79,22 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
         LoginBrowserWindowController.closeAll()
     }
 
-    private func scheduleMainMenuPruning() {
-        guard !menuPruneScheduled else { return }
-        menuPruneScheduled = true
-        DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.menuPruneScheduled = false
-                guard !self.isApplyingMainMenuLocalization else { return }
-                self.isApplyingMainMenuLocalization = true
-                defer { self.isApplyingMainMenuLocalization = false }
-                AppMainMenuPruner.simplify(
-                    NSApplication.shared.mainMenu,
-                    language: self.manager?.interfaceLanguage ?? .english
-                )
-            }
+    private func installStableMainMenu() {
+        guard !isApplyingMainMenuLocalization else { return }
+        isApplyingMainMenuLocalization = true
+        defer { isApplyingMainMenuLocalization = false }
+        AppMainMenuPruner.simplify(
+            NSApplication.shared.mainMenu,
+            language: self.manager?.interfaceLanguage ?? .english
+        )
+        guard let menu = AppMainMenuPruner.makeStableMainMenu(
+            from: NSApplication.shared.mainMenu
+        ) else { return }
+        if let application = NSApplication.shared as? HitomiBadayoApplication {
+            application.installStableMainMenu(menu)
+        } else {
+            NSApplication.shared.mainMenu = menu
         }
-    }
-
-    private func mainMenuDidChange(_ menu: NSMenu) {
-        guard !isApplyingMainMenuLocalization,
-              isMainMenuOrDescendant(menu) else { return }
-        scheduleMainMenuPruning()
     }
 
     private func localizeTrackedMenu(_ menu: NSMenu) {
@@ -143,21 +107,6 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
             language: manager?.interfaceLanguage ?? .english,
             appName: appName
         )
-    }
-
-    private func isMainMenuOrDescendant(_ candidate: NSMenu) -> Bool {
-        guard let mainMenu = NSApplication.shared.mainMenu else { return false }
-        return candidate === mainMenu || containsMenu(candidate, in: mainMenu)
-    }
-
-    private func containsMenu(_ candidate: NSMenu, in root: NSMenu) -> Bool {
-        for item in root.items {
-            guard let submenu = item.submenu else { continue }
-            if submenu === candidate || containsMenu(candidate, in: submenu) {
-                return true
-            }
-        }
-        return false
     }
 
     private func installModalQuitCommand() {
@@ -256,8 +205,8 @@ struct HitomiBadayoApp: App {
                 .preferredColorScheme(manager.preferredColorScheme)
                 .tint(manager.activeThemeTintColor)
                 .frame(
-                    minWidth: 620,
-                    minHeight: 420
+                    minWidth: MainWindowLayout.minimumSize.width,
+                    minHeight: MainWindowLayout.minimumSize.height
                 )
                 .background(MainWindowFrameRestorer(
                     opacity: manager.mainWindowOpacity,
@@ -265,7 +214,10 @@ struct HitomiBadayoApp: App {
                 ))
         }
         .windowStyle(.titleBar)
-        .defaultSize(width: 840, height: 880)
+        .defaultSize(
+            width: MainWindowLayout.defaultSize.width,
+            height: MainWindowLayout.defaultSize.height
+        )
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button {

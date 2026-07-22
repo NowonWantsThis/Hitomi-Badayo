@@ -8,7 +8,7 @@ The application is an independent native implementation informed by observed
 behavior from an existing desktop downloader. No original executable or
 decompiled bytecode is included in this repository.
 
-Version 0.3.9 is the initial beta test release.
+Version 0.3.10 is the initial beta test release.
 
 ## Highlights
 

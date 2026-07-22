@@ -2,6 +2,31 @@ import AppKit
 import Combine
 import Foundation
 
+struct StatusBarPresentationState: Equatable {
+    let totalCount: Int
+    let activeCount: Int
+    let finishedCount: Int
+    let failedCount: Int
+    let isRunning: Bool
+    let clipboardEnabled: Bool
+    let language: AppInterfaceLanguage
+
+    init(
+        statuses: [JobStatus],
+        isRunning: Bool,
+        clipboardEnabled: Bool,
+        language: AppInterfaceLanguage
+    ) {
+        totalCount = statuses.count
+        activeCount = statuses.filter { $0 == .queued || $0 == .resolving || $0 == .downloading }.count
+        finishedCount = statuses.filter { $0 == .finished }.count
+        failedCount = statuses.filter { $0 == .failed }.count
+        self.isRunning = isRunning
+        self.clipboardEnabled = clipboardEnabled
+        self.language = language
+    }
+}
+
 @MainActor
 final class StatusBarController: NSObject {
     private let manager: DownloadManager
@@ -10,64 +35,66 @@ final class StatusBarController: NSObject {
 
     init(manager: DownloadManager) {
         self.manager = manager
-        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
 
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: "Hitomi Badayo")
-            button.imagePosition = .imageLeading
+            button.imagePosition = .imageOnly
         }
 
         manager.$jobs
-            .combineLatest(manager.$isRunning, manager.$clipboardMonitorEnabled)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _, _, _ in
-                self?.refresh()
+            .combineLatest(
+                manager.$isRunning,
+                manager.$clipboardMonitorEnabled,
+                manager.$interfaceLanguage
+            )
+            .map { jobs, isRunning, clipboardEnabled, language in
+                StatusBarPresentationState(
+                    statuses: jobs.map(\.status),
+                    isRunning: isRunning,
+                    clipboardEnabled: clipboardEnabled,
+                    language: language
+                )
             }
-            .store(in: &cancellables)
-
-        manager.$interfaceLanguage
             .removeDuplicates()
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.refresh()
+            .sink { [weak self] state in
+                self?.refresh(state)
             }
             .store(in: &cancellables)
-
-        refresh()
     }
 
-    private func refresh() {
-        updateButton()
-        rebuildMenu()
+    private func refresh(_ state: StatusBarPresentationState) {
+        updateButton(state)
+        rebuildMenu(state)
     }
 
-    private func updateButton() {
+    private func updateButton(_ state: StatusBarPresentationState) {
         guard let button = statusItem.button else { return }
-        let activeCount = manager.jobs.filter { $0.status == .queued || $0.status == .resolving || $0.status == .downloading }.count
         button.image = NSImage(
             systemSymbolName: Self.statusSymbolName(
-                isRunning: manager.isRunning,
-                clipboardEnabled: manager.clipboardMonitorEnabled
+                isRunning: state.isRunning,
+                clipboardEnabled: state.clipboardEnabled
             ),
             accessibilityDescription: "Hitomi Badayo"
         )
-        button.title = Self.statusButtonTitle(activeCount: activeCount, clipboardEnabled: manager.clipboardMonitorEnabled)
-        let queueState = manager.isRunning
-            ? AppLocalization.text("Hitomi Badayo 실행 중", language: manager.interfaceLanguage)
+        button.title = ""
+        let queueState = state.isRunning
+            ? AppLocalization.text("Hitomi Badayo 실행 중", language: state.language)
             : "Hitomi Badayo"
         let clipboardState = Self.clipboardMenuTitle(
-            enabled: manager.clipboardMonitorEnabled,
-            language: manager.interfaceLanguage
+            enabled: state.clipboardEnabled,
+            language: state.language
         )
         button.toolTip = "\(queueState) - \(clipboardState)"
         button.setAccessibilityLabel(button.toolTip)
     }
 
-    private func rebuildMenu() {
+    private func rebuildMenu(_ state: StatusBarPresentationState) {
         let menu = NSMenu()
 
-        let summary = NSMenuItem(title: summaryTitle, action: nil, keyEquivalent: "")
+        let summary = NSMenuItem(title: summaryTitle(state), action: nil, keyEquivalent: "")
         summary.isEnabled = false
         menu.addItem(summary)
         menu.addItem(NSMenuItem.separator())
@@ -75,11 +102,11 @@ final class StatusBarController: NSObject {
         menu.addItem(item("Hitomi Badayo 보기", action: #selector(showApp)))
 
         let start = item("대기열 시작", action: #selector(startQueue))
-        start.isEnabled = !manager.isRunning
+        start.isEnabled = !state.isRunning
         menu.addItem(start)
 
         let cancel = item("대기열 중지", action: #selector(cancelQueue))
-        cancel.isEnabled = manager.isRunning
+        cancel.isEnabled = state.isRunning
         menu.addItem(cancel)
 
         menu.addItem(item("완료된 작업 모두 제거", action: #selector(clearFinished)))
@@ -87,13 +114,13 @@ final class StatusBarController: NSObject {
 
         let clipboard = item(
             Self.clipboardMenuTitle(
-                enabled: manager.clipboardMonitorEnabled,
-                language: manager.interfaceLanguage
+                enabled: state.clipboardEnabled,
+                language: state.language
             ),
             action: #selector(toggleClipboardMonitor),
             localize: false
         )
-        clipboard.state = Self.clipboardMenuState(enabled: manager.clipboardMonitorEnabled)
+        clipboard.state = Self.clipboardMenuState(enabled: state.clipboardEnabled)
         menu.addItem(clipboard)
 
         menu.addItem(NSMenuItem.separator())
@@ -117,20 +144,6 @@ final class StatusBarController: NSObject {
         enabled ? .on : .off
     }
 
-    nonisolated static func statusButtonTitle(activeCount: Int, clipboardEnabled: Bool) -> String {
-        let count = max(0, activeCount)
-        switch (count, clipboardEnabled) {
-        case (0, false):
-            return ""
-        case (0, true):
-            return " Clip"
-        case (_, false):
-            return " \(count)"
-        case (_, true):
-            return " \(count) Clip"
-        }
-    }
-
     nonisolated static func statusSymbolName(isRunning: Bool, clipboardEnabled: Bool) -> String {
         if clipboardEnabled {
             return isRunning ? "doc.on.clipboard.fill" : "doc.on.clipboard"
@@ -138,27 +151,22 @@ final class StatusBarController: NSObject {
         return isRunning ? "arrow.down.circle.fill" : "arrow.down.circle"
     }
 
-    private var summaryTitle: String {
-        let total = manager.jobs.count
-        let active = manager.jobs.filter { $0.status == .queued || $0.status == .resolving || $0.status == .downloading }.count
-        let finished = manager.jobs.filter { $0.status == .finished }.count
-        let failed = manager.jobs.filter { $0.status == .failed }.count
-
-        if manager.isRunning {
+    private func summaryTitle(_ state: StatusBarPresentationState) -> String {
+        if state.isRunning {
             return AppLocalization.format(
                 "Running: %@ active, %@ finished, %@ failed",
-                language: manager.interfaceLanguage,
-                String(active),
-                String(finished),
-                String(failed)
+                language: state.language,
+                String(state.activeCount),
+                String(state.finishedCount),
+                String(state.failedCount)
             )
         }
         return AppLocalization.format(
             "Queue: %@, %@ finished, %@ failed",
-            language: manager.interfaceLanguage,
-            String(total),
-            String(finished),
-            String(failed)
+            language: state.language,
+            String(state.totalCount),
+            String(state.finishedCount),
+            String(state.failedCount)
         )
     }
 
@@ -199,7 +207,6 @@ final class StatusBarController: NSObject {
 
     @objc private func toggleClipboardMonitor() {
         manager.setClipboardMonitorEnabled(!manager.clipboardMonitorEnabled)
-        refresh()
     }
 
     @objc private func quit() {

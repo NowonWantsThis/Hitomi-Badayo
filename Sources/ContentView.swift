@@ -279,7 +279,7 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
 
     private func configureTitle(_ button: NSButton) {
         let title = AppLocalization.text("옵션", language: interfaceLanguage)
-        let font = NSFont.systemFont(ofSize: fontSize)
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
         button.font = font
         button.contentTintColor = .labelColor
         button.attributedTitle = NSAttributedString(
@@ -929,6 +929,15 @@ struct ContentView: View {
         return family.isEmpty ? .system(size: size) : .custom(family, size: size)
     }
 
+    private var rootFontSettingsPresentation: Binding<Bool> {
+        Binding(
+            get: {
+                manager.showingFontSettings && !manager.showingSettingsWindow
+            },
+            set: { manager.showingFontSettings = $0 }
+        )
+    }
+
     var body: some View {
         GeometryReader { geometry in
             content(hostSize: geometry.size)
@@ -1012,7 +1021,7 @@ struct ContentView: View {
         .sheet(isPresented: $manager.showingQuickAccessCustomization) {
             QuickAccessCustomizationView(manager: manager)
         }
-        .sheet(isPresented: $manager.showingFontSettings) {
+        .sheet(isPresented: rootFontSettingsPresentation) {
             FontSettingsView(manager: manager)
         }
         .sheet(isPresented: $manager.showingShortcutSettings) {
@@ -1246,13 +1255,26 @@ struct ContentView: View {
         if environment["HITOMI_NATIVE_UI_TEST_CONTEXT_MENU"] == "1" ||
             environment["HITOMI_NATIVE_UI_TEST_DUPLICATE"] == "1" ||
             environment["HITOMI_NATIVE_UI_TEST_OUTPUT_PREVIEW"] == "1" ||
-            environment["HITOMI_NATIVE_UI_TEST_JOB_INFO"] == "1" {
+            environment["HITOMI_NATIVE_UI_TEST_JOB_INFO"] == "1" ||
+            environment["HITOMI_NATIVE_UI_TEST_ARCHIVE_BADGE"] == "1" {
             let configuredFixtureOutputPath = environment["HITOMI_NATIVE_UI_TEST_OUTPUT_PATH"]?.trimmed ?? ""
             let fixtureOutputPath = configuredFixtureOutputPath.isEmpty
                 ? FileManager.default.temporaryDirectory.path
                 : configuredFixtureOutputPath
             let testsGroupArtistFallback = environment["HITOMI_NATIVE_UI_TEST_GROUP_ARTIST"] == "1"
             let testsActionsDuringDownload = environment["HITOMI_NATIVE_UI_TEST_RUNNING_ACTIONS"] == "1"
+            let testsArchiveBadge = environment["HITOMI_NATIVE_UI_TEST_ARCHIVE_BADGE"] == "1"
+            var fixtureMetadata = [
+                "artist": testsGroupArtistFallback ? "unknown" : "sailor_yamao",
+                "site": "Hitomi",
+                "groups": testsGroupArtistFallback ? "Circle One, Circle Two" : "Reference",
+                "known_size": "18.2 MB"
+            ]
+            if testsArchiveBadge {
+                fixtureMetadata["archive_format"] = "zip"
+                fixtureMetadata["archive_path"] = fixtureOutputPath
+                fixtureMetadata["archive_deleted_original"] = "true"
+            }
             let fixture = DownloadJob(
                 id: UUID(uuidString: "00000000-0000-4000-8000-000000000404")!,
                 source: "https://hitomi.la/galleries/4040886.html",
@@ -1266,12 +1288,7 @@ struct ContentView: View {
                 completed: 28,
                 total: 28,
                 outputPath: fixtureOutputPath,
-                metadata: [
-                    "artist": testsGroupArtistFallback ? "unknown" : "sailor_yamao",
-                    "site": "Hitomi",
-                    "groups": testsGroupArtistFallback ? "Circle One, Circle Two" : "Reference",
-                    "known_size": "18.2 MB"
-                ],
+                metadata: fixtureMetadata,
                 tags: ["red", "blue"],
                 comment: "Recovered information fixture",
                 rangeExpression: "1-28",
@@ -1666,6 +1683,18 @@ struct ContentView: View {
         manager.inputAutocompleteSuggestions
     }
 
+    private var compactMenuFontSize: CGFloat {
+        max(9, CGFloat(manager.interfaceFontSize.pointSize) + 1)
+    }
+
+    private func compactMenuTitle(_ key: String) -> some View {
+        Text(AppLocalization.text(key, language: manager.interfaceLanguage))
+            .font(.system(size: compactMenuFontSize, weight: .regular))
+            .fontWeight(.regular)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
     private var compactMenuBar: some View {
         HStack(spacing: scaled(26)) {
             Menu {
@@ -1727,7 +1756,7 @@ struct ContentView: View {
                 }
                 .disabled(manager.removableFinishedJobCount == 0)
             } label: {
-                Text("작업")
+                compactMenuTitle("작업")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -1798,14 +1827,14 @@ struct ContentView: View {
                     Label("다운로드 폴더...", systemImage: "folder")
                 }
             } label: {
-                Text("도구")
+                compactMenuTitle("도구")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
 
             CompactOptionsMenuButton(
-                fontSize: scaled(14),
+                fontSize: compactMenuFontSize,
                 interfaceLanguage: manager.interfaceLanguage,
                 queueViewMode: manager.queueViewMode,
                 queueThumbnailsHidden: manager.queueThumbnailsHidden,
@@ -1834,7 +1863,7 @@ struct ContentView: View {
                     Label("Hitomi Badayo 정보", systemImage: "info.circle")
                 }
             } label: {
-                Text("도움말")
+                compactMenuTitle("도움말")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -1866,8 +1895,8 @@ struct ContentView: View {
                             }
                             .buttonStyle(.plain)
                             .disabled(!manager.canPerformQuickAccessCommand(item.command))
-                            .help(item.command.label)
-                            .accessibilityLabel(item.command.label)
+                            .help(item.command.localizedLabel(language: manager.interfaceLanguage))
+                            .accessibilityLabel(item.command.localizedLabel(language: manager.interfaceLanguage))
                             .accessibilityIdentifier("quick-access.action.\(item.command.rawValue)")
                         }
                     }
@@ -1899,6 +1928,7 @@ struct ContentView: View {
                 set: { manager.setMainWindowOpacity($0) }
             ), range: MainWindowAppearance.minimumOpacity...1, step: 0.01)
             .frame(width: scaled(92), height: scaled(18))
+            .offset(y: scaled(-2))
             .help(AppLocalization.format(
                 "Window Opacity: %@",
                 language: manager.interfaceLanguage,
@@ -1907,7 +1937,7 @@ struct ContentView: View {
         }
         .font(.system(size: scaled(14)))
         .padding(.horizontal, scaled(14))
-        .padding(.vertical, scaled(9))
+        .padding(.vertical, scaled(7))
         .background(.bar)
     }
 
@@ -4103,11 +4133,14 @@ struct ContentView: View {
                                 destinationPath: manager.destinationPath,
                                 viewMode: .list,
                                 showsThumbnail: !manager.queueThumbnailsHidden,
-                                thumbnailScale: manager.queueThumbnailScale
+                                thumbnailScale: manager.queueThumbnailScale,
+                                hideArchiveIndicatorWhenFileMissing: manager.hideArchiveIndicatorWhenFileMissing
                             ) {
                                 manager.revealOutputs(startingAt: job)
                             } openFirstOutput: {
                                 manager.openFirstOutputFile(for: job)
+                            } openArchive: {
+                                manager.openArchiveOutput(for: job)
                             } openFirstSelectedOutputs: {
                                 manager.openFirstOutputFiles(startingAt: job)
                             } viewOutputInBrowser: {
@@ -4402,11 +4435,14 @@ struct ContentView: View {
             destinationPath: manager.destinationPath,
             viewMode: viewMode,
             showsThumbnail: !manager.queueThumbnailsHidden,
-            thumbnailScale: manager.queueThumbnailScale
+            thumbnailScale: manager.queueThumbnailScale,
+            hideArchiveIndicatorWhenFileMissing: manager.hideArchiveIndicatorWhenFileMissing
         ) {
             manager.revealOutputs(startingAt: job)
         } openFirstOutput: {
             manager.openFirstOutputFile(for: job)
+        } openArchive: {
+            manager.openArchiveOutput(for: job)
         } openFirstSelectedOutputs: {
             manager.openFirstOutputFiles(startingAt: job)
         } viewOutputInBrowser: {
@@ -5090,6 +5126,9 @@ struct SettingsWindowView: View {
             maxHeight: .infinity
         )
         .environment(\.locale, manager.interfaceLanguage.locale)
+        .sheet(isPresented: $manager.showingFontSettings) {
+            FontSettingsView(manager: manager)
+        }
     }
 
     private var sidebar: some View {
@@ -6028,6 +6067,22 @@ struct SettingsWindowView: View {
                     }
                     .labelsHidden()
                     .frame(maxWidth: 170, alignment: .trailing)
+                }
+            }
+
+            settingsSection("압축 아이콘", systemImage: "archivebox.fill") {
+                settingsRow(
+                    "누락된 압축 아이콘 숨기기",
+                    detail: "압축 파일이 이동되거나 삭제되면 목록에서 아이콘 숨김"
+                ) {
+                    settingsSwitch(
+                        "누락된 압축 아이콘 숨기기",
+                        isOn: Binding(
+                            get: { manager.hideArchiveIndicatorWhenFileMissing },
+                            set: { manager.setHideArchiveIndicatorWhenFileMissing($0) }
+                        )
+                    )
+                    .accessibilityIdentifier("settings.hide-missing-archive-indicator")
                 }
             }
 
@@ -12680,6 +12735,7 @@ enum JobStatusStyle {
 
 struct FontSettingsView: View {
     @ObservedObject var manager: DownloadManager
+    @Environment(\.dismiss) private var dismiss
 
     private var fontFamilySelection: Binding<String> {
         Binding(
@@ -12710,12 +12766,13 @@ struct FontSettingsView: View {
                 Spacer()
 
                 Button {
-                    manager.showingFontSettings = false
+                    dismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                 }
                 .buttonStyle(.borderless)
                 .help("Close font settings")
+                .accessibilityIdentifier("font-settings.close")
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
@@ -12795,7 +12852,7 @@ struct FontSettingsView: View {
                         .lineLimit(1)
 
                     Button("Done") {
-                        manager.showingFontSettings = false
+                        dismiss()
                     }
                     .keyboardShortcut(.defaultAction)
                 }
@@ -12803,6 +12860,7 @@ struct FontSettingsView: View {
             .padding(18)
         }
         .frame(width: 560, height: 390)
+        .accessibilityIdentifier("font-settings.view")
     }
 }
 
@@ -13696,8 +13754,10 @@ struct JobRow: View {
     let viewMode: QueueViewMode
     let showsThumbnail: Bool
     let thumbnailScale: QueueThumbnailScale
+    let hideArchiveIndicatorWhenFileMissing: Bool
     let reveal: () -> Void
     let openFirstOutput: () -> Void
+    let openArchive: () -> Void
     let openFirstSelectedOutputs: () -> Void
     let viewOutputInBrowser: () -> Void
     let previewOutput: () -> Void
@@ -13881,7 +13941,9 @@ struct JobRow: View {
                 HStack(spacing: scaled(5)) {
                     siteBadge
 
-                    if pageCount != nil {
+                    if let archiveArtifact {
+                        archiveBadge(archiveArtifact)
+                    } else if pageCount != nil {
                         Image(systemName: "rectangle.stack.fill")
                             .font(.system(size: scaled(11), weight: .semibold))
                             .foregroundStyle(.white)
@@ -13983,6 +14045,9 @@ struct JobRow: View {
                         .scaleEffect(min(1, thumbnailFactor), anchor: .topLeading)
                         .opacity(hoverState.isHovering ? 1 : 0)
                         .allowsHitTesting(hoverState.isHovering)
+                    if let archiveArtifact {
+                        archiveBadge(archiveArtifact)
+                    }
 
                     if job.status == .downloading {
                         ClockwiseDownloadIndicator(
@@ -14021,6 +14086,9 @@ struct JobRow: View {
                     siteBadge
                         .opacity(hoverState.isHovering ? 1 : 0)
                         .allowsHitTesting(hoverState.isHovering)
+                    if let archiveArtifact {
+                        archiveBadge(archiveArtifact)
+                    }
 
                     if job.status == .downloading {
                         ClockwiseDownloadIndicator(
@@ -14867,10 +14935,42 @@ struct JobRow: View {
             .contentShape(Rectangle())
             .help("Open \(siteLabel) in the default browser\n\(job.source)")
             .accessibilityLabel("Open \(siteLabel) source in the default browser")
+            .accessibilityIdentifier("queue.site-indicator.\(job.id.uuidString)")
         } else {
             siteBadgeContent
                 .help("\(siteLabel): \(job.source)")
+                .accessibilityIdentifier("queue.site-indicator.\(job.id.uuidString)")
         }
+    }
+
+    private var archiveArtifact: JobArchiveArtifact? {
+        if hideArchiveIndicatorWhenFileMissing {
+            return JobArchiveArtifact.existing(for: job)
+        }
+        return JobArchiveArtifact.recorded(for: job)
+    }
+
+    private func archiveBadge(_ artifact: JobArchiveArtifact) -> some View {
+        let actionLabel = AppLocalization.format("Open %@ archive", artifact.format.label)
+        return Button(action: openArchive) {
+            Image(systemName: "archivebox.fill")
+                .font(.system(size: scaled(12), weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: scaled(23), height: scaled(23))
+                .background(
+                    RoundedRectangle(cornerRadius: scaled(4))
+                        .fill(
+                            isSelected
+                                ? Color.white.opacity(0.24)
+                                : Color.secondary.opacity(0.75)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .help(actionLabel)
+        .accessibilityLabel(actionLabel)
+        .accessibilityIdentifier("queue.archive-indicator.\(job.id.uuidString)")
     }
 
     private var siteBadgeContent: some View {

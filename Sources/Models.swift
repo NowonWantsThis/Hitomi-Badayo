@@ -1182,6 +1182,68 @@ struct DownloadJob: Identifiable, Codable, Equatable {
     }
 }
 
+struct JobArchiveArtifact: Equatable {
+    let path: String
+    let format: ArchiveFileFormat
+
+    var url: URL {
+        URL(fileURLWithPath: path)
+    }
+
+    static func recorded(for job: DownloadJob) -> JobArchiveArtifact? {
+        candidates(for: job).first.map {
+            JobArchiveArtifact(path: $0.path, format: $0.format)
+        }
+    }
+
+    static func existing(
+        for job: DownloadJob,
+        fileManager: FileManager = .default
+    ) -> JobArchiveArtifact? {
+        for candidate in candidates(for: job) {
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: candidate.path, isDirectory: &isDirectory),
+                  !isDirectory.boolValue else {
+                continue
+            }
+            return JobArchiveArtifact(path: candidate.path, format: candidate.format)
+        }
+        return nil
+    }
+
+    private static func candidates(for job: DownloadJob) -> [(path: String, format: ArchiveFileFormat)] {
+        let recordedPath = job.metadata["archive_path"]?.trimmed ?? ""
+        let recordedFormat = job.metadata["archive_format"]
+            .flatMap { ArchiveFileFormat(rawValue: $0.trimmed.lowercased()) }
+        guard !recordedPath.isEmpty || recordedFormat != nil else { return [] }
+
+        var candidates: [(path: String, format: ArchiveFileFormat)] = []
+        if let outputFormat = archiveFormat(forPath: job.outputPath) {
+            candidates.append((job.outputPath, outputFormat))
+        }
+        if !recordedPath.isEmpty,
+           let format = archiveFormat(forPath: recordedPath) ?? recordedFormat {
+            candidates.append((recordedPath, format))
+        }
+
+        var checkedPaths = Set<String>()
+        var normalizedCandidates: [(path: String, format: ArchiveFileFormat)] = []
+        for candidate in candidates {
+            let normalizedPath = URL(fileURLWithPath: candidate.path)
+                .standardizedFileURL
+                .path
+            guard checkedPaths.insert(normalizedPath).inserted else { continue }
+            normalizedCandidates.append((normalizedPath, candidate.format))
+        }
+        return normalizedCandidates
+    }
+
+    private static func archiveFormat(forPath path: String) -> ArchiveFileFormat? {
+        let fileExtension = URL(fileURLWithPath: path.trimmed).pathExtension.lowercased()
+        return ArchiveFileFormat(rawValue: fileExtension)
+    }
+}
+
 struct URLBookmark: Identifiable, Codable, Equatable {
     var id: UUID
     var title: String
