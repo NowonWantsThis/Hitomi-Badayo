@@ -430,31 +430,31 @@ enum AppShortcutCommand: String, CaseIterable, Codable, Hashable, Identifiable {
 
     private var labelKey: String {
         switch self {
-        case .help: return "도움말"
-        case .settings: return "설정"
-        case .shortcuts: return "단축키"
-        case .pasteURLs: return "붙여넣고 다운로드"
-        case .startQueue: return "대기열 시작"
-        case .progressWindow: return "진행 상황"
-        case .moveSelectedJobsUp: return "작업을 위로 이동"
-        case .moveSelectedJobsDown: return "작업을 아래로 이동"
-        case .statistics: return "정보 및 통계"
-        case .activityLog: return "활동 로그"
-        case .historyWindow: return "작업 기록"
-        case .directories: return "다운로드 폴더"
-        case .metadataFinder: return "메타데이터 검색"
-        case .metadataAnalysis: return "메타데이터 분석"
-        case .searcher: return "검색기"
-        case .browserWindow: return "브라우저"
-        case .textViewer: return "텍스트 뷰어"
-        case .outputPreview: return "결과물 미리보기"
-        case .statusColors: return "상태 색상"
-        case .fontSettings: return "글꼴"
-        case .floatingMonitor: return "플로팅 모니터"
-        case .duplicateImageFinder: return "중복 이미지 찾기"
-        case .clipboardViewer: return "클립보드 뷰어"
-        case .openDuplicateImageFolder: return "중복 이미지 폴더 열기"
-        case .artistRecommendations: return "작가 추천"
+        case .help: return "Help"
+        case .settings: return "Settings"
+        case .shortcuts: return "Shortcuts"
+        case .pasteURLs: return "Paste and Download"
+        case .startQueue: return "Start Queue"
+        case .progressWindow: return "Progress"
+        case .moveSelectedJobsUp: return "Move Tasks Up"
+        case .moveSelectedJobsDown: return "Move Tasks Down"
+        case .statistics: return "Info & Statistics"
+        case .activityLog: return "Activity Log"
+        case .historyWindow: return "History"
+        case .directories: return "Download Folder"
+        case .metadataFinder: return "Metadata Finder"
+        case .metadataAnalysis: return "Metadata Analysis"
+        case .searcher: return "Searcher"
+        case .browserWindow: return "Browser"
+        case .textViewer: return "Text Viewer"
+        case .outputPreview: return "Output Preview"
+        case .statusColors: return "Status Colors"
+        case .fontSettings: return "Font"
+        case .floatingMonitor: return "Floating Monitor"
+        case .duplicateImageFinder: return "Duplicate Image Finder"
+        case .clipboardViewer: return "Clipboard Viewer"
+        case .openDuplicateImageFolder: return "Open Duplicate Image Folder"
+        case .artistRecommendations: return "Artist Recommendations"
         case .hitomiTaster: return "Hitomi Taster"
         }
     }
@@ -466,25 +466,25 @@ enum AppShortcutCommand: String, CaseIterable, Codable, Hashable, Identifiable {
     private var detailKey: String {
         switch self {
         case .help, .settings, .shortcuts:
-            return "애플리케이션"
+            return "Application"
         case .pasteURLs, .startQueue, .moveSelectedJobsUp, .moveSelectedJobsDown:
-            return "대기열"
+            return "Queue"
         case .progressWindow, .statistics, .activityLog, .historyWindow:
-            return "모니터"
+            return "Monitor"
         case .directories, .metadataFinder, .metadataAnalysis, .searcher, .browserWindow, .textViewer, .outputPreview:
-            return "도구"
+            return "Tools"
         case .statusColors, .fontSettings:
-            return "화면"
+            return "Display"
         case .floatingMonitor:
-            return "모니터"
+            return "Monitor"
         case .duplicateImageFinder, .openDuplicateImageFolder:
-            return "중복 이미지"
+            return "Duplicate Images"
         case .clipboardViewer:
-            return "클립보드"
+            return "Clipboard"
         case .artistRecommendations:
-            return "추천"
+            return "Recommendations"
         case .hitomiTaster:
-            return "추천"
+            return "Recommendations"
         }
     }
 

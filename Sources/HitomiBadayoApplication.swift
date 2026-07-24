@@ -5,6 +5,7 @@ import ObjectiveC.runtime
 final class HitomiBadayoApplication: NSApplication {
     private static var stableMainMenuKey: UInt8 = 0
     weak var shortcutController: AppShortcutController?
+    private var terminationRequestInProgress = false
 
     private var stableMainMenu: NSMenu? {
         get {
@@ -67,8 +68,24 @@ final class HitomiBadayoApplication: NSApplication {
         if modalWindow != nil {
             abortModal()
         }
+        guard !terminationRequestInProgress else { return }
+        terminationRequestInProgress = true
         DispatchQueue.main.async { [weak self] in
-            self?.finishTermination(sender)
+            self?.prepareAndFinishTermination(sender)
+        }
+    }
+
+    private func prepareAndFinishTermination(_ sender: Any?) {
+        guard let preparingDelegate = delegate as? ApplicationTerminationPreparing else {
+            terminationRequestInProgress = false
+            finishTermination(sender)
+            return
+        }
+        preparingDelegate.prepareForApplicationTermination { [weak self] shouldTerminate in
+            guard let self else { return }
+            terminationRequestInProgress = false
+            guard shouldTerminate else { return }
+            finishTermination(sender)
         }
     }
 

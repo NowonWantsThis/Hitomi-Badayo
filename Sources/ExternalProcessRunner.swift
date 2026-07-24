@@ -17,11 +17,12 @@ final class ExternalProcessControl: @unchecked Sendable {
     private var shouldTerminate = false
     private var shouldInterrupt = false
     private var suspended = false
+    private var suspensionRequested = false
 
     var isSuspended: Bool {
         lock.lock()
         defer { lock.unlock() }
-        return suspended
+        return suspended || suspensionRequested
     }
 
     var isRunning: Bool {
@@ -44,9 +45,20 @@ final class ExternalProcessControl: @unchecked Sendable {
         } else {
             self.process = nil
             suspended = false
+            suspensionRequested = false
         }
         let terminateNow = shouldTerminate
         let interruptNow = shouldInterrupt
+        if terminateNow || interruptNow {
+            suspended = false
+            suspensionRequested = false
+        } else if process.isRunning, suspensionRequested, !suspended {
+            let ok = Self.signal(process, SIGSTOP)
+            suspended = ok
+            if !ok {
+                suspensionRequested = false
+            }
+        }
         lock.unlock()
 
         if terminateNow {
@@ -61,6 +73,7 @@ final class ExternalProcessControl: @unchecked Sendable {
         if self.process === process {
             self.process = nil
             suspended = false
+            suspensionRequested = false
         }
         lock.unlock()
     }
@@ -73,43 +86,68 @@ final class ExternalProcessControl: @unchecked Sendable {
             lock.unlock()
             return false
         }
-        let pid = process.processIdentifier
-        suspended = true
-        lock.unlock()
-
-        let ok = Darwin.kill(pid, SIGSTOP) == 0
-        if !ok {
-            lock.lock()
-            if self.process?.processIdentifier == pid {
-                suspended = false
-            }
+        if suspended {
+            suspensionRequested = true
             lock.unlock()
+            return true
         }
+        suspensionRequested = true
+        let ok = Self.signal(process, SIGSTOP)
+        suspended = ok
+        if !ok {
+            suspensionRequested = false
+        }
+        lock.unlock()
+        return ok
+    }
+
+    @discardableResult
+    func suspendWhenAvailable() -> Bool {
+        lock.lock()
+        guard !shouldTerminate, !shouldInterrupt else {
+            lock.unlock()
+            return false
+        }
+        suspensionRequested = true
+        guard let process, process.isRunning else {
+            lock.unlock()
+            return true
+        }
+        if suspended {
+            lock.unlock()
+            return true
+        }
+        let ok = Self.signal(process, SIGSTOP)
+        suspended = ok
+        if !ok {
+            suspensionRequested = false
+        }
+        lock.unlock()
         return ok
     }
 
     @discardableResult
     func resume() -> Bool {
         lock.lock()
+        let hadSuspensionRequest = suspensionRequested
+        suspensionRequested = false
         guard let process, process.isRunning else {
             suspended = false
             lock.unlock()
-            return false
+            return hadSuspensionRequest
         }
-        let pid = process.processIdentifier
         let wasSuspended = suspended
         suspended = false
-        lock.unlock()
-
-        guard wasSuspended else { return true }
-        let ok = Darwin.kill(pid, SIGCONT) == 0
-        if !ok {
-            lock.lock()
-            if self.process?.processIdentifier == pid {
-                suspended = true
-            }
+        guard wasSuspended else {
             lock.unlock()
+            return true
         }
+        let ok = Self.signal(process, SIGCONT)
+        if !ok {
+            suspended = true
+            suspensionRequested = true
+        }
+        lock.unlock()
         return ok
     }
 
@@ -119,6 +157,7 @@ final class ExternalProcessControl: @unchecked Sendable {
         let process = self.process
         let wasSuspended = suspended
         suspended = false
+        suspensionRequested = false
         lock.unlock()
 
         guard let process, process.isRunning else { return }
@@ -135,6 +174,7 @@ final class ExternalProcessControl: @unchecked Sendable {
         let process = self.process
         let wasSuspended = suspended
         suspended = false
+        suspensionRequested = false
         lock.unlock()
 
         guard let process, process.isRunning else { return false }
@@ -168,7 +208,84 @@ final class ExternalProcessControl: @unchecked Sendable {
     }
 }
 
+private enum ExternalProcessRuntimeRegistry {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var controls: [ObjectIdentifier: ExternalProcessControl] = [:]
+    nonisolated(unsafe) private static var queuePausedControls: [ObjectIdentifier: ExternalProcessControl] = [:]
+    nonisolated(unsafe) private static var queuePaused = false
+
+    static func register(_ control: ExternalProcessControl) {
+        let identifier = ObjectIdentifier(control)
+        lock.lock()
+        controls[identifier] = control
+        let shouldPause = queuePaused
+        lock.unlock()
+
+        if shouldPause {
+            pauseForQueue(control, identifier: identifier)
+        }
+    }
+
+    static func unregister(_ control: ExternalProcessControl) {
+        let identifier = ObjectIdentifier(control)
+        lock.lock()
+        controls.removeValue(forKey: identifier)
+        let pausedControl = queuePausedControls.removeValue(forKey: identifier)
+        lock.unlock()
+        if pausedControl != nil {
+            _ = control.resume()
+        }
+    }
+
+    static func pauseAllForQueue() {
+        lock.lock()
+        queuePaused = true
+        let activeControls = Array(controls)
+        lock.unlock()
+
+        for (identifier, control) in activeControls {
+            pauseForQueue(control, identifier: identifier)
+        }
+    }
+
+    static func resumeAllForQueue() {
+        lock.lock()
+        queuePaused = false
+        let pausedControls = Array(queuePausedControls.values)
+        queuePausedControls.removeAll()
+        lock.unlock()
+
+        pausedControls.forEach { _ = $0.resume() }
+    }
+
+    private static func pauseForQueue(
+        _ control: ExternalProcessControl,
+        identifier: ObjectIdentifier
+    ) {
+        guard !control.isSuspended, control.suspendWhenAvailable() else { return }
+
+        lock.lock()
+        let stillOwned = queuePaused && controls[identifier] === control
+        if stillOwned {
+            queuePausedControls[identifier] = control
+        }
+        lock.unlock()
+
+        if !stillOwned {
+            _ = control.resume()
+        }
+    }
+}
+
 enum ExternalProcessRunner {
+    static func pauseAllForQueue() {
+        ExternalProcessRuntimeRegistry.pauseAllForQueue()
+    }
+
+    static func resumeAllForQueue() {
+        ExternalProcessRuntimeRegistry.resumeAllForQueue()
+    }
+
     static func run(
         executable: URL,
         arguments: [String],
@@ -181,6 +298,8 @@ enum ExternalProcessRunner {
         failureDescription: String
     ) async throws {
         let state = suppliedControl ?? ExternalProcessControl()
+        ExternalProcessRuntimeRegistry.register(state)
+        defer { ExternalProcessRuntimeRegistry.unregister(state) }
         let status = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 do {

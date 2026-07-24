@@ -110,6 +110,7 @@ struct DownloadSourceFolderProfile: Identifiable, Hashable {
     private static let settingsSourceIDs = [
         "hitomi",
         "pixiv",
+        "pawchive",
         "youtube",
         "insta",
         "twitter",
@@ -192,6 +193,7 @@ struct DownloadSourceFolderProfile: Identifiable, Hashable {
     private static let displayNames: [String: String] = [
         "hitomi": "Hitomi.la / E(x)Hentai",
         "pixiv": "Pixiv",
+        "pawchive": "Pawchive",
         "youtube": "YouTube",
         "insta": "Instagram",
         "twitter": "Twitter / X",

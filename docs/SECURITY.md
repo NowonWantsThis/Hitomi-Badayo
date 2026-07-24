@@ -24,7 +24,7 @@ Issue is appropriate only after sensitive details have been removed.
 
 ## Distribution security
 
-The 0.3.10 beta release is ad-hoc signed and is not notarized by Apple.
+The 0.4.0 beta release is ad-hoc signed and is not notarized by Apple.
 Users should obtain release archives from the project's own GitHub Releases,
 verify the published SHA-256 digest, and avoid mirrors that modify the bundle.
 

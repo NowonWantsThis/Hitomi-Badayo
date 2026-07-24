@@ -45,6 +45,100 @@ final class EHentaiResolver {
         return Self.galleryID(from: url) != nil || Self.imagePageID(from: url) != nil
     }
 
+    func findGalleryURL(
+        galleryID: String,
+        headers: HTTPRequestOptions = HTTPRequestOptions(),
+        searchRoots: [URL]? = nil
+    ) async throws -> URL {
+        guard !galleryID.isEmpty, galleryID.allSatisfy(\.isNumber) else {
+            throw NativeDownloadError.missingGalleryID(galleryID)
+        }
+
+        let nextGalleryID = Int(galleryID).map { String($0 + 1) } ?? galleryID
+        var lastError: Error?
+        for root in searchRoots ?? Self.defaultGallerySearchRoots {
+            for includeExpunged in [false, true] {
+                guard var components = URLComponents(url: root, resolvingAgainstBaseURL: false) else {
+                    continue
+                }
+                components.path = "/"
+                components.fragment = nil
+                components.queryItems = [
+                    URLQueryItem(name: "advsearch", value: "1"),
+                    includeExpunged ? URLQueryItem(name: "f_sh", value: "on") : nil,
+                    URLQueryItem(name: "f_sfl", value: "on"),
+                    URLQueryItem(name: "f_sfu", value: "on"),
+                    URLQueryItem(name: "f_sft", value: "on"),
+                    URLQueryItem(name: "next", value: nextGalleryID)
+                ].compactMap { $0 }
+                guard let searchURL = components.url else { continue }
+
+                do {
+                    let html = try await HTTPClient.shared.string(
+                        from: searchURL,
+                        referer: root.absoluteString,
+                        userAgent: headers.userAgent,
+                        retryLimitOverride: 3
+                    )
+                    if let galleryURL = Self.galleryURL(
+                        galleryID: galleryID,
+                        fromSearchHTML: html,
+                        baseURL: root
+                    ) {
+                        return galleryURL
+                    }
+                } catch {
+                    try Self.rethrowIfCancelled(error)
+                    lastError = error
+                }
+            }
+        }
+
+        throw lastError ?? NativeDownloadError.noFiles
+    }
+
+    static func galleryURL(galleryID: String, fromSearchHTML html: String, baseURL: URL) -> URL? {
+        guard !galleryID.isEmpty, galleryID.allSatisfy(\.isNumber) else { return nil }
+        let normalized = html
+            .replacingOccurrences(of: "\\/", with: "/")
+            .replacingOccurrences(of: "&amp;", with: "&")
+        let escapedID = NSRegularExpression.escapedPattern(for: galleryID)
+        let patterns = [
+            #"(?i)https?://[^/"'<>\s]+/g/"# + escapedID + #"/([a-z0-9]+)/?"#,
+            #"(?i)(?:href|data-href)\s*=\s*["'](/g/"# + escapedID + #"/([a-z0-9]+)/?)"#
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let fullRange = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
+            for match in regex.matches(in: normalized, range: fullRange) {
+                if match.numberOfRanges > 2,
+                   let relativeRange = Range(match.range(at: 1), in: normalized) {
+                    let relative = String(normalized[relativeRange])
+                    if relative.hasPrefix("/"),
+                       let resolved = URL(string: relative, relativeTo: baseURL)?.absoluteURL,
+                       isSupportedHost(resolved.host?.lowercased() ?? "") {
+                        return resolved
+                    }
+                }
+
+                guard match.numberOfRanges > 1,
+                      let matchRange = Range(match.range(at: 0), in: normalized),
+                      let resolved = URL(string: String(normalized[matchRange])),
+                      isSupportedHost(resolved.host?.lowercased() ?? "") else {
+                    continue
+                }
+                return resolved
+            }
+        }
+        return nil
+    }
+
+    private static let defaultGallerySearchRoots = [
+        URL(string: "https://e-hentai.org/")!,
+        URL(string: "https://exhentai.org/")!
+    ]
+
     func resolve(
         _ url: URL,
         headers: HTTPRequestOptions = HTTPRequestOptions(),
@@ -1066,5 +1160,19 @@ final class EHentaiResolver {
     private static func siteName(for url: URL) -> String {
         let host = url.host?.lowercased() ?? ""
         return host.contains("exhentai") ? "ExHentai" : "E-Hentai"
+    }
+
+    private static func rethrowIfCancelled(_ error: Error) throws {
+        try Task.checkCancellation()
+        if error is CancellationError {
+            throw CancellationError()
+        }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            throw CancellationError()
+        }
+        if let nativeError = error as? NativeDownloadError,
+           case .cancelled = nativeError {
+            throw CancellationError()
+        }
     }
 }

@@ -1,10 +1,78 @@
 import AppKit
 
+private final class StableRootMenuItem: NSMenuItem {
+    private var lockedTitle: String?
+
+    override var title: String {
+        get { super.title }
+        set { super.title = lockedTitle ?? newValue }
+    }
+
+    func lockTitle(_ title: String) {
+        lockedTitle = title
+        if super.title != title {
+            super.title = title
+        }
+    }
+}
+
 final class StableApplicationMainMenu: NSMenu {
     private(set) var isStructureLocked = false
+    private var lockedRootTitles: [ObjectIdentifier: String] = [:]
+    private var rootTitleObservations: [ObjectIdentifier: NSKeyValueObservation] = [:]
+    private var lockedSubmenuTitles: [ObjectIdentifier: String] = [:]
+    private var submenuTitleObservations: [ObjectIdentifier: NSKeyValueObservation] = [:]
 
     func lockStructure() {
         isStructureLocked = true
+    }
+
+    func lockRootTitles(_ entries: [(item: NSMenuItem, title: String)]) {
+        for entry in entries {
+            lockedRootTitles[ObjectIdentifier(entry.item)] = entry.title
+            if let submenu = entry.item.submenu {
+                lockedSubmenuTitles[ObjectIdentifier(submenu)] = entry.title
+            }
+        }
+
+        for entry in entries {
+            let identifier = ObjectIdentifier(entry.item)
+            if let stableItem = entry.item as? StableRootMenuItem {
+                stableItem.lockTitle(entry.title)
+            } else if rootTitleObservations[identifier] == nil {
+                rootTitleObservations[identifier] = entry.item.observe(\.title, options: [.new]) {
+                    [weak self, weak item = entry.item] _, _ in
+                    guard let self,
+                          let item,
+                          let lockedTitle = self.lockedRootTitles[identifier],
+                          item.title != lockedTitle else {
+                        return
+                    }
+                    item.title = lockedTitle
+                }
+            }
+            if !(entry.item is StableRootMenuItem), entry.item.title != entry.title {
+                entry.item.title = entry.title
+            }
+
+            guard let submenu = entry.item.submenu else { continue }
+            let submenuIdentifier = ObjectIdentifier(submenu)
+            if submenuTitleObservations[submenuIdentifier] == nil {
+                submenuTitleObservations[submenuIdentifier] = submenu.observe(\.title, options: [.new]) {
+                    [weak self, weak submenu] _, _ in
+                    guard let self,
+                          let submenu,
+                          let lockedTitle = self.lockedSubmenuTitles[submenuIdentifier],
+                          submenu.title != lockedTitle else {
+                        return
+                    }
+                    submenu.title = lockedTitle
+                }
+            }
+            if submenu.title != entry.title {
+                submenu.title = entry.title
+            }
+        }
     }
 
     override func addItem(_ newItem: NSMenuItem) {
@@ -102,8 +170,25 @@ enum AppMainMenuPruner {
         let stable = StableApplicationMainMenu(title: mainMenu.title)
         stable.autoenablesItems = mainMenu.autoenablesItems
         for item in mainMenu.items {
+            let replacement = StableRootMenuItem(
+                title: item.title,
+                action: item.action,
+                keyEquivalent: item.keyEquivalent
+            )
+            replacement.target = item.target
+            replacement.keyEquivalentModifierMask = item.keyEquivalentModifierMask
+            replacement.tag = item.tag
+            replacement.state = item.state
+            replacement.isEnabled = item.isEnabled
+            replacement.isHidden = item.isHidden
+            replacement.image = item.image
+            replacement.toolTip = item.toolTip
+            replacement.representedObject = item.representedObject
+            let submenu = item.submenu
+            item.submenu = nil
+            replacement.submenu = submenu
             mainMenu.removeItem(item)
-            stable.addItem(item)
+            stable.addItem(replacement)
         }
         stable.lockStructure()
         return stable
@@ -119,6 +204,13 @@ enum AppMainMenuPruner {
         removeExtraneousRootItems(mainMenu)
 
         if let language {
+            (mainMenu as? StableApplicationMainMenu)?.lockRootTitles([
+                (applicationItem, applicationItem.title),
+                (editItem, AppLocalization.text("Edit", language: language)),
+                (windowItem, AppLocalization.text("Window", language: language))
+            ].compactMap { item, title in
+                item.map { (item: $0, title: title) }
+            })
             localize(
                 applicationItem: applicationItem,
                 editItem: editItem,
@@ -305,8 +397,8 @@ enum AppMainMenuPruner {
         let action = item.action.map(NSStringFromSelector) ?? ""
         let key: String?
         switch action {
-        case "undo:": key = "Undo"
-        case "redo:": key = "Redo"
+        case "undo:", "performUndo:": key = "Undo"
+        case "redo:", "performRedo:": key = "Redo"
         case "cut:": key = "Cut"
         case "copy:": key = "Copy"
         case "paste:", "pasteAsPlainText:": key = "Paste"

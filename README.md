@@ -8,7 +8,7 @@ The application is an independent native implementation informed by observed
 behavior from an existing desktop downloader. No original executable or
 decompiled bytecode is included in this repository.
 
-Version 0.3.10 is the initial beta test release.
+Version 0.4.0 is a beta test release.
 
 ## Highlights
 
@@ -17,6 +17,7 @@ Version 0.3.10 is the initial beta test release.
 - Hitomi, YouTube, and other supported site handlers
 - Source-specific output folders, naming templates, ZIP and CBZ options
 - Embedded login windows and local cookie storage for sources that require them
+- Optional browser DPI bypass through a loopback-only SpoofDPI proxy
 - Thumbnail previews, output opening, graceful live-recording stop, and cleanup
 - English, Japanese, Simplified Chinese, Traditional Chinese, and Korean UI
 
@@ -61,10 +62,20 @@ The build uses the system macOS SDK and does not require an Xcode project.
 
 ## External tools
 
-An Apple-silicon build of aria2 1.37.0 is bundled together with its source,
-patch, and GPL license. yt-dlp, FFmpeg, and ffprobe are optional and are
-downloaded only after the user requests managed-tool installation. See
-[THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).
+Apple-silicon builds of aria2 1.37.0 and SpoofDPI 1.5.3 are bundled as separate
+helper processes with their license information. yt-dlp, FFmpeg, and ffprobe
+are optional and are downloaded only after the user requests managed-tool
+installation. See [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).
+
+## Browser DPI bypass
+
+The optional control is under **Settings > Network > Browser DPI Bypass**.
+Turning it on starts a proxy bound only to `127.0.0.1` and opens macOS Network
+settings. Set both **Web Proxy (HTTP)** and **Secure Web Proxy (HTTPS)** to the
+address shown by the app. The status updates when macOS applies or removes
+those settings. Turn both system proxies off when disabling the feature or
+before quitting the app; if they remain connected, the app opens Network
+settings during shutdown so they can be removed.
 
 ## Data and privacy
 

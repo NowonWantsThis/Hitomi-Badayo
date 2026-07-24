@@ -99,91 +99,88 @@ enum AppLocalization {
         guard !value.isEmpty else { return value }
 
         let exact = text(value, language: language, bundle: bundle)
-        if exact != value || language == .korean {
+        if exact != value || (language == .english && !containsHangul(value)) {
             return exact
         }
 
-        if value.hasPrefix("활성 단축키 "), value.hasSuffix("개") {
-            let count = value
-                .dropFirst("활성 단축키 ".count)
-                .dropLast()
-            return format("활성 단축키 %@개", language: language, bundle: bundle, String(count))
+        if value.hasSuffix(" Active Shortcuts") {
+            let count = String(value.dropLast(" Active Shortcuts".count))
+            return format("%@ Active Shortcuts", language: language, bundle: bundle, count)
         }
 
-        if value.hasPrefix("Python 3 준비됨 · ") {
-            let detail = String(value.dropFirst("Python 3 준비됨 · ".count))
-            if detail.hasSuffix("개 사용") {
-                let count = detail.dropLast("개 사용".count)
-                return format(
-                    "Python 3 준비됨 · %@개 사용",
-                    language: language,
-                    bundle: bundle,
-                    String(count)
-                )
-            }
-        }
-
-        if value.hasPrefix("자동 녹화 "), value.hasSuffix("개 대기열 추가") {
+        if value.hasPrefix("Python 3 Ready · "), value.hasSuffix(" Enabled") {
             let count = value
-                .dropFirst("자동 녹화 ".count)
-                .dropLast("개 대기열 추가".count)
+                .dropFirst("Python 3 Ready · ".count)
+                .dropLast(" Enabled".count)
             return format(
-                "자동 녹화 %@개 대기열 추가",
+                "Python 3 Ready · %@ Enabled",
                 language: language,
                 bundle: bundle,
                 String(count)
             )
         }
 
-        if value.hasPrefix("자동 녹화: "), value.hasSuffix("개 대기열 추가") {
+        if value.hasPrefix("Automatic Recording Added "), value.hasSuffix(" to Queue") {
             let count = value
-                .dropFirst("자동 녹화: ".count)
-                .dropLast("개 대기열 추가".count)
+                .dropFirst("Automatic Recording Added ".count)
+                .dropLast(" to Queue".count)
             return format(
-                "자동 녹화: %@개 대기열 추가",
+                "Automatic Recording Added %@ to Queue",
                 language: language,
                 bundle: bundle,
                 String(count)
             )
         }
 
-        if value.hasSuffix(" 설치 중…") {
+        if value.hasPrefix("Automatic Recording: Added "), value.hasSuffix(" to Queue") {
+            let count = value
+                .dropFirst("Automatic Recording: Added ".count)
+                .dropLast(" to Queue".count)
             return format(
-                "%@ 설치 중…",
+                "Automatic Recording: Added %@ to Queue",
                 language: language,
                 bundle: bundle,
-                String(value.dropLast(" 설치 중…".count))
+                String(count)
             )
         }
-        if let range = value.range(of: " 준비됨: ") {
+
+        if value.hasPrefix("Installing "), value.hasSuffix("…") {
             return format(
-                "%@ 준비됨: %@",
+                "Installing %@…",
+                language: language,
+                bundle: bundle,
+                String(value.dropFirst("Installing ".count).dropLast())
+            )
+        }
+        if let range = value.range(of: " Ready: ") {
+            return format(
+                "%@ Ready: %@",
                 language: language,
                 bundle: bundle,
                 String(value[..<range.lowerBound]),
                 String(value[range.upperBound...])
             )
         }
-        if let range = value.range(of: " 설치 실패: ") {
+        if let range = value.range(of: " Installation Failed: ") {
             return format(
-                "%@ 설치 실패: %@",
+                "%@ Installation Failed: %@",
                 language: language,
                 bundle: bundle,
                 String(value[..<range.lowerBound]),
                 String(value[range.upperBound...])
             )
         }
-        if value.hasSuffix(" 후크 실행 중...") {
+        if value.hasPrefix("Running "), value.hasSuffix(" Hook...") {
             return format(
-                "%@ 후크 실행 중...",
+                "Running %@ Hook...",
                 language: language,
                 bundle: bundle,
-                String(value.dropLast(" 후크 실행 중...".count))
+                String(value.dropFirst("Running ".count).dropLast(" Hook...".count))
             )
         }
-        if let range = value.range(of: " 후크 실패: ") {
+        if let range = value.range(of: " Hook Failed: ") {
             return format(
-                "%@ 후크 실패: %@",
+                "%@ Hook Failed: %@",
                 language: language,
                 bundle: bundle,
                 String(value[..<range.lowerBound]),
@@ -192,110 +189,137 @@ enum AppLocalization {
         }
 
         let replacements = [
-            "관리 도구 제거됨",
-            "관리 도구 제거 중",
-            "도구 설치 취소됨",
-            "도구 설치 실패",
-            "도구 제거 실패",
-            "자동 제거 후크",
-            "자동 녹화",
-            "Python 스크립트",
-            "실행 파일을 선택하세요",
-            "프록시 제외",
-            "공인 IP",
-            "확인 실패",
-            "확인 중",
-            "경유",
-            "직접",
-            "프록시",
-            "준비됨",
-            "없음",
-            "일시 정지",
-            "다시 시작",
-            "대기 중",
-            "실행 중",
-            "완료",
-            "꺼짐",
-            "켜짐",
-            "URL 필요",
-            "새 URL 없음",
-            "설치 실패",
-            "제거 실패",
-            "내장",
-            "계속 사용 가능"
+            "Managed Tools Removed",
+            "Removing Managed Tools",
+            "Tool Installation Cancelled",
+            "Tool Installation Failed",
+            "Tool Removal Failed",
+            "Auto-remove Hook",
+            "Automatic Recording",
+            "Python Scripts",
+            "Select an Executable",
+            "Proxy Bypassed",
+            "Public IP",
+            "Check Failed",
+            "Checking",
+            "Via",
+            "Direct",
+            "Proxy",
+            "Ready",
+            "Missing",
+            "Pause",
+            "Restart",
+            "Waiting",
+            "Running",
+            "Complete",
+            "Off",
+            "On",
+            "URL Required",
+            "No New URLs",
+            "Installation Failed",
+            "Removal Failed",
+            "Bundled",
+            "Remains Available"
         ]
-        return replacements.reduce(value) { result, key in
+        let localized = replacements.reduce(value) { result, key in
             result.replacingOccurrences(
-                of: key,
-                with: text(key, language: language, bundle: bundle)
+                of: "(?<![A-Za-z])\(NSRegularExpression.escapedPattern(for: key))(?![A-Za-z])",
+                with: text(key, language: language, bundle: bundle),
+                options: .regularExpression
             )
         }
+        if localized != value {
+            return localized
+        }
+
+        // Older queue records may contain Korean status strings from builds
+        // released before English became the canonical source language.
+        if language != .korean, containsHangul(value) {
+            if value.contains("시간이 초과") {
+                return text("The request timed out.", language: language, bundle: bundle)
+            }
+            return text("Status message unavailable.", language: language, bundle: bundle)
+        }
+        return value
     }
 
-    private static func fallbackText(_ key: String, language: AppInterfaceLanguage) -> String {
-        switch language {
-        case .korean:
-            return koreanFallback[key] ?? key
-        case .english, .japanese, .simplifiedChinese, .traditionalChinese:
-            return englishFallback[key] ?? key
+    static func errorText(
+        _ error: Error,
+        language: AppInterfaceLanguage = currentLanguage(),
+        bundle: Bundle = .main
+    ) -> String {
+        if error is CancellationError {
+            return text("Cancelled", language: language, bundle: bundle)
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            let code = URLError.Code(rawValue: nsError.code)
+            let key: String
+            switch code {
+            case .timedOut:
+                key = "The request timed out."
+            case .notConnectedToInternet:
+                key = "The Internet connection appears to be offline."
+            case .networkConnectionLost:
+                key = "The network connection was lost."
+            case .cannotFindHost, .dnsLookupFailed:
+                key = "The host could not be found."
+            case .cannotConnectToHost:
+                key = "Could not connect to the server."
+            case .secureConnectionFailed, .serverCertificateHasBadDate,
+                 .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
+                 .serverCertificateNotYetValid, .clientCertificateRejected,
+                 .clientCertificateRequired:
+                key = "A secure connection could not be established."
+            case .userAuthenticationRequired, .userCancelledAuthentication:
+                key = "Authentication is required."
+            case .resourceUnavailable:
+                key = "The requested resource is unavailable."
+            case .dataNotAllowed:
+                key = "Network access is not allowed."
+            case .badURL, .unsupportedURL:
+                key = "The URL is invalid or unsupported."
+            case .cannotDecodeContentData, .cannotDecodeRawData,
+                 .cannotParseResponse:
+                key = "The server response could not be decoded."
+            case .cancelled:
+                key = "Cancelled"
+            default:
+                return format(
+                    "Network request failed (error %@).",
+                    language: language,
+                    bundle: bundle,
+                    String(nsError.code)
+                )
+            }
+            return text(key, language: language, bundle: bundle)
+        }
+
+        let description = nsError.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        if language != .korean, containsHangul(description) {
+            return format(
+                "Operation failed (%@, error %@).",
+                language: language,
+                bundle: bundle,
+                nsError.domain,
+                String(nsError.code)
+            )
+        }
+        return statusText(description, language: language, bundle: bundle)
+    }
+
+    private static func fallbackText(_ key: String, language _: AppInterfaceLanguage) -> String {
+        key
+    }
+
+    private static func containsHangul(_ value: String) -> Bool {
+        value.unicodeScalars.contains { scalar in
+            (0xAC00...0xD7AF).contains(Int(scalar.value)) ||
+                (0x1100...0x11FF).contains(Int(scalar.value)) ||
+                (0x3130...0x318F).contains(Int(scalar.value))
         }
     }
-
-    private static let englishFallback: [String: String] = [
-        "일반": "General",
-        "네트워크": "Network",
-        "녹화": "Recording",
-        "디스플레이": "Display",
-        "압축": "Archive",
-        "플러그인": "Plugins",
-        "고급": "Advanced",
-        "소셜": "Social",
-        "토렌트": "Torrent",
-        "설정": "Settings",
-        "검색": "Search",
-        "언어": "Language",
-        "표시 언어": "Display language",
-        "작업": "Task",
-        "도구": "Tools",
-        "옵션": "Options",
-        "도움말": "Help",
-        "보기": "View",
-        "대기열 시작": "Start Queue",
-        "대기열 중지": "Stop Queue",
-        "녹화 중지": "Stop Recording",
-        "미리보기": "Preview",
-        "출력 폴더 열기": "Open Output Folder",
-        "작업과 다운로드 파일 삭제": "Delete Task and Downloaded Files",
-        "목록에서만 제거": "Remove from List Only",
-        "상세": "More",
-        "쿠키 없음": "No cookies"
-    ]
-
-    private static let koreanFallback: [String: String] = [
-        "About Hitomi Badayo": "Hitomi Badayo 정보",
-        "Settings...": "설정...",
-        "Start": "시작",
-        "Cancel": "중지",
-        "Clear": "정리",
-        "Settings": "설정",
-        "Progress": "진행 상황",
-        "History": "작업 기록",
-        "Browser": "브라우저",
-        "Output Preview": "결과물 미리보기",
-        "Stopping recording": "녹화 중지 중",
-        "Finalizing recording": "녹화 마무리 중",
-        "Recording stopped": "녹화 중지됨",
-        "Recording YouTube live": "유튜브 생방송 녹화 중",
-        "Downloading with yt-dlp": "yt-dlp로 다운로드 중",
-        "Language": "언어",
-        "General": "일반",
-        "Network": "네트워크",
-        "Display": "디스플레이",
-        "Plugins": "플러그인",
-        "Advanced": "고급",
-        "Social": "소셜",
-        "Torrent": "토렌트"
-    ]
 }
 
 extension Notification.Name {

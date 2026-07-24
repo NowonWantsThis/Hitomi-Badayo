@@ -35,6 +35,7 @@ enum SiteFaviconCatalog {
 
         if sourceURL?.isFileURL == true || source.hasPrefix("/") || contains("local file") { return "file" }
         if source.lowercased().hasPrefix("magnet:") || contains("torrent") { return "torrent" }
+        if contains("pawchive", "kemono friends", "kemono.cr", "kemono.su", "coomer.st") { return "pawchive" }
         if contains("pixiv comic", "pixiv_comic", "comic.pixiv") { return "pixiv_comic" }
         if contains("pixiv") { return "pixiv" }
         if contains("hitomi") { return "hitomi" }

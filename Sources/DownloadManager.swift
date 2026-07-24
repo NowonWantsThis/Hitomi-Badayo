@@ -60,6 +60,12 @@ private struct APIVideoThumbnailCacheEntry {
     }
 }
 
+private struct FirstOutputOpenRequest: Sendable {
+    var outputPath: String
+    var archivedFolderPath: String?
+    var archivePath: String?
+}
+
 private struct EffectivePythonHookCall {
     var plugin: PythonScriptPlugin
     var names: [String]
@@ -1340,7 +1346,7 @@ final class DownloadManager: ObservableObject {
     @Published var archiveSourceFilter = ""
     @Published var autoRemoveFinishedJobs = false
     @Published var autoRemoveHookCommand = ""
-    @Published var autoRemoveHookStatus = "자동 제거 후크 꺼짐"
+    @Published var autoRemoveHookStatus = "Auto-remove Hook Off"
     @Published var showDownloadDate = false
     @Published var numberPlaylistFiles = false
     @Published var retryIncompleteAutomatically = false
@@ -1362,7 +1368,7 @@ final class DownloadManager: ObservableObject {
     @Published var playSoundWhenJobCompletes = false
     @Published var playSoundOnClipboardAdd = false
     @Published var queueCompletionAction: QueueCompletionAction = .none
-    @Published var queueCompletionActionStatus = "완료 후: 아무것도 안 함"
+    @Published var queueCompletionActionStatus = "After completion: Do Nothing"
     @Published var preventSleepWhileDownloading = false
     @Published var sleepPreventionActive = false
     @Published var historyEnabled: Bool
@@ -1370,13 +1376,19 @@ final class DownloadManager: ObservableObject {
     @Published var proxyEnabled = false
     @Published var proxyURLString = ""
     @Published var proxyBypassList = ""
-    @Published var publicIPStatus = "공인 IP 미확인"
+    @Published var browserDPIBypassEnabled = false
+    @Published var browserDPIAdvancedExpanded = false
+    @Published private(set) var browserDPIBypassSnapshot = BrowserDPIBypassSnapshot(
+        phase: .off,
+        endpoint: BrowserDPIProxyEndpoint()
+    )
+    @Published var publicIPStatus = "Public IP Not Checked"
     @Published var isRefreshingPublicIP = false
     @Published var autoRecordEnabled = false
     @Published var autoRecordPaused = false
     @Published var autoRecordURLsText = ""
     @Published var autoRecordIntervalMinutesString = "10"
-    @Published var autoRecordStatus = "자동 녹화 꺼짐"
+    @Published var autoRecordStatus = "Automatic Recording Off"
     @Published var isAutoRecordChecking = false
     @Published var youtubePreferredLanguage = ""
     @Published var youtubeDownloadThumbnail = false
@@ -1395,6 +1407,15 @@ final class DownloadManager: ObservableObject {
     @Published var pixivUgoiraFileFormat: PixivUgoiraFileFormat = .ugoira
     @Published var pixivUgoiraDither = true
     @Published var pixivUgoiraQuality = 90
+    @Published private(set) var pawchiveSiteAddresses = PawchiveResolver.defaultSiteAddresses
+    @Published var pawchiveSiteAddressDraft = ""
+    @Published var pawchiveSelectedSiteAddress = ""
+    @Published var isAddingPawchiveSiteAddress = false
+    @Published var pawchiveDownloadLargeOriginalFiles = false
+    @Published var pawchiveDownloadImages = true
+    @Published var pawchiveDownloadVideos = true
+    @Published var pawchiveDownloadHTML = true
+    @Published var pawchiveDownloadOtherFiles = true
     @Published var remuxM3U8ToMP4 = false
     @Published var hlsContinueOnSegmentFailure = false
     @Published var m3u8SegmentDelayMillisecondsString = ""
@@ -1402,11 +1423,11 @@ final class DownloadManager: ObservableObject {
     @Published var ffmpegPath = ""
     @Published var pythonPath = ""
     @Published var pythonScriptPlugins: [PythonScriptPlugin] = []
-    @Published var pythonScriptStatus = "Python 스크립트 불러오지 않음"
-    @Published var pythonHookStatus = "후크 대기 중"
+    @Published var pythonScriptStatus = "Python Scripts Not Loaded"
+    @Published var pythonHookStatus = "Hook Waiting"
     @Published var isReloadingPythonScripts = false
     @Published var isInstallingExternalTools = false
-    @Published var externalToolInstallStatus = "도구 관리자 준비됨"
+    @Published var externalToolInstallStatus = "Tool Manager Ready"
     @Published var ffmpegTranscodeEnabled = false
     @Published var ffmpegVideoCodec = FFmpegTranscodeOptions.defaults.videoCodec
     @Published var ffmpegAudioCodec = FFmpegTranscodeOptions.defaults.audioCodec
@@ -1426,7 +1447,7 @@ final class DownloadManager: ObservableObject {
     @Published var httpAPIPortString = "8110"
     @Published var httpAPIPassword = ""
     @Published var httpViewerLazyLoading = true
-    @Published var httpAPIStatus = "HTTP API 꺼짐"
+    @Published var httpAPIStatus = "HTTP API Off"
     @Published private(set) var browserExtensionStatus = "Browser extension off"
     @Published var queueFilter = ""
     @Published var showingQueueControls = false
@@ -1462,7 +1483,7 @@ final class DownloadManager: ObservableObject {
     @Published var draggedQueueJobIDs: Set<UUID> = []
     @Published var queueJobDropTarget: QueueJobDropTarget?
     @Published var queueFilterBookmarks: [QueueFilterBookmark] = []
-    @Published var cookieSummary = "쿠키 없음"
+    @Published var cookieSummary = "No cookies"
     @Published private(set) var isClearingCookies = false
     @Published var activityLog: [ActivityLogEntry] = []
     @Published var activityLogAutoRefreshAndScroll = true
@@ -1582,7 +1603,7 @@ final class DownloadManager: ObservableObject {
     @Published var isCopyingGalleryNumbers = false
     @Published var appAppearanceMode: AppAppearanceMode = .system
     @Published var selectedPythonThemeKey = ""
-    @Published var pythonThemeStatus = "기본 테마"
+    @Published var pythonThemeStatus = "Default Theme"
     @Published var uiScale: AppUIScale = .defaultScale
     @Published var queueViewMode: QueueViewMode = .list
     @Published var queueThumbnailsHidden = false
@@ -1909,7 +1930,7 @@ final class DownloadManager: ObservableObject {
     var interfaceFontSummary: String {
         let family = Self.normalizedInterfaceFontFamily(interfaceFontFamily)
         let displayFamily = family.isEmpty
-            ? AppLocalization.text("시스템", language: interfaceLanguage)
+            ? AppLocalization.text("System", language: interfaceLanguage)
             : family
         return "\(displayFamily) / \(interfaceFontSize.label)"
     }
@@ -2076,6 +2097,7 @@ final class DownloadManager: ObservableObject {
     private let kakaoPageResolver = KakaoPageResolver()
     private let pixivArtworkResolver = PixivArtworkResolver()
     private let pixivComicResolver = PixivComicResolver()
+    private let pawchiveResolver = PawchiveResolver()
     private let comicWalkerResolver = ComicWalkerResolver()
     private let sankakuResolver = SankakuResolver()
     private let m3u8Resolver = M3U8Resolver()
@@ -2086,6 +2108,7 @@ final class DownloadManager: ObservableObject {
     private let ffmpegBridge = FFmpegBridge()
     private let aria2Bridge = Aria2Bridge()
     private let customCommandBridge = CustomCommandBridge()
+    private let browserDPIBypassService = BrowserDPIBypassService()
 
     init(niconicoLiveResolver: NiconicoLiveResolver = NiconicoLiveResolver()) {
         self.niconicoLiveResolver = niconicoLiveResolver
@@ -2298,7 +2321,7 @@ final class DownloadManager: ObservableObject {
         autoRemoveFinishedJobs = defaults.object(forKey: "autoRemoveFinishedJobs") as? Bool ?? false
         let savedAutoRemoveHookCommand = defaults.string(forKey: "autoRemoveHookCommand") ?? ""
         autoRemoveHookCommand = savedAutoRemoveHookCommand
-        autoRemoveHookStatus = savedAutoRemoveHookCommand.trimmed.isEmpty ? "자동 제거 후크 꺼짐" : "자동 제거 후크 준비됨"
+        autoRemoveHookStatus = savedAutoRemoveHookCommand.trimmed.isEmpty ? "Auto-remove Hook Off" : "Auto-remove Hook Ready"
         showDownloadDate = defaults.object(forKey: "showDownloadDate") as? Bool ?? false
         numberPlaylistFiles = defaults.object(forKey: "numberPlaylistFiles") as? Bool ?? false
         retryIncompleteAutomatically =
@@ -2388,6 +2411,9 @@ final class DownloadManager: ObservableObject {
         proxyEnabled = networkSettings.proxyEnabled
         proxyURLString = networkSettings.proxyURLString
         proxyBypassList = networkSettings.proxyBypassList
+        browserDPIBypassEnabled =
+            defaults.object(forKey: "browserDPIBypassEnabled") as? Bool ?? false
+        browserDPIBypassSnapshot = browserDPIBypassService.snapshot
         autoRecordEnabled = Self.environmentBool("HITOMI_NATIVE_AUTO_RECORD_ENABLED")
             ?? (defaults.object(forKey: "autoRecordEnabled") as? Bool ?? false)
         autoRecordPaused = defaults.object(forKey: "autoRecordPaused") as? Bool ?? false
@@ -2395,8 +2421,8 @@ final class DownloadManager: ObservableObject {
         let savedAutoRecordInterval = defaults.object(forKey: "autoRecordIntervalMinutes") as? Int ?? 10
         autoRecordIntervalMinutesString = String(Self.normalizedAutoRecordIntervalMinutes(from: String(savedAutoRecordInterval)))
         autoRecordStatus = autoRecordEnabled
-            ? (autoRecordPaused ? "자동 녹화 일시 정지" : "자동 녹화 대기 중")
-            : "자동 녹화 꺼짐"
+            ? (autoRecordPaused ? "Automatic Recording Paused" : "Automatic Recording Waiting")
+            : "Automatic Recording Off"
         youtubePreferredLanguage = defaults.string(forKey: "youtubePreferredLanguage") ?? ""
         youtubeDownloadThumbnail = defaults.object(forKey: "youtubeDownloadThumbnail") as? Bool ?? false
         youtubeReversePlaylist = defaults.object(forKey: "youtubeReversePlaylist") as? Bool ?? false
@@ -2420,6 +2446,23 @@ final class DownloadManager: ObservableObject {
         pixivUgoiraFileFormat = PixivUgoiraFileFormat(rawValue: defaults.string(forKey: "pixivUgoiraFileFormat") ?? "") ?? .ugoira
         pixivUgoiraDither = defaults.object(forKey: "pixivUgoiraDither") as? Bool ?? true
         pixivUgoiraQuality = min(max(1, defaults.object(forKey: "pixivUgoiraQuality") as? Int ?? 90), 100)
+        if defaults.object(forKey: "pawchiveSiteAddresses") != nil {
+            pawchiveSiteAddresses = PawchiveResolver.normalizedSiteAddresses(
+                defaults.stringArray(forKey: "pawchiveSiteAddresses") ?? []
+            )
+        } else {
+            pawchiveSiteAddresses = PawchiveResolver.defaultSiteAddresses
+        }
+        pawchiveDownloadLargeOriginalFiles =
+            defaults.object(forKey: "pawchiveDownloadLargeOriginalFiles") as? Bool ?? false
+        pawchiveDownloadImages =
+            defaults.object(forKey: "pawchiveDownloadImages") as? Bool ?? true
+        pawchiveDownloadVideos =
+            defaults.object(forKey: "pawchiveDownloadVideos") as? Bool ?? true
+        pawchiveDownloadHTML =
+            defaults.object(forKey: "pawchiveDownloadHTML") as? Bool ?? true
+        pawchiveDownloadOtherFiles =
+            defaults.object(forKey: "pawchiveDownloadOtherFiles") as? Bool ?? true
         remuxM3U8ToMP4 = defaults.object(forKey: "remuxM3U8ToMP4") as? Bool ?? false
         hlsContinueOnSegmentFailure = defaults.object(forKey: "hlsContinueOnSegmentFailure") as? Bool ?? false
         let savedM3U8Delay = defaults.object(forKey: "m3u8SegmentDelayMilliseconds") as? Int ?? 0
@@ -2475,7 +2518,7 @@ final class DownloadManager: ObservableObject {
         }
         syncAutoRecordMonitor()
         recordActivity("App started", category: "App")
-        cookieSummary = CookieStore.hasPersistedStore ? "저장된 쿠키 (필요할 때 불러옴)" : "쿠키 없음"
+        cookieSummary = CookieStore.hasPersistedStore ? "Saved cookies (loaded when needed)" : "No cookies"
         if CookieStore.hasPersistedStore {
             Task { [weak self] in
                 let count = await CookieStore.shared.count
@@ -2490,6 +2533,20 @@ final class DownloadManager: ObservableObject {
             await self?.backfillCompletedOutputMetadata()
         }
         restoreScheduledRetries()
+        browserDPIBypassService.onUpdate = { [weak self] snapshot in
+            guard let self else { return }
+            self.browserDPIBypassSnapshot = snapshot
+            if snapshot.phase == .failed || snapshot.phase == .conflictingSystemProxy {
+                self.browserDPIBypassEnabled = false
+                UserDefaults.standard.set(false, forKey: "browserDPIBypassEnabled")
+                self.addSummary = snapshot.diagnostic.isEmpty
+                    ? "DPI Bypass Failed"
+                    : snapshot.diagnostic
+            }
+        }
+        if browserDPIBypassEnabled {
+            browserDPIBypassService.start(openSystemSettings: false)
+        }
     }
 
     private nonisolated static func normalizedQueueGroups(
@@ -2632,6 +2689,8 @@ final class DownloadManager: ObservableObject {
     }
 
     deinit {
+        HTTPClient.shared.resumeAllTransfers()
+        ExternalProcessRunner.resumeAllForQueue()
         queueTask?.cancel()
         runningJobTasks.values.forEach { $0.cancel() }
         aria2RuntimeProcesses.values.forEach { $0.terminate() }
@@ -2689,13 +2748,17 @@ final class DownloadManager: ObservableObject {
         runtimeProcesses.forEach { $0.terminate() }
         ffmpegProcesses.forEach { $0.terminate() }
         ytdlpProcesses.forEach { $0.terminate() }
+        HTTPClient.shared.resumeAllTransfers()
+        ExternalProcessRunner.resumeAllForQueue()
 
         releaseSleepPreventionAssertion()
         stopHTTPAPIServer()
         stopBrowserExtensionServer()
+        browserDPIBypassService.prepareForTermination()
         stopClipboardMonitor()
         normalizeActiveQueueOrder()
         persistSourceFileNameTemplates()
+        persistPawchiveSettings()
         QuickAccessConfiguration.save(quickAccessItems)
         UserDefaults.standard.set(mainWindowAlwaysOnTop, forKey: "mainWindowAlwaysOnTop")
         persistUserData()
@@ -2747,17 +2810,27 @@ final class DownloadManager: ObservableObject {
             .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
     }
 
-    func outputDirectoriesText(entries: [OutputDirectoryEntry]? = nil) -> String {
+    func outputDirectoriesText(
+        entries: [OutputDirectoryEntry]? = nil,
+        language: AppInterfaceLanguage = AppLocalization.currentLanguage()
+    ) -> String {
         let entries = entries ?? outputDirectoryEntries()
-        guard !entries.isEmpty else { return "No directories" }
+        guard !entries.isEmpty else { return AppLocalization.text("No directories", language: language) }
 
         let lines = entries.map { entry -> String in
-            let counts = Self.outputDirectoryCountText(queueCount: entry.queueCount, historyCount: entry.historyCount)
-            let state = entry.exists ? (entry.isDirectory ? "exists" : "file parent") : "missing"
+            let counts = Self.outputDirectoryCountText(
+                queueCount: entry.queueCount,
+                historyCount: entry.historyCount,
+                language: language
+            )
+            let stateKey = entry.exists ? (entry.isDirectory ? "Exists" : "File Parent") : "Missing"
+            let state = AppLocalization.text(stateKey, language: language)
             let suffix = entry.sampleTitle.trimmed.isEmpty ? "" : " - \(entry.sampleTitle)"
-            return "[\(entry.scope)] \(entry.path)\n  \(counts), \(state)\(suffix)"
+            let scope = AppLocalization.text(entry.scope, language: language)
+            return "[\(scope)] \(entry.path)\n  \(counts), \(state)\(suffix)"
         }
-        return "Dirs (\(entries.count))\n\n" + lines.joined(separator: "\n")
+        return AppLocalization.format("Dirs (%@)", language: language, String(entries.count))
+            + "\n\n" + lines.joined(separator: "\n")
     }
 
     func metadataFinderResults(
@@ -3018,12 +3091,20 @@ final class DownloadManager: ObservableObject {
         }
     }
 
-    private nonisolated static func outputDirectoryCountText(queueCount: Int, historyCount: Int) -> String {
+    private nonisolated static func outputDirectoryCountText(
+        queueCount: Int,
+        historyCount: Int,
+        language: AppInterfaceLanguage
+    ) -> String {
         let pieces = [
-            queueCount > 0 ? "\(queueCount) queue" : nil,
-            historyCount > 0 ? "\(historyCount) history" : nil
+            queueCount > 0
+                ? AppLocalization.format("%@ queue", language: language, String(queueCount))
+                : nil,
+            historyCount > 0
+                ? AppLocalization.format("%@ history", language: language, String(historyCount))
+                : nil
         ].compactMap { $0 }
-        return pieces.isEmpty ? "0 items" : pieces.joined(separator: ", ")
+        return pieces.isEmpty ? AppLocalization.text("0 items", language: language) : pieces.joined(separator: ", ")
     }
 
     nonisolated static func metadataFinderKeys(for field: MetadataFinderField) -> [String] {
@@ -4295,7 +4376,7 @@ final class DownloadManager: ObservableObject {
             operatingSystemVersion: ProcessInfo.processInfo.operatingSystemVersionString,
             latestVersionText: "Native macOS build",
             developedBy: "A native macOS downloader recreated through reverse engineering.",
-            licenseSummary: "Hitomi Badayo is released under the MIT License. The bundled aria2c helper remains GPL-2.0-or-later, and managed tools retain their respective upstream licenses. See Third-Party Notices in the app resources.",
+            licenseSummary: "Hitomi Badayo is released under the MIT License. The bundled aria2c helper remains GPL-2.0-or-later, the bundled SpoofDPI helper remains Apache-2.0, and managed tools retain their respective upstream licenses. See Third-Party Notices in the app resources.",
             historySummary: "Initial beta release with native queue, downloader, preview, login, and media workflows."
         )
     }
@@ -5331,7 +5412,7 @@ final class DownloadManager: ObservableObject {
 
     private nonisolated static let queueFilterNoTagAliases: Set<String> = [
         "none", "missing", "empty", "untagged", "tagless", "notags", "no_tag", "no-tags",
-        "no tags", "태그없음", "태그_없음", "태그-없음", "없음"
+        "no tags", "태그없음", "태그_없음", "태그-없음", "Missing"
     ]
 
     private nonisolated static let queueFilterAnyTagAliases: Set<String> = [
@@ -6674,7 +6755,7 @@ final class DownloadManager: ObservableObject {
                     errorMessage: nil
                 )
             } catch {
-                return TextViewerDocument(entry: entry, text: "", bytesRead: 0, byteCount: apiOutputFileSize(file), truncated: false, errorMessage: error.localizedDescription)
+                return TextViewerDocument(entry: entry, text: "", bytesRead: 0, byteCount: apiOutputFileSize(file), truncated: false, errorMessage: AppLocalization.errorText(error))
             }
         }
 
@@ -7149,7 +7230,7 @@ final class DownloadManager: ObservableObject {
         do {
             _ = try importQueueJobs(from: url)
         } catch {
-            addSummary = "HDT import failed: \(error.localizedDescription)"
+            addSummary = "HDT import failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -7162,7 +7243,7 @@ final class DownloadManager: ObservableObject {
         do {
             try exportQueueJobs(to: url)
         } catch {
-            addSummary = "HDT export failed: \(error.localizedDescription)"
+            addSummary = "HDT export failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -7170,7 +7251,7 @@ final class DownloadManager: ObservableObject {
         do {
             _ = try importQueueJobs(from: url)
         } catch {
-            addSummary = "HDT import failed: \(error.localizedDescription)"
+            addSummary = "HDT import failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -7418,13 +7499,13 @@ final class DownloadManager: ObservableObject {
                             : "\(plugin.title) \(asPlugin ? "installed" : "imported")"
                     }
                 } catch {
-                    self.pythonScriptStatus = error.localizedDescription
-                    self.addSummary = "Python script import failed: \(error.localizedDescription)"
+                    self.pythonScriptStatus = AppLocalization.errorText(error)
+                    self.addSummary = "Python script import failed: \(AppLocalization.errorText(error))"
                 }
             }
         } catch {
-            pythonScriptStatus = error.localizedDescription
-            addSummary = "Python script import failed: \(error.localizedDescription)"
+            pythonScriptStatus = AppLocalization.errorText(error)
+            addSummary = "Python script import failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -7483,7 +7564,7 @@ final class DownloadManager: ObservableObject {
     func reloadPythonScriptPluginsNow() async {
         guard !isReloadingPythonScripts else { return }
         isReloadingPythonScripts = true
-        pythonScriptStatus = "Python 스크립트 다시 불러오는 중..."
+        pythonScriptStatus = "Reloading Python Scripts..."
         let current = pythonScriptPlugins
         var refreshed: [PythonScriptPlugin] = []
         var failed = 0
@@ -7504,7 +7585,7 @@ final class DownloadManager: ObservableObject {
             } catch {
                 var plugin = previous
                 plugin.isEnabled = false
-                plugin.lastError = error.localizedDescription
+                plugin.lastError = AppLocalization.errorText(error)
                 if !plugin.isSession {
                     try? PythonScriptPluginStore.save(plugin)
                 }
@@ -7539,15 +7620,15 @@ final class DownloadManager: ObservableObject {
                 try? PythonScriptPluginStore.save(pythonScriptPlugins[index])
             } catch {
                 guard let index = pythonScriptPlugins.firstIndex(where: { $0.id == previous.id }) else { continue }
-                pythonScriptPlugins[index].lastError = error.localizedDescription
+                pythonScriptPlugins[index].lastError = AppLocalization.errorText(error)
                 failures += 1
                 try? PythonScriptPluginStore.save(pythonScriptPlugins[index])
-                recordActivity("Tool plugin failed: \(previous.title) - \(error.localizedDescription)", category: "Script")
+                recordActivity("Tool plugin failed: \(previous.title) - \(AppLocalization.errorText(error))", category: "Script")
             }
         }
         refreshPythonScriptStatus()
         if failures > 0 {
-            pythonScriptStatus = "시작할 때 도구 플러그인 \(failures)개 실패"
+            pythonScriptStatus = "\(failures) tool plugins failed at startup"
         }
     }
 
@@ -7573,7 +7654,7 @@ final class DownloadManager: ObservableObject {
             refreshPythonScriptStatus()
             addSummary = "\(current.title) removed"
         } catch {
-            addSummary = "Python script removal failed: \(error.localizedDescription)"
+            addSummary = "Python script removal failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -7608,7 +7689,7 @@ final class DownloadManager: ObservableObject {
             try AppPaths.ensureDirectory(AppPaths.pythonPluginDirectory)
             NSWorkspace.shared.open(AppPaths.pythonPluginDirectory)
         } catch {
-            addSummary = "Plugin folder unavailable: \(error.localizedDescription)"
+            addSummary = "Plugin folder unavailable: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -7668,7 +7749,7 @@ final class DownloadManager: ObservableObject {
 
     private func refreshPythonThemeSelection() {
         let key = selectedPythonThemeKey.trimmed.lowercased()
-        let defaultLabel = AppLocalization.text("기본", language: interfaceLanguage)
+        let defaultLabel = AppLocalization.text("Default", language: interfaceLanguage)
         guard !key.isEmpty else {
             selectedPythonThemeKey = ""
             pythonThemeStatus = "\(defaultLabel) · \(appAppearanceMode.label)"
@@ -7684,8 +7765,8 @@ final class DownloadManager: ObservableObject {
         let appearance: String
         switch theme.appearance {
         case .system: appearance = appAppearanceMode.label
-        case .light: appearance = AppLocalization.text("라이트", language: interfaceLanguage)
-        case .dark: appearance = AppLocalization.text("다크", language: interfaceLanguage)
+        case .light: appearance = AppLocalization.text("Light", language: interfaceLanguage)
+        case .dark: appearance = AppLocalization.text("Dark", language: interfaceLanguage)
         }
         pythonThemeStatus = "\(theme.displayName) · \(appearance)"
     }
@@ -7694,8 +7775,8 @@ final class DownloadManager: ObservableObject {
         let enabled = pythonScriptPlugins.filter(\.isEnabled).count
         let runtimeReady = PythonScriptBridge.pythonExecutableURL(configuredPath: pythonPath) != nil
         pythonScriptStatus = runtimeReady
-            ? "Python 3 준비됨 · \(enabled)/\(pythonScriptPlugins.count)개 사용"
-            : "Python 3 없음 · 실행 파일을 선택하세요"
+            ? "Python 3 Ready · \(enabled)/\(pythonScriptPlugins.count) Enabled"
+            : "Python 3 Missing · Select an Executable"
         refreshPythonThemeSelection()
     }
 
@@ -7754,7 +7835,7 @@ final class DownloadManager: ObservableObject {
         guard !calls.isEmpty else { return initialContext }
         var context = initialContext
         var executed = 0
-        pythonHookStatus = "\(event.shortLabel) 후크 실행 중..."
+        pythonHookStatus = "Running \(event.shortLabel) Hook..."
 
         do {
             for call in calls {
@@ -7768,10 +7849,10 @@ final class DownloadManager: ObservableObject {
                 executed += call.names.count
                 recordPythonHookLogs(result.logs, plugin: call.plugin, event: event)
             }
-            pythonHookStatus = "\(event.shortLabel.capitalized): 후크 \(executed)개"
+            pythonHookStatus = "\(event.shortLabel.capitalized): \(executed) Hooks Executed"
             return context
         } catch {
-            pythonHookStatus = "\(event.shortLabel.capitalized) 후크 실패: \(error.localizedDescription)"
+            pythonHookStatus = "\(event.shortLabel.capitalized) Hook Failed: \(AppLocalization.errorText(error))"
             throw error
         }
     }
@@ -8075,7 +8156,7 @@ final class DownloadManager: ObservableObject {
                     metadataUpdates[QueueThumbnailProvider.customThumbnailMetadataKey] = ""
                 }
             } catch {
-                addSummary = "Thumbnail update failed: \(error.localizedDescription)"
+                addSummary = "Thumbnail update failed: \(AppLocalization.errorText(error))"
                 return
             }
         }
@@ -8122,7 +8203,7 @@ final class DownloadManager: ObservableObject {
             addSummary = "Custom thumbnail selected"
         } catch {
             jobEditThumbnailMessage = "Could not read thumbnail"
-            addSummary = "Thumbnail selection failed: \(error.localizedDescription)"
+            addSummary = "Thumbnail selection failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -8174,7 +8255,7 @@ final class DownloadManager: ObservableObject {
             addSummary = "Thumbnail saved"
         } catch {
             jobEditThumbnailMessage = "Could not save thumbnail"
-            addSummary = "Thumbnail save failed: \(error.localizedDescription)"
+            addSummary = "Thumbnail save failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -8354,7 +8435,7 @@ final class DownloadManager: ObservableObject {
             do {
                 _ = try Self.assetIndexes(forRangeExpression: range, total: total)
             } catch {
-                pageSelectorMessage = error.localizedDescription
+                pageSelectorMessage = AppLocalization.errorText(error)
                 return
             }
         }
@@ -8569,23 +8650,26 @@ final class DownloadManager: ObservableObject {
         addSummary = "History cleared"
     }
 
-    func historyPlainText() -> String {
-        guard !history.isEmpty else { return "No history" }
+    func historyPlainText(
+        language: AppInterfaceLanguage = AppLocalization.currentLanguage()
+    ) -> String {
+        guard !history.isEmpty else { return AppLocalization.text("No history", language: language) }
         let formatter = DateFormatter()
+        formatter.locale = language.locale
         formatter.dateStyle = .medium
         formatter.timeStyle = .medium
         return history.enumerated().map { index, entry in
             var lines = [
                 "[\(index + 1)] \(entry.title.trimmed.isEmpty ? entry.source : entry.title)",
-                "URL: \(entry.source)",
-                "Output: \(entry.outputPath)",
-                "Completed: \(formatter.string(from: entry.completedAt))"
+                "\(AppLocalization.text("URL", language: language)): \(entry.source)",
+                "\(AppLocalization.text("Output", language: language)): \(entry.outputPath)",
+                "\(AppLocalization.text("Completed", language: language)): \(formatter.string(from: entry.completedAt))"
             ]
             let metadata = entry.metadata
                 .filter { !$0.key.trimmed.isEmpty && !$0.value.trimmed.isEmpty }
                 .sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }
             if !metadata.isEmpty {
-                lines.append("Metadata:")
+                lines.append("\(AppLocalization.text("Metadata", language: language)):")
                 lines.append(contentsOf: metadata.map { "  \($0.key): \($0.value)" })
             }
             return lines.joined(separator: "\n")
@@ -10639,7 +10723,7 @@ final class DownloadManager: ObservableObject {
 
     func saveAutoRemoveHookCommand() {
         persistAutoRemoveHookCommand()
-        autoRemoveHookStatus = autoRemoveHookCommand.trimmed.isEmpty ? "자동 제거 후크 꺼짐" : "자동 제거 후크 저장됨"
+        autoRemoveHookStatus = autoRemoveHookCommand.trimmed.isEmpty ? "Auto-remove Hook Off" : "Auto-remove Hook Saved"
         addSummary = autoRemoveHookStatus
     }
 
@@ -10733,9 +10817,9 @@ final class DownloadManager: ObservableObject {
         queueCompletionActionStatus = Self.queueCompletionActionStatusText(for: queueCompletionAction)
         refreshPythonThemeSelection()
         if isClearingCookies {
-            cookieSummary = AppLocalization.text("쿠키 및 로그인 세션 삭제 중...", language: interfaceLanguage)
-        } else if cookieSummary == "쿠키 없음" || cookieSummary == "No cookies" {
-            cookieSummary = AppLocalization.text("쿠키 없음", language: interfaceLanguage)
+            cookieSummary = AppLocalization.text("Deleting cookies and login sessions...", language: interfaceLanguage)
+        } else if cookieSummary == "No cookies" || cookieSummary == "No cookies" {
+            cookieSummary = AppLocalization.text("No cookies", language: interfaceLanguage)
         }
     }
 
@@ -11764,7 +11848,7 @@ final class DownloadManager: ObservableObject {
                     jobs[index].metadata.removeValue(forKey: Self.pendingQueueOutputDeletionMetadataKey)
                     jobs[index].metadata["output_delete_partial_at"] = deletedAt
                     jobs[index].metadata["output_delete_failed_count"] = "1"
-                    jobs[index].message = "Output delete failed: \(error.localizedDescription)"
+                    jobs[index].message = "Output delete failed: \(AppLocalization.errorText(error))"
                 }
             }
         }
@@ -11873,7 +11957,7 @@ final class DownloadManager: ObservableObject {
             return delay.label
         }
         guard seconds > 0 else { return TaskTagRestartDelay.off.label }
-        return "\(Self.restartDelayDescription(for: TimeInterval(seconds))) 뒤 다시 시작"
+        return "Restart after \(Self.restartDelayDescription(for: TimeInterval(seconds)))"
     }
 
     func setTaskTagRestartDelay(_ delay: TaskTagRestartDelay, for tag: TaskTagColor) {
@@ -11999,7 +12083,7 @@ final class DownloadManager: ObservableObject {
 
     func beginCreatingQueueGroup() {
         guard queueSortMode == .manual else {
-            addSummary = "기본 정렬 상태에서만 그룹을 만들 수 있습니다."
+            addSummary = "Groups can only be created while using manual sort."
             return
         }
         guard !isRunning else {
@@ -12008,7 +12092,7 @@ final class DownloadManager: ObservableObject {
         }
         let selectedIDs = selectedJobIDs.intersection(Set(jobs.map(\.id)))
         if jobs.contains(where: { selectedIDs.contains($0.id) && jobGroupID(for: $0) != nil }) {
-            addSummary = "이미 포함하는 그룹이 있습니다."
+            addSummary = "One or more selected tasks already belong to a group."
             return
         }
         queueGroupPromptAction = .create(jobIDs: selectedIDs)
@@ -12027,7 +12111,7 @@ final class DownloadManager: ObservableObject {
 
     func beginMovingJobToNewGroup(_ job: DownloadJob) {
         guard queueSortMode == .manual else {
-            addSummary = "기본 정렬 상태에서만 그룹으로 이동할 수 있습니다."
+            addSummary = "Tasks can only be moved to groups while using manual sort."
             return
         }
         guard let current = jobs.first(where: { $0.id == job.id }) else { return }
@@ -12118,7 +12202,7 @@ final class DownloadManager: ObservableObject {
         guard !name.isEmpty, queueSortMode == .manual, !isRunning else { return nil }
         let selected = jobs.filter { jobIDs.contains($0.id) }
         guard !selected.contains(where: { jobGroupID(for: $0) != nil }) else {
-            addSummary = "이미 포함하는 그룹이 있습니다."
+            addSummary = "One or more selected tasks already belong to a group."
             return nil
         }
 
@@ -12148,7 +12232,7 @@ final class DownloadManager: ObservableObject {
     @discardableResult
     func moveJobs(_ jobIDs: Set<UUID>, toQueueGroup groupID: UUID?) -> Bool {
         guard queueSortMode == .manual else {
-            addSummary = "기본 정렬 상태에서만 그룹으로 이동할 수 있습니다."
+            addSummary = "Tasks can only be moved to groups while using manual sort."
             return false
         }
         guard !isRunning else {
@@ -12382,12 +12466,12 @@ final class DownloadManager: ObservableObject {
         let qualitySlider = NSSlider(value: 95, minValue: 1, maxValue: 100, target: nil, action: nil)
         qualitySlider.numberOfTickMarks = 5
         qualitySlider.allowsTickMarkValuesOnly = false
-        let qualityTitle = AppLocalization.text("JPEG 화질", language: interfaceLanguage)
+        let qualityTitle = AppLocalization.text("JPEG Quality", language: interfaceLanguage)
         qualitySlider.toolTip = qualityTitle
         qualitySlider.setAccessibilityLabel(qualityTitle)
 
         let form = NSGridView(views: [
-            [NSTextField(labelWithString: AppLocalization.text("파일 형식", language: interfaceLanguage)), formatPopup],
+            [NSTextField(labelWithString: AppLocalization.text("File Format", language: interfaceLanguage)), formatPopup],
             [NSTextField(labelWithString: qualityTitle), qualitySlider]
         ])
         form.column(at: 0).xPlacement = .trailing
@@ -12398,14 +12482,14 @@ final class DownloadManager: ObservableObject {
 
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = AppLocalization.text("이미지 포맷 변환", language: interfaceLanguage)
+        alert.messageText = AppLocalization.text("Convert Image Format", language: interfaceLanguage)
         alert.informativeText = AppLocalization.text(
-            "선택한 완료 작업의 이미지 파일을 변환합니다.",
+            "Convert image files from the selected completed tasks.",
             language: interfaceLanguage
         )
         alert.accessoryView = form
-        alert.addButton(withTitle: AppLocalization.text("변환", language: interfaceLanguage))
-        alert.addButton(withTitle: AppLocalization.text("취소", language: interfaceLanguage))
+        alert.addButton(withTitle: AppLocalization.text("Convert", language: interfaceLanguage))
+        alert.addButton(withTitle: AppLocalization.text("Cancel", language: interfaceLanguage))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
         let selectedIndex = max(0, min(formatPopup.indexOfSelectedItem, formats.count - 1))
@@ -12462,7 +12546,7 @@ final class DownloadManager: ObservableObject {
                     return OutputImageConversionJobResult(
                         request: request,
                         result: nil,
-                        errorDescription: error.localizedDescription
+                        errorDescription: AppLocalization.errorText(error)
                     )
                 }
             }
@@ -12604,13 +12688,65 @@ final class DownloadManager: ObservableObject {
 
     func saveProxySettings() {
         guard persistProxySettingsForUse() else { return }
-        addSummary = proxyEnabled ? "프록시 저장됨" : "프록시 꺼짐"
+        addSummary = proxyEnabled ? "Proxy saved" : "Proxy off"
+    }
+
+    func setBrowserDPIBypassEnabled(_ enabled: Bool) {
+        guard !browserDPIBypassSnapshot.phase.isBusy else { return }
+        browserDPIBypassEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "browserDPIBypassEnabled")
+        if enabled {
+            browserDPIBypassService.start(openSystemSettings: false)
+            addSummary = "Configuring app & browser DPI bypass"
+        } else {
+            browserDPIBypassService.requestStop(openSystemSettings: false)
+            addSummary = "Restoring network settings"
+        }
+    }
+
+    func restoreBrowserDPIProxySettings() {
+        browserDPIBypassEnabled = false
+        UserDefaults.standard.set(false, forKey: "browserDPIBypassEnabled")
+        browserDPIBypassService.restoreSystemProxySettings()
+        addSummary = "Restoring network settings"
+    }
+
+    var requiresBrowserDPIProxyRestorationBeforeTermination: Bool {
+        browserDPIBypassService.requiresProxyRestorationBeforeTermination
+    }
+
+    func restoreBrowserDPIProxyBeforeTermination() async -> Bool {
+        await browserDPIBypassService.restoreBeforeTermination()
+    }
+
+    func openBrowserDPIProxySettings() {
+        if browserDPIBypassService.openSystemProxySettings() {
+            addSummary = "macOS Proxy Settings opened"
+        } else {
+            addSummary = "Could not open macOS Network settings"
+        }
+    }
+
+    func refreshBrowserDPIBypassStatus() {
+        browserDPIBypassService.refreshSystemProxyState()
+        browserDPIBypassSnapshot = browserDPIBypassService.snapshot
+        addSummary = "DPI bypass status refreshed"
+    }
+
+    func copyBrowserDPIProxyAddress() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        if pasteboard.setString(browserDPIBypassSnapshot.endpoint.displayValue, forType: .string) {
+            addSummary = "Proxy address copied"
+        } else {
+            addSummary = "Copy failed"
+        }
     }
 
     func refreshPublicIP() {
         guard !isRefreshingPublicIP else { return }
         guard persistProxySettingsForUse() else {
-            publicIPStatus = "프록시 확인 실패: 잘못된 프록시 URL"
+            publicIPStatus = "Proxy check failed: invalid proxy URL"
             return
         }
         let lookupURL = Self.publicIPLookupURL()
@@ -12623,14 +12759,14 @@ final class DownloadManager: ObservableObject {
                 let text = try await HTTPClient.shared.string(from: lookupURL)
                 let ip = try Self.publicIPAddress(from: text)
                 self?.publicIPStatus = Self.publicIPStatusText(ip: ip, settings: settings, lookupURL: lookupURL)
-                self?.addSummary = "공인 IP 업데이트됨"
+                self?.addSummary = "Public IP updated"
             } catch {
                 self?.publicIPStatus = Self.publicIPFailureStatus(
                     settings: settings,
                     lookupURL: lookupURL,
-                    errorDescription: error.localizedDescription
+                    errorDescription: AppLocalization.errorText(error)
                 )
-                self?.addSummary = "공인 IP 확인 실패"
+                self?.addSummary = "Public IP check failed"
             }
             self?.isRefreshingPublicIP = false
         }
@@ -12665,22 +12801,22 @@ final class DownloadManager: ObservableObject {
 
     nonisolated static func publicIPCheckingStatus(settings: NetworkSettings, lookupURL: URL) -> String {
         if let proxy = settings.proxyArgument(for: lookupURL) {
-            return "\(proxyDisplayName(proxy)) 경유 공인 IP 확인 중..."
+            return "Checking public IP via \(proxyDisplayName(proxy))..."
         }
         if settings.proxyEnabled && settings.bypassesProxy(for: lookupURL) {
-            return "직접 공인 IP 확인 중 (프록시 제외)..."
+            return "Checking public IP directly (proxy bypassed)..."
         }
-        return "직접 공인 IP 확인 중..."
+        return "Checking public IP directly..."
     }
 
     nonisolated static func publicIPStatusText(ip: String, settings: NetworkSettings, lookupURL: URL) -> String {
         if let proxy = settings.proxyArgument(for: lookupURL) {
-            return "프록시 공인 IP \(ip) · \(proxyDisplayName(proxy))"
+            return "Proxy public IP \(ip) · \(proxyDisplayName(proxy))"
         }
         if settings.proxyEnabled && settings.bypassesProxy(for: lookupURL) {
-            return "직접 공인 IP \(ip) (프록시 제외)"
+            return "Direct public IP \(ip) (proxy bypassed)"
         }
-        return "직접 공인 IP \(ip)"
+        return "Direct public IP \(ip)"
     }
 
     nonisolated static func publicIPFailureStatus(
@@ -12689,12 +12825,12 @@ final class DownloadManager: ObservableObject {
         errorDescription: String
     ) -> String {
         if let proxy = settings.proxyArgument(for: lookupURL) {
-            return "프록시 공인 IP 확인 실패 · \(proxyDisplayName(proxy)): \(errorDescription)"
+            return "Proxy public IP check failed · \(proxyDisplayName(proxy)): \(errorDescription)"
         }
         if settings.proxyEnabled && settings.bypassesProxy(for: lookupURL) {
-            return "직접 공인 IP 확인 실패 (프록시 제외): \(errorDescription)"
+            return "Direct public IP check failed (proxy bypassed): \(errorDescription)"
         }
-        return "직접 공인 IP 확인 실패: \(errorDescription)"
+        return "Direct public IP check failed: \(errorDescription)"
     }
 
     private nonisolated static func normalizedPublicIPAddress(_ value: String) -> String? {
@@ -12809,6 +12945,78 @@ final class DownloadManager: ObservableObject {
         addSummary = "Pixiv ugoira settings saved"
     }
 
+    func addPawchiveSiteAddress() {
+        guard let normalized = PawchiveResolver.normalizedSiteAddress(pawchiveSiteAddressDraft) else {
+            addSummary = "Enter a valid Pawchive site address"
+            return
+        }
+        var addresses = pawchiveSiteAddresses
+        guard !addresses.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) else {
+            pawchiveSiteAddressDraft = ""
+            addSummary = "Pawchive site address already added"
+            return
+        }
+        addresses.append(normalized)
+        pawchiveSiteAddresses = PawchiveResolver.normalizedSiteAddresses(addresses)
+        pawchiveSiteAddressDraft = ""
+        persistPawchiveSettings()
+        addSummary = "Pawchive site address added"
+    }
+
+    func removePawchiveSiteAddress(_ address: String) {
+        pawchiveSiteAddresses.removeAll {
+            $0.caseInsensitiveCompare(address) == .orderedSame
+        }
+        persistPawchiveSettings()
+        addSummary = "Pawchive site address removed"
+    }
+
+    func resetPawchiveSiteAddresses() {
+        pawchiveSiteAddresses = PawchiveResolver.defaultSiteAddresses
+        pawchiveSiteAddressDraft = ""
+        persistPawchiveSettings()
+        addSummary = "Pawchive site addresses restored"
+    }
+
+    func setPawchiveDownloadLargeOriginalFiles(_ enabled: Bool) {
+        pawchiveDownloadLargeOriginalFiles = enabled
+        persistPawchiveSettings()
+        addSummary = enabled ? "Pawchive PSD originals enabled" : "Pawchive PSD originals disabled"
+    }
+
+    func setPawchiveDownloadImages(_ enabled: Bool) {
+        pawchiveDownloadImages = enabled
+        persistPawchiveSettings()
+        addSummary = "Kemono friends file types saved"
+    }
+
+    func setPawchiveDownloadVideos(_ enabled: Bool) {
+        pawchiveDownloadVideos = enabled
+        persistPawchiveSettings()
+        addSummary = "Kemono friends file types saved"
+    }
+
+    func setPawchiveDownloadHTML(_ enabled: Bool) {
+        pawchiveDownloadHTML = enabled
+        persistPawchiveSettings()
+        addSummary = "Kemono friends file types saved"
+    }
+
+    func setPawchiveDownloadOtherFiles(_ enabled: Bool) {
+        pawchiveDownloadOtherFiles = enabled
+        persistPawchiveSettings()
+        addSummary = "Kemono friends file types saved"
+    }
+
+    var pawchiveFileTypeSelection: PawchiveFileTypeSelection {
+        PawchiveFileTypeSelection(
+            images: pawchiveDownloadImages,
+            videos: pawchiveDownloadVideos,
+            html: pawchiveDownloadHTML,
+            other: pawchiveDownloadOtherFiles
+        )
+    }
+
     func saveM3U8RemuxSetting() {
         let delay = persistM3U8Settings()
         var options: [String] = []
@@ -12846,7 +13054,7 @@ final class DownloadManager: ObservableObject {
     func installManagedExternalTool(_ kind: ExternalToolKind) {
         guard !isInstallingExternalTools else { return }
         isInstallingExternalTools = true
-        externalToolInstallStatus = "\(kind.displayName) 설치 중…"
+        externalToolInstallStatus = "Installing \(kind.displayName)…"
         externalToolInstallTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -12854,13 +13062,13 @@ final class DownloadManager: ObservableObject {
                 try Task.checkCancellation()
                 applyManagedExternalTool(result)
                 let version = String(result.version.prefix(100))
-                externalToolInstallStatus = "\(kind.displayName) 준비됨: \(version)"
+                externalToolInstallStatus = "\(kind.displayName) Ready: \(version)"
                 addSummary = "\(kind.displayName) installed"
             } catch is CancellationError {
-                externalToolInstallStatus = "도구 설치 취소됨"
+                externalToolInstallStatus = "Tool Installation Cancelled"
                 addSummary = externalToolInstallStatus
             } catch {
-                externalToolInstallStatus = "\(kind.displayName) 설치 실패: \(error.localizedDescription)"
+                externalToolInstallStatus = "\(kind.displayName) Installation Failed: \(AppLocalization.errorText(error))"
                 addSummary = "\(kind.displayName) install failed"
             }
             isInstallingExternalTools = false
@@ -12876,17 +13084,17 @@ final class DownloadManager: ObservableObject {
             do {
                 for kind in [ExternalToolKind.aria2c, .ytdlp, .ffmpeg] {
                     try Task.checkCancellation()
-                    externalToolInstallStatus = "\(kind.displayName) 설치 중…"
+                    externalToolInstallStatus = "Installing \(kind.displayName)…"
                     let result = try await ManagedExternalToolInstaller.shared.install(kind)
                     applyManagedExternalTool(result)
                 }
-                externalToolInstallStatus = "모든 관리 도구 준비됨"
+                externalToolInstallStatus = "All Managed Tools Ready"
                 addSummary = externalToolInstallStatus
             } catch is CancellationError {
-                externalToolInstallStatus = "도구 설치 취소됨"
+                externalToolInstallStatus = "Tool Installation Cancelled"
                 addSummary = externalToolInstallStatus
             } catch {
-                externalToolInstallStatus = "도구 설치 실패: \(error.localizedDescription)"
+                externalToolInstallStatus = "Tool Installation Failed: \(AppLocalization.errorText(error))"
                 addSummary = "Tool installation failed"
             }
             isInstallingExternalTools = false
@@ -12901,16 +13109,16 @@ final class DownloadManager: ObservableObject {
     func removeManagedExternalTools() {
         guard !isInstallingExternalTools else { return }
         isInstallingExternalTools = true
-        externalToolInstallStatus = "관리 도구 제거 중…"
+        externalToolInstallStatus = "Removing Managed Tools…"
         externalToolInstallTask = Task { [weak self] in
             guard let self else { return }
             do {
                 try await ManagedExternalToolInstaller.shared.removeManagedTools()
                 clearManagedExternalToolPaths()
-                externalToolInstallStatus = "관리 도구 제거됨 · 내장 aria2c는 계속 사용 가능"
+                externalToolInstallStatus = "Managed Tools Removed · Bundled aria2c Remains Available"
                 addSummary = "Managed tools removed"
             } catch {
-                externalToolInstallStatus = "도구 제거 실패: \(error.localizedDescription)"
+                externalToolInstallStatus = "Tool Removal Failed: \(AppLocalization.errorText(error))"
                 addSummary = "Tool removal failed"
             }
             isInstallingExternalTools = false
@@ -12961,6 +13169,7 @@ final class DownloadManager: ObservableObject {
     }
 
     func pauseAria2(for job: DownloadJob) {
+        guard isQueueEnabled else { return }
         guard let index = jobs.firstIndex(where: { $0.id == job.id }) else { return }
         if pauseAria2Job(at: index) {
             addSummary = "aria2 paused"
@@ -12970,6 +13179,7 @@ final class DownloadManager: ObservableObject {
     }
 
     func resumeAria2(for job: DownloadJob) {
+        guard isQueueEnabled else { return }
         guard let index = jobs.firstIndex(where: { $0.id == job.id }) else { return }
         if resumeAria2Job(at: index) {
             addSummary = "aria2 resumed"
@@ -12979,19 +13189,22 @@ final class DownloadManager: ObservableObject {
     }
 
     func canPauseAria2(for job: DownloadJob) -> Bool {
-        job.status == .downloading &&
+        isQueueEnabled &&
+            job.status == .downloading &&
             aria2RuntimeProcesses[job.id]?.isRunning == true &&
             !aria2RuntimePausedJobIDs.contains(job.id)
     }
 
     func canResumeAria2(for job: DownloadJob) -> Bool {
-        job.status == .downloading &&
+        isQueueEnabled &&
+            job.status == .downloading &&
             aria2RuntimeProcesses[job.id]?.isRunning == true &&
             aria2RuntimePausedJobIDs.contains(job.id)
     }
 
     func canApplyAria2RuntimeLimits(for job: DownloadJob) -> Bool {
-        job.status == .downloading &&
+        isQueueEnabled &&
+            job.status == .downloading &&
             aria2RuntimeProcesses[job.id]?.isRunning == true &&
             aria2RuntimeRPCSessions[job.id] != nil &&
             !aria2RuntimePausedJobIDs.contains(job.id)
@@ -13184,7 +13397,7 @@ final class DownloadManager: ObservableObject {
             return true
         } catch {
             guard let currentIndex = jobs.firstIndex(where: { $0.id == jobID }) else { return false }
-            jobs[currentIndex].metadata["aria2_runtime_limit_error"] = error.localizedDescription
+            jobs[currentIndex].metadata["aria2_runtime_limit_error"] = AppLocalization.errorText(error)
             jobs[currentIndex].message = "aria2 limit update failed"
             if persist {
                 persistQueue()
@@ -13229,7 +13442,7 @@ final class DownloadManager: ObservableObject {
             return true
         } catch {
             guard let currentIndex = jobs.firstIndex(where: { $0.id == jobID }) else { return false }
-            jobs[currentIndex].metadata["aria2_runtime_file_selection_error"] = error.localizedDescription
+            jobs[currentIndex].metadata["aria2_runtime_file_selection_error"] = AppLocalization.errorText(error)
             jobs[currentIndex].message = "aria2 file selection update failed"
             if persist {
                 persistQueue()
@@ -13279,7 +13492,7 @@ final class DownloadManager: ObservableObject {
             return true
         } catch {
             guard let currentIndex = jobs.firstIndex(where: { $0.id == jobID }) else { return false }
-            jobs[currentIndex].metadata["aria2_runtime_seed_error"] = error.localizedDescription
+            jobs[currentIndex].metadata["aria2_runtime_seed_error"] = AppLocalization.errorText(error)
             jobs[currentIndex].message = "aria2 seeding update failed"
             if persist {
                 persistQueue()
@@ -13323,8 +13536,8 @@ final class DownloadManager: ObservableObject {
         } catch {
             guard let currentIndex = jobs.firstIndex(where: { $0.id == jobID }) else { return nil }
             aria2PeerEntries = []
-            aria2PeerSummary = "Peer list failed: \(error.localizedDescription)"
-            jobs[currentIndex].metadata["aria2_runtime_peer_error"] = error.localizedDescription
+            aria2PeerSummary = "Peer list failed: \(AppLocalization.errorText(error))"
+            jobs[currentIndex].metadata["aria2_runtime_peer_error"] = AppLocalization.errorText(error)
             addSummary = "aria2 peer list failed"
             persistQueue()
             return nil
@@ -13396,10 +13609,10 @@ final class DownloadManager: ObservableObject {
             return entries
         } catch {
             aria2FileEntries = []
-            aria2FileListSummary = "File list failed: \(error.localizedDescription)"
+            aria2FileListSummary = "File list failed: \(AppLocalization.errorText(error))"
             if let jobID,
                let currentIndex = jobs.firstIndex(where: { $0.id == jobID }) {
-                jobs[currentIndex].metadata["aria2_file_list_error"] = error.localizedDescription
+                jobs[currentIndex].metadata["aria2_file_list_error"] = AppLocalization.errorText(error)
                 persistQueue()
             }
             addSummary = "aria2 file list failed"
@@ -13491,6 +13704,19 @@ final class DownloadManager: ObservableObject {
         UserDefaults.standard.set(pixivUgoiraQuality, forKey: "pixivUgoiraQuality")
     }
 
+    private func persistPawchiveSettings() {
+        pawchiveSiteAddresses = PawchiveResolver.normalizedSiteAddresses(pawchiveSiteAddresses)
+        UserDefaults.standard.set(pawchiveSiteAddresses, forKey: "pawchiveSiteAddresses")
+        UserDefaults.standard.set(
+            pawchiveDownloadLargeOriginalFiles,
+            forKey: "pawchiveDownloadLargeOriginalFiles"
+        )
+        UserDefaults.standard.set(pawchiveDownloadImages, forKey: "pawchiveDownloadImages")
+        UserDefaults.standard.set(pawchiveDownloadVideos, forKey: "pawchiveDownloadVideos")
+        UserDefaults.standard.set(pawchiveDownloadHTML, forKey: "pawchiveDownloadHTML")
+        UserDefaults.standard.set(pawchiveDownloadOtherFiles, forKey: "pawchiveDownloadOtherFiles")
+    }
+
     @discardableResult
     private func persistM3U8Settings() -> Int {
         let delay = Self.normalizedM3U8SegmentDelayMilliseconds(from: m3u8SegmentDelayMillisecondsString)
@@ -13504,21 +13730,21 @@ final class DownloadManager: ObservableObject {
     func saveAutoRecordSettings() {
         persistAutoRecordSettings()
         syncAutoRecordMonitor()
-        addSummary = autoRecordEnabled ? "자동 녹화 저장됨" : "자동 녹화 꺼짐"
+        addSummary = autoRecordEnabled ? "Automatic Recording Saved" : "Automatic Recording Off"
     }
 
     func setAutoRecordEnabled(_ enabled: Bool) {
         autoRecordEnabled = enabled
         persistAutoRecordSettings()
         syncAutoRecordMonitor()
-        addSummary = enabled ? "자동 녹화 켜짐" : "자동 녹화 꺼짐"
+        addSummary = enabled ? "Automatic Recording On" : "Automatic Recording Off"
     }
 
     func setAutoRecordPaused(_ paused: Bool) {
         autoRecordPaused = paused
         persistAutoRecordSettings()
         syncAutoRecordMonitor()
-        addSummary = paused ? "자동 녹화 일시 정지" : "자동 녹화 다시 시작"
+        addSummary = paused ? "Automatic Recording Paused" : "Automatic Recording Resumed"
     }
 
     func checkAutoRecordNow() {
@@ -13546,16 +13772,16 @@ final class DownloadManager: ObservableObject {
 
         guard autoRecordEnabled else {
             isAutoRecordChecking = false
-            autoRecordStatus = "자동 녹화 꺼짐"
+            autoRecordStatus = "Automatic Recording Off"
             return
         }
         guard !autoRecordPaused else {
             isAutoRecordChecking = false
-            autoRecordStatus = "자동 녹화 일시 정지"
+            autoRecordStatus = "Automatic Recording Paused"
             return
         }
 
-        autoRecordStatus = "자동 녹화 대기 중"
+        autoRecordStatus = "Automatic Recording Waiting"
         autoRecordTask = Task { [weak self] in
             while !Task.isCancelled {
                 _ = await MainActor.run {
@@ -13579,22 +13805,22 @@ final class DownloadManager: ObservableObject {
     private func performAutoRecordCheck(startQueueIfNeeded: Bool) -> Int {
         guard !isAutoRecordChecking else { return 0 }
         guard autoRecordEnabled else {
-            autoRecordStatus = "자동 녹화 꺼짐"
+            autoRecordStatus = "Automatic Recording Off"
             return 0
         }
         guard !autoRecordPaused else {
-            autoRecordStatus = "자동 녹화 일시 정지"
+            autoRecordStatus = "Automatic Recording Paused"
             return 0
         }
 
         let urls = autoRecordURLs()
         guard !urls.isEmpty else {
-            autoRecordStatus = "자동 녹화 URL 필요"
+            autoRecordStatus = "Automatic Recording URL Required"
             return 0
         }
 
         isAutoRecordChecking = true
-        autoRecordStatus = "자동 녹화 확인 중..."
+        autoRecordStatus = "Checking Automatic Recording..."
         defer { isAutoRecordChecking = false }
 
         let newJobs = jobsForAdding(
@@ -13609,15 +13835,15 @@ final class DownloadManager: ObservableObject {
         if added > 0 {
             insertAddedJobsAtTop(newJobs)
             persistQueue()
-            autoRecordStatus = "자동 녹화 \(added)개 대기열 추가"
-            addSummary = "자동 녹화: \(added)개 대기열 추가"
+            autoRecordStatus = "Automatic Recording Added \(added) to Queue"
+            addSummary = "Automatic Recording: Added \(added) to Queue"
             if startQueueIfNeeded, queueTask == nil {
                 startQueue(addingInput: false)
             }
         } else {
             autoRecordStatus = addSummary.trimmed.isEmpty
-                ? "자동 녹화 확인: 새 URL 없음"
-                : "자동 녹화 확인: \(addSummary)"
+                ? "Automatic Recording Check: No New URLs"
+                : "Automatic Recording Check: \(addSummary)"
         }
         return added
     }
@@ -13984,7 +14210,7 @@ final class DownloadManager: ObservableObject {
             startHTTPAPIServer()
         } else {
             stopHTTPAPIServer()
-            addSummary = "HTTP API 꺼짐"
+            addSummary = "HTTP API Off"
         }
     }
 
@@ -13993,7 +14219,7 @@ final class DownloadManager: ObservableObject {
         if httpAPIEnabled {
             startHTTPAPIServer()
         }
-        addSummary = httpAPIEnabled ? "HTTP API 저장됨" : "HTTP API 꺼짐"
+        addSummary = httpAPIEnabled ? "HTTP API Saved" : "HTTP API Off"
     }
 
     func setClipboardMonitorEnabled(_ enabled: Bool) {
@@ -14048,7 +14274,7 @@ final class DownloadManager: ObservableObject {
         queueCompletionAction = action
         queueCompletionActionStatus = Self.queueCompletionActionStatusText(for: action)
         persistCompletionAlertSettings()
-        addSummary = action == .none ? "완료 후 동작 꺼짐" : "완료 후: \(action.label)"
+        addSummary = action == .none ? "After Completion Disabled" : "After completion: \(action.label)"
     }
 
     func setPreventSleepWhileDownloading(_ enabled: Bool) {
@@ -14338,7 +14564,7 @@ final class DownloadManager: ObservableObject {
         do {
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         } catch {
-            addSummary = "Could not open download folder: \(error.localizedDescription)"
+            addSummary = "Could not open download folder: \(AppLocalization.errorText(error))"
             return
         }
 
@@ -14398,7 +14624,7 @@ final class DownloadManager: ObservableObject {
                     self.selectedDuplicateImagePath = ""
                     self.autoSelectedDuplicateImagePath = ""
                     self.isScanningDuplicateImages = false
-                    self.duplicateImageSummary = "Duplicate scan failed: \(error.localizedDescription)"
+                    self.duplicateImageSummary = "Duplicate scan failed: \(AppLocalization.errorText(error))"
                 }
             }
         }
@@ -14584,7 +14810,7 @@ final class DownloadManager: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self.cookieSummary = "브라우저 쿠키 없음"
+                    self.cookieSummary = "No browser cookies"
                 }
             }
         }
@@ -14617,10 +14843,10 @@ final class DownloadManager: ObservableObject {
             "필요", "대기", "없", "만료", "업데이트"
         ].contains { message.contains($0) }
 
-        if cookieFlag || ((message.contains("cookie") || message.contains("쿠키")) && needsAttention) {
+        if cookieFlag || ((message.contains("cookie") || message.contains("Cookies")) && needsAttention) {
             return .cookies
         }
-        if (message.contains("login") || message.contains("authentication") || message.contains("로그인")) &&
+        if (message.contains("login") || message.contains("authentication") || message.contains("Sign In")) &&
             needsAttention {
             let providerKey = inferredAuthenticationProviderKey(for: job)
             let provider = authenticationProviderName(for: providerKey ?? "", job: job)
@@ -15269,17 +15495,17 @@ final class DownloadManager: ObservableObject {
     func clearCookies() {
         guard !isClearingCookies else { return }
         isClearingCookies = true
-        cookieSummary = "쿠키 및 로그인 세션 삭제 중..."
-        addSummary = "쿠키 및 로그인 세션 삭제 중"
+        cookieSummary = "Deleting cookies and login sessions..."
+        addSummary = "Deleting cookies and login sessions..."
 
         Task { [weak self] in
             guard let self else { return }
             let browserSessionCount = await LoginBrowserWindowController.clearAllWebsiteData()
             await CookieStore.shared.clear()
-            cookieSummary = "쿠키 없음"
+            cookieSummary = "No cookies"
             addSummary = browserSessionCount == 0
-                ? "쿠키 삭제됨"
-                : "쿠키 및 내장 브라우저 로그인 세션 삭제됨"
+                ? "Cookies deleted"
+                : "Cookies and embedded-browser login sessions deleted"
             isClearingCookies = false
         }
     }
@@ -15418,12 +15644,12 @@ final class DownloadManager: ObservableObject {
 
     private nonisolated static func browserCookieSummary(imported: Int, skipped: Int) -> String {
         skipped > 0
-            ? "브라우저 쿠키 \(imported)개 · 건너뜀 \(skipped)개"
-            : "브라우저 쿠키 \(imported)개"
+            ? "Saved \(imported) cookies, skipped \(skipped)."
+            : "Saved \(imported) cookies."
     }
 
     private nonisolated static func storedCookieSummary(count: Int) -> String {
-        count == 0 ? "쿠키 없음" : "쿠키 \(count)개"
+        count == 0 ? "No cookies" : "Saved \(count) cookies."
     }
 
     private func refreshCookieSummary() async {
@@ -15477,12 +15703,19 @@ final class DownloadManager: ObservableObject {
 
     func openFirstOutputFile(for job: DownloadJob) {
         let outputPath = repairedOutputPath(for: job)
-        guard let url = Self.firstOutputOpenURL(forOutputPath: outputPath) else {
-            addSummary = "No output file found"
-            return
+        let request = Self.firstOutputOpenRequest(for: job, outputPath: outputPath)
+        Task { @MainActor [weak self] in
+            let url = await Task.detached(priority: .userInitiated) {
+                Self.preferredFirstOutputOpenURL(for: request)
+            }.value
+            guard let self else { return }
+            guard let url else {
+                self.addSummary = "No output file found"
+                return
+            }
+            NSWorkspace.shared.open(url)
+            self.addSummary = "Output file opened"
         }
-        NSWorkspace.shared.open(url)
-        addSummary = "Output file opened"
     }
 
     func openArchiveOutput(for job: DownloadJob) {
@@ -15531,34 +15764,138 @@ final class DownloadManager: ObservableObject {
         return nil
     }
 
-    func openFirstOutputFiles(startingAt job: DownloadJob) {
-        let urls = contextualJobs(startingAt: job).compactMap { selected -> URL? in
-            let outputPath = repairedOutputPath(for: selected)
-            return Self.firstOutputOpenURL(forOutputPath: outputPath)
+    private nonisolated static func firstOutputOpenRequest(
+        for job: DownloadJob,
+        outputPath: String? = nil
+    ) -> FirstOutputOpenRequest {
+        FirstOutputOpenRequest(
+            outputPath: outputPath ?? job.outputPath,
+            archivedFolderPath: job.metadata["archived_folder_path"]?.trimmed,
+            archivePath: job.metadata["archive_path"]?.trimmed
+        )
+    }
+
+    nonisolated static func preferredFirstOutputOpenURL(
+        for job: DownloadJob,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        preferredFirstOutputOpenURL(
+            for: firstOutputOpenRequest(for: job),
+            fileManager: fileManager
+        )
+    }
+
+    private nonisolated static func preferredFirstOutputOpenURL(
+        for request: FirstOutputOpenRequest,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        let outputPath = request.outputPath.trimmed
+        var folderCandidates: [URL] = []
+        var checkedFolders = Set<String>()
+        let hasGeneratedArchive = !(request.archivePath?.trimmed.isEmpty ?? true) ||
+            !(request.archivedFolderPath?.trimmed.isEmpty ?? true)
+
+        func appendFolder(_ rawPath: String?) {
+            guard let rawPath, !rawPath.trimmed.isEmpty else { return }
+            let url = URL(fileURLWithPath: rawPath.trimmed).standardizedFileURL
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory),
+                  isDirectory.boolValue,
+                  checkedFolders.insert(url.path).inserted else {
+                return
+            }
+            folderCandidates.append(url)
         }
-        guard !urls.isEmpty else {
+
+        func appendArchiveFolder(_ rawPath: String?) {
+            guard let rawPath, !rawPath.trimmed.isEmpty else { return }
+            let url = URL(fileURLWithPath: rawPath.trimmed).standardizedFileURL
+            guard ArchiveFileFormat(rawValue: url.pathExtension.lowercased()) != nil else { return }
+            appendFolder(url.deletingPathExtension().path)
+        }
+
+        appendFolder(request.archivedFolderPath)
+        appendArchiveFolder(request.archivePath)
+
+        if !outputPath.isEmpty {
+            let output = URL(fileURLWithPath: outputPath).standardizedFileURL
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: output.path, isDirectory: &isDirectory) {
+                if isDirectory.boolValue {
+                    appendFolder(output.path)
+                } else {
+                    appendArchiveFolder(output.path)
+                }
+            } else if let sibling = archiveSiblingURL(forMissingOutput: output, fileManager: fileManager) {
+                appendArchiveFolder(sibling.path)
+            }
+        }
+
+        for folder in folderCandidates {
+            if let image = firstReadableFile(
+                in: folder,
+                fileManager: fileManager,
+                matchingExtensions: pdfImageExtensions
+            ) {
+                return image
+            }
+        }
+
+        for folder in folderCandidates {
+            if let file = firstReadableFile(in: folder, fileManager: fileManager) {
+                return file
+            }
+        }
+
+        if hasGeneratedArchive {
+            return nil
+        }
+
+        if !outputPath.isEmpty,
+           let output = firstOutputOpenURL(forOutputPath: outputPath, fileManager: fileManager) {
+            return output
+        }
+        return nil
+    }
+
+    func openFirstOutputFiles(startingAt job: DownloadJob) {
+        let requests = contextualJobs(startingAt: job).map { selected in
+            let outputPath = repairedOutputPath(for: selected)
+            return Self.firstOutputOpenRequest(for: selected, outputPath: outputPath)
+        }
+        guard !requests.isEmpty else {
             addSummary = "No output file found"
             return
         }
-        if urls.count > 10 {
-            let alert = NSAlert()
-            alert.alertStyle = .warning
-            alert.messageText = AppLocalization.format(
-                "Open the first file for %@ tasks.",
-                language: interfaceLanguage,
-                String(urls.count)
-            )
-            alert.informativeText = AppLocalization.text("계속하시겠습니까?", language: interfaceLanguage)
-            alert.addButton(withTitle: AppLocalization.text("열기", language: interfaceLanguage))
-            alert.addButton(withTitle: AppLocalization.text("취소", language: interfaceLanguage))
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task { @MainActor [weak self] in
+            let urls = await Task.detached(priority: .userInitiated) {
+                requests.compactMap { Self.preferredFirstOutputOpenURL(for: $0) }
+            }.value
+            guard let self else { return }
+            guard !urls.isEmpty else {
+                self.addSummary = "No output file found"
+                return
+            }
+            if urls.count > 10 {
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = AppLocalization.format(
+                    "Open the first file for %@ tasks.",
+                    language: self.interfaceLanguage,
+                    String(urls.count)
+                )
+                alert.informativeText = AppLocalization.text("Continue?", language: self.interfaceLanguage)
+                alert.addButton(withTitle: AppLocalization.text("Open", language: self.interfaceLanguage))
+                alert.addButton(withTitle: AppLocalization.text("Cancel", language: self.interfaceLanguage))
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+            }
+            for url in urls {
+                NSWorkspace.shared.open(url)
+            }
+            self.addSummary = urls.count == 1
+                ? "Output file opened"
+                : "First output file opened for \(urls.count) jobs"
         }
-        for url in urls {
-            NSWorkspace.shared.open(url)
-        }
-        addSummary = urls.count == 1
-            ? "Output file opened"
-            : "First output file opened for \(urls.count) jobs"
     }
 
     func canOpenFirstOutputFile(for job: DownloadJob) -> Bool {
@@ -15613,7 +15950,7 @@ final class DownloadManager: ObservableObject {
             persistQueue()
             addSummary = "PDF created: \(pdfURL.lastPathComponent)"
         } catch {
-            addSummary = "PDF failed: \(error.localizedDescription)"
+            addSummary = "PDF failed: \(AppLocalization.errorText(error))"
         }
     }
 
@@ -15851,9 +16188,9 @@ final class DownloadManager: ObservableObject {
                 didChange = true
             } catch {
                 failedJobCount += 1
-                firstFailureDescription = firstFailureDescription ?? error.localizedDescription
-                jobs[index].metadata["output_move_error"] = error.localizedDescription
-                jobs[index].message = "Output move failed: \(error.localizedDescription)"
+                firstFailureDescription = firstFailureDescription ?? AppLocalization.errorText(error)
+                jobs[index].metadata["output_move_error"] = AppLocalization.errorText(error)
+                jobs[index].message = "Output move failed: \(AppLocalization.errorText(error))"
                 didChange = true
             }
         }
@@ -16056,7 +16393,7 @@ final class DownloadManager: ObservableObject {
                 persistQueue()
             }
         } catch {
-            addSummary = "Output delete failed: \(error.localizedDescription)"
+            addSummary = "Output delete failed: \(AppLocalization.errorText(error))"
         }
         cancelDeletingOutput()
     }
@@ -16141,7 +16478,7 @@ final class DownloadManager: ObservableObject {
                 result.keptJobCount += 1
                 jobs[index].metadata["output_delete_partial_at"] = deletedAt
                 jobs[index].metadata["output_delete_failed_count"] = "1"
-                jobs[index].message = "Output delete failed: \(error.localizedDescription)"
+                jobs[index].message = "Output delete failed: \(AppLocalization.errorText(error))"
                 didChange = true
             }
         }
@@ -16423,7 +16760,11 @@ final class DownloadManager: ObservableObject {
         pdfImageExtensions.contains(URL(fileURLWithPath: name).pathExtension.lowercased())
     }
 
-    private nonisolated static func firstReadableFile(in folder: URL, fileManager: FileManager) -> URL? {
+    private nonisolated static func firstReadableFile(
+        in folder: URL,
+        fileManager: FileManager,
+        matchingExtensions: Set<String>? = nil
+    ) -> URL? {
         guard let enumerator = fileManager.enumerator(
             at: folder,
             includingPropertiesForKeys: [.isRegularFileKey],
@@ -16443,6 +16784,10 @@ final class DownloadManager: ObservableObject {
                   !isDirectory.boolValue,
                   fileManager.isReadableFile(atPath: resolved.path),
                   resolved.path.hasPrefix(folderPrefix) else {
+                continue
+            }
+            if let matchingExtensions,
+               !matchingExtensions.contains(resolved.pathExtension.lowercased()) {
                 continue
             }
             let relativePath = String(resolved.path.dropFirst(folderPrefix.count))
@@ -16823,7 +17168,7 @@ final class DownloadManager: ObservableObject {
                     result.resolvedPaths.insert(item.url.path)
                     result.resolvedPaths.insert(item.safetyURL.standardizedFileURL.path)
                 } else {
-                    result.failures.append("\(item.candidate.filename): \(error.localizedDescription)")
+                    result.failures.append("\(item.candidate.filename): \(AppLocalization.errorText(error))")
                 }
             }
         }
@@ -16880,6 +17225,8 @@ final class DownloadManager: ObservableObject {
             addURLs()
         }
         isQueueEnabled = true
+        HTTPClient.shared.resumeAllTransfers()
+        ExternalProcessRunner.resumeAllForQueue()
         guard queueTask == nil else { return }
         guard jobs.contains(where: { $0.status == .queued }) else { return }
 
@@ -16953,6 +17300,7 @@ final class DownloadManager: ObservableObject {
         UserDefaults.standard.set(instagramIncludeStories, forKey: "instagramIncludeStories")
         persistSOOPPreferredResolution()
         persistPixivUgoiraFileFormat()
+        persistPawchiveSettings()
         persistM3U8Settings()
         persistAutoRecordSettings()
         persistExternalToolPaths()
@@ -16987,7 +17335,9 @@ final class DownloadManager: ObservableObject {
     func pauseQueue() {
         guard isQueueEnabled else { return }
         isQueueEnabled = false
-        let message = isRunning ? "Queue paused after active jobs" : "Queue paused"
+        HTTPClient.shared.pauseAllTransfers()
+        ExternalProcessRunner.pauseAllForQueue()
+        let message = "Queue paused"
         addSummary = message
         recordActivity(message, category: "Queue")
     }
@@ -16995,6 +17345,8 @@ final class DownloadManager: ObservableObject {
     func resumeQueue() {
         let wasPaused = !isQueueEnabled
         isQueueEnabled = true
+        HTTPClient.shared.resumeAllTransfers()
+        ExternalProcessRunner.resumeAllForQueue()
         if wasPaused {
             addSummary = "Queue resumed"
             recordActivity("Queue resumed", category: "Queue")
@@ -17277,7 +17629,7 @@ final class DownloadManager: ObservableObject {
         } catch {
             markFailed(
                 index,
-                message: "Start hook failed: \(error.localizedDescription)",
+                message: "Start hook failed: \(AppLocalization.errorText(error))",
                 allowsIncompleteRetry: Self.failureAllowsIncompleteRetry(error)
             )
             return
@@ -17369,6 +17721,19 @@ final class DownloadManager: ObservableObject {
                 try await downloadWithYTDLP(url, jobIndex: index)
             } else if aria2Bridge.canResolve(url) {
                 try await downloadWithAria2(url, jobIndex: index)
+            } else if pawchiveResolver.canResolve(url, siteAddresses: pawchiveSiteAddresses) {
+                jobs[index].status = .resolving
+                jobs[index].message = "Reading Pawchive posts"
+                persistQueue()
+                let resolved = try await pawchiveResolver.resolve(
+                    url,
+                    headers: headers,
+                    siteAddresses: pawchiveSiteAddresses,
+                    downloadLargeOriginalFiles: pawchiveDownloadLargeOriginalFiles,
+                    fileTypeSelection: pawchiveFileTypeSelection,
+                    rangeExpression: jobs[index].rangeExpression
+                )
+                try await downloadResolved(resolved, sourceURL: url, jobIndex: index)
             } else if !pythonNativeFallbackJobIDs.contains(jobs[index].id),
                       let script = matchingPythonScriptPlugin(for: url) {
                 jobs[index].status = .resolving
@@ -17412,7 +17777,11 @@ final class DownloadManager: ObservableObject {
                 jobs[index].status = .resolving
                 jobs[index].message = "Reading gallery metadata"
                 persistQueue()
-                let resolved = try await hitomiResolver.resolve(url, preferWebP: preferWebP)
+                let resolved = try await resolveHitomiWithFallback(
+                    url,
+                    headers: headers,
+                    jobIndex: index
+                )
                 try await downloadResolved(resolved, sourceURL: url, jobIndex: index)
             } else if nhentaiResolver.canResolve(url) {
                 jobs[index].status = .resolving
@@ -18447,7 +18816,7 @@ final class DownloadManager: ObservableObject {
             }
             markFailed(
                 index,
-                message: error.localizedDescription,
+                message: AppLocalization.errorText(error),
                 allowsIncompleteRetry: Self.failureAllowsIncompleteRetry(error)
             )
         }
@@ -18469,7 +18838,11 @@ final class DownloadManager: ObservableObject {
             jobs[jobIndex].status = .resolving
             jobs[jobIndex].message = "Reading Hitomi gallery"
             persistQueue()
-            resolved = try await hitomiResolver.resolve(url, preferWebP: preferWebP)
+            resolved = try await resolveHitomiWithFallback(
+                url,
+                headers: headers,
+                jobIndex: jobIndex
+            )
         case .ehen:
             jobs[jobIndex].status = .resolving
             jobs[jobIndex].message = "Reading E-Hentai gallery"
@@ -18496,6 +18869,50 @@ final class DownloadManager: ObservableObject {
             resolved = try await hiyobiResolver.resolve(url, headers: headers)
         }
         try await downloadResolved(resolved, sourceURL: url, jobIndex: jobIndex)
+    }
+
+    private func resolveHitomiWithFallback(
+        _ url: URL,
+        headers: HTTPRequestOptions,
+        jobIndex: Int
+    ) async throws -> ResolvedDownload {
+        guard jobs.indices.contains(jobIndex), jobs[jobIndex].status != .cancelled else {
+            throw CancellationError()
+        }
+        let jobID = jobs[jobIndex].id
+        let resolution = try await eHentaiSourceResolver.resolveHitomiSource(
+            url,
+            preferWebP: preferWebP,
+            headers: headers,
+            preferOriginalImages: preferOriginalEHentaiImages,
+            preferJapaneseTitle: preferJapaneseEHentaiTitle,
+            onFallbackToOriginal: { [weak self] in
+                guard let self,
+                      let currentIndex = self.jobs.firstIndex(where: { $0.id == jobID }),
+                      self.jobs[currentIndex].status != .cancelled else {
+                    return
+                }
+                self.jobs[currentIndex].message = "Hitomi gallery unavailable; checking E-Hentai"
+                self.persistQueue()
+            },
+            onStage: { [weak self] message in
+                guard let self,
+                      let currentIndex = self.jobs.firstIndex(where: { $0.id == jobID }),
+                      self.jobs[currentIndex].status != .cancelled else {
+                    return
+                }
+                self.jobs[currentIndex].message = message
+                self.persistQueue()
+            }
+        )
+        guard jobs.indices.contains(jobIndex), jobs[jobIndex].status != .cancelled else {
+            throw CancellationError()
+        }
+        jobs[jobIndex].message = resolution.selectedSource == .hitomi
+            ? "Using Hitomi gallery"
+            : "Using original E-Hentai source"
+        persistQueue()
+        return resolution.download
     }
 
     private func resolveArcaliveWithLogin(
@@ -19258,6 +19675,9 @@ final class DownloadManager: ObservableObject {
                 jobs[jobIndex].metadata["incomplete_gallery"] = "true"
                 jobs[jobIndex].metadata["incomplete_file_count"] = String(skippedFailureCount)
                 jobs[jobIndex].metadata["downloaded_file_count"] = String(downloadedItems.count)
+                jobs[jobIndex].metadata["failed_file_count"] = String(skippedFailureCount)
+                jobs[jobIndex].metadata["successful_file_count"] = String(downloadedItems.count)
+                jobs[jobIndex].metadata["total_file_count"] = String(assets.count)
                 persistQueue()
             }
             throw deferredGalleryFailure.underlying
@@ -19366,7 +19786,7 @@ final class DownloadManager: ObservableObject {
 
     private func recordAssetDownloadFailure(_ failure: AssetDownloadFailure, total: Int, jobIndex: Int) {
         guard jobs.indices.contains(jobIndex) else { return }
-        let message = failure.underlying.localizedDescription
+        let message = AppLocalization.errorText(failure.underlying)
         let segmentIndex = displaySegmentIndex(for: failure)
         let segmentTotal = displaySegmentTotal(for: failure, fallbackTotal: total, jobIndex: jobIndex)
         jobs[jobIndex].metadata["last_error"] = message
@@ -19380,7 +19800,7 @@ final class DownloadManager: ObservableObject {
 
     private func recordSkippedAssetDownloadFailure(_ failure: AssetDownloadFailure, total: Int, jobIndex: Int) {
         guard jobs.indices.contains(jobIndex) else { return }
-        let message = failure.underlying.localizedDescription
+        let message = AppLocalization.errorText(failure.underlying)
         let segmentIndex = displaySegmentIndex(for: failure)
         let segmentTotal = displaySegmentTotal(for: failure, fallbackTotal: total, jobIndex: jobIndex)
         jobs[jobIndex].metadata["last_error"] = message
@@ -19953,7 +20373,7 @@ final class DownloadManager: ObservableObject {
                 jobs[jobIndex].metadata["info_text_path"] = url.path
             }
         } catch {
-            jobs[jobIndex].metadata["info_text_error"] = error.localizedDescription
+            jobs[jobIndex].metadata["info_text_error"] = AppLocalization.errorText(error)
         }
         persistQueue()
     }
@@ -20243,6 +20663,14 @@ final class DownloadManager: ObservableObject {
         additionalHeaders: [String: String],
         progressHandler: HTTPDownloadProgressHandler? = nil
     ) async throws -> URL {
+        if HitomiResolver.isLazyImageAsset(asset) {
+            return try await downloadLazyHitomiAsset(
+                asset,
+                to: destination,
+                additionalHeaders: additionalHeaders,
+                progressHandler: progressHandler
+            )
+        }
         if EHentaiResolver.isLazyImageAsset(asset) {
             return try await downloadLazyEHentaiAsset(
                 asset,
@@ -20284,6 +20712,71 @@ final class DownloadManager: ObservableObject {
         throw NativeDownloadError.noFiles
     }
 
+    private nonisolated func downloadLazyHitomiAsset(
+        _ asset: ResolvedAsset,
+        to destination: URL,
+        additionalHeaders: [String: String],
+        progressHandler: HTTPDownloadProgressHandler? = nil
+    ) async throws -> URL {
+        let maximumAttempts = 24
+        var lastError: Error?
+
+        for attempt in 0..<maximumAttempts {
+            try Task.checkCancellation()
+            do {
+                let resolved = try await HitomiResolver.resolveLazyImageAsset(asset)
+                var headers = additionalHeaders
+                for (name, value) in resolved.additionalHeaderFields {
+                    headers[name] = value
+                }
+                try await HTTPClient.shared.download(
+                    from: resolved.remoteURL,
+                    to: destination,
+                    referer: resolved.referer,
+                    userAgent: resolved.userAgent ?? asset.userAgent,
+                    additionalHeaders: headers,
+                    retryLimitOverride: 0,
+                    progressHandler: progressHandler
+                )
+                return destination
+            } catch {
+                try Task.checkCancellation()
+                lastError = error
+                guard Self.shouldRetryLazyHitomiAsset(error, attempt: attempt) else {
+                    throw error
+                }
+                try await Self.waitBeforeLazyHitomiRetry()
+            }
+        }
+
+        throw lastError ?? NativeDownloadError.noFiles
+    }
+
+    private nonisolated static func shouldRetryLazyHitomiAsset(_ error: Error, attempt: Int) -> Bool {
+        guard attempt < 23 else { return false }
+        if error is CancellationError { return false }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return false }
+        if let nativeError = error as? NativeDownloadError {
+            switch nativeError {
+            case .cancelled:
+                return false
+            case .httpStatus(let status, _):
+                return status != 400 && status != 401
+            default:
+                return true
+            }
+        }
+        return true
+    }
+
+    private nonisolated static func waitBeforeLazyHitomiRetry() async throws {
+#if TESTING
+        return
+#else
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+#endif
+    }
+
     private nonisolated static func shouldReportNativeTransferProgress(
         asset: ResolvedAsset,
         jobMetadata: [String: String]
@@ -20302,7 +20795,8 @@ final class DownloadManager: ObservableObject {
     }
 
     private func applyNativeTransferProgress(_ update: HTTPDownloadProgress, jobID: UUID) {
-        guard let index = jobs.firstIndex(where: { $0.id == jobID }),
+        guard isQueueEnabled,
+              let index = jobs.firstIndex(where: { $0.id == jobID }),
               jobs[index].status == .downloading else { return }
 
         jobs[index].metadata["transfer_active"] = "true"
@@ -20893,7 +21387,7 @@ final class DownloadManager: ObservableObject {
                 } catch {
                     if jobs.indices.contains(jobIndex) {
                         jobs[jobIndex].metadata["live_poll_count"] = String(pollCount)
-                        jobs[jobIndex].metadata["live_last_refresh_error"] = error.localizedDescription
+                        jobs[jobIndex].metadata["live_last_refresh_error"] = AppLocalization.errorText(error)
                         jobs[jobIndex].message = "Live playlist refresh failed; retrying"
                         persistQueue()
                     }
@@ -23206,7 +23700,8 @@ final class DownloadManager: ObservableObject {
     }
 
     private func applyYTDLPRuntimeUpdate(_ update: YTDLPRuntimeUpdate, jobID: UUID) {
-        guard let index = jobs.firstIndex(where: { $0.id == jobID }),
+        guard isQueueEnabled,
+              let index = jobs.firstIndex(where: { $0.id == jobID }),
               jobs[index].status == .downloading else { return }
 
         var progressState = ytdlpProgressStates[jobID] ?? YTDLPJobProgressState()
@@ -24159,7 +24654,7 @@ final class DownloadManager: ObservableObject {
         guard let index = jobs.firstIndex(where: { $0.id == jobID }) else { return }
         markFailed(
             index,
-            message: error.localizedDescription,
+            message: AppLocalization.errorText(error),
             allowsIncompleteRetry: Self.failureAllowsIncompleteRetry(error)
         )
     }
@@ -24199,9 +24694,9 @@ final class DownloadManager: ObservableObject {
         jobs[index].message = "Retrying recording (\(nextRetryCount) / \(Self.maxRecordingAutoRetryCount))"
         jobs[index].outputPath = ""
         jobs[index].metadata["recording_retry_count"] = String(nextRetryCount)
-        jobs[index].metadata["recording_retry_last_error"] = error.localizedDescription
+        jobs[index].metadata["recording_retry_last_error"] = AppLocalization.errorText(error)
         jobs[index].metadata["recording_retry_at"] = ISO8601DateFormatter().string(from: Date())
-        jobs[index].metadata["last_error"] = error.localizedDescription
+        jobs[index].metadata["last_error"] = AppLocalization.errorText(error)
         addSummary = "Recording retry queued"
         persistQueue()
         return true
@@ -25621,7 +26116,7 @@ final class DownloadManager: ObservableObject {
             } catch {
                 markFailed(
                     index,
-                    message: "Finished hook failed: \(error.localizedDescription)",
+                    message: "Finished hook failed: \(AppLocalization.errorText(error))",
                     allowsIncompleteRetry: Self.failureAllowsIncompleteRetry(error)
                 )
                 return
@@ -25956,11 +26451,11 @@ final class DownloadManager: ObservableObject {
         } catch {
             let message = Self.autoRemoveHookErrorMessage(error)
             if let currentIndex = jobs.firstIndex(where: { $0.id == job.id }) {
-                jobs[currentIndex].message = "자동 제거 후크 실패"
+                jobs[currentIndex].message = "Auto-remove Hook Failed"
                 jobs[currentIndex].metadata["auto_remove_hook_error"] = message
             }
-            autoRemoveHookStatus = "자동 제거 후크 실패: \(message)"
-            addSummary = "자동 제거 후크 실패"
+            autoRemoveHookStatus = "Auto-remove Hook Failed: \(message)"
+            addSummary = "Auto-remove Hook Failed"
             return
         }
 
@@ -26000,7 +26495,7 @@ final class DownloadManager: ObservableObject {
     private func runAutoRemoveHookIfNeeded(for job: DownloadJob) async throws {
         let template = autoRemoveHookCommand.trimmed
         guard !template.isEmpty else {
-            autoRemoveHookStatus = "자동 제거 후크 꺼짐"
+            autoRemoveHookStatus = "Auto-remove Hook Off"
             return
         }
 
@@ -26017,7 +26512,7 @@ final class DownloadManager: ObservableObject {
 
         try AppPaths.ensureDirectory(AppPaths.applicationSupportDirectory)
         let logURL = AppPaths.applicationSupportDirectory.appendingPathComponent("auto-remove-hook.log")
-        autoRemoveHookStatus = "자동 제거 후크 실행 중"
+        autoRemoveHookStatus = "Auto-remove Hook Running"
         try await ExternalProcessRunner.run(
             executable: executable,
             arguments: Array(arguments.dropFirst()),
@@ -26025,7 +26520,7 @@ final class DownloadManager: ObservableObject {
             currentDirectoryURL: Self.hookWorkingDirectory(for: job),
             failureDescription: "Auto-remove hook"
         )
-        autoRemoveHookStatus = "자동 제거 후크 완료"
+        autoRemoveHookStatus = "Auto-remove Hook Completed"
     }
 
     private nonisolated static func splitHookCommand(_ template: String) throws -> [String] {
@@ -26615,15 +27110,15 @@ final class DownloadManager: ObservableObject {
         let minutes = (total % 3_600) / 60
         let seconds = total % 60
         if days > 0 {
-            return "\(days)일 \(hours)시간 \(minutes)분 \(seconds)초 뒤 다시 시작: \(identifier)"
+            return "Restart in \(days)d \(hours)h \(minutes)m \(seconds)s: \(identifier)"
         }
         if hours > 0 {
-            return "\(hours)시간 \(minutes)분 \(seconds)초 뒤 다시 시작: \(identifier)"
+            return "Restart in \(hours)h \(minutes)m \(seconds)s: \(identifier)"
         }
         if minutes > 0 {
-            return "\(minutes)분 \(seconds)초 뒤 다시 시작: \(identifier)"
+            return "Restart in \(minutes)m \(seconds)s: \(identifier)"
         }
-        return "\(seconds)초 뒤 다시 시작: \(identifier)"
+        return "Restart in \(seconds)s: \(identifier)"
     }
 
     private nonisolated static func scheduledRetryOriginalTitle(for job: DownloadJob) -> String {
@@ -27563,6 +28058,9 @@ final class DownloadManager: ObservableObject {
     }
 
     private func templatedFolderName(for resolved: ResolvedDownload, sourceURL: URL) -> String {
+        if resolved.metadata["preserve_resolved_folder_path"] == "true" {
+            return resolved.folderName.sanitizedRelativePath(maxComponentLength: 120)
+        }
         let template = folderNameTemplate.trimmed
         guard !template.isEmpty else { return resolved.folderName.sanitizedRelativePath(maxComponentLength: 120) }
         let context = nameTemplateContext(
@@ -27583,14 +28081,25 @@ final class DownloadManager: ObservableObject {
         return assets.enumerated().map { offset, asset in
             var copy = asset
             let assetMetadata = Self.mergedNameTemplateMetadata(metadata, assetMetadata: asset.metadata)
-            copy.filename = templatedFileName(
-                original: asset.filename,
+            let preservesRelativePath = asset.metadata["preserve_relative_path"] == "true"
+            let safeRelativePath = asset.filename.sanitizedRelativePath(maxComponentLength: 120)
+            let relativeDirectory = preservesRelativePath
+                ? (safeRelativePath as NSString).deletingLastPathComponent
+                : ""
+            let originalName = preservesRelativePath
+                ? (safeRelativePath as NSString).lastPathComponent
+                : asset.filename
+            let outputName = templatedFileName(
+                original: originalName,
                 title: title,
                 sourceURL: sourceURL,
                 index: Self.nameTemplateIndex(for: asset, fallback: offset + 1),
                 total: total,
                 metadata: assetMetadata
             )
+            copy.filename = preservesRelativePath && relativeDirectory != "." && !relativeDirectory.isEmpty
+                ? "\(relativeDirectory)/\(outputName)".sanitizedRelativePath(maxComponentLength: 120)
+                : outputName
             return copy
         }
     }
@@ -28183,7 +28692,7 @@ final class DownloadManager: ObservableObject {
 
         guard let portValue = UInt16(httpAPIPortString), portValue > 0 else {
             httpAPIEnabled = false
-            httpAPIStatus = "잘못된 HTTP API 포트"
+            httpAPIStatus = "Invalid HTTP API Port"
             addSummary = httpAPIStatus
             persistHTTPAPISettings()
             return
@@ -28202,8 +28711,8 @@ final class DownloadManager: ObservableObject {
             httpAPIStatus = "http://127.0.0.1:\(portValue)"
         } catch {
             httpAPIEnabled = false
-            httpAPIStatus = "HTTP API 시작 실패"
-            addSummary = "HTTP API 시작 실패"
+            httpAPIStatus = "HTTP API Failed to Start"
+            addSummary = "HTTP API Failed to Start"
             persistHTTPAPISettings()
         }
     }
@@ -28211,7 +28720,7 @@ final class DownloadManager: ObservableObject {
     private func stopHTTPAPIServer() {
         httpAPIServer?.stop()
         httpAPIServer = nil
-        httpAPIStatus = "HTTP API 꺼짐"
+        httpAPIStatus = "HTTP API Off"
     }
 
     private func response(forAPIRequest request: LocalHTTPRequest) async -> LocalHTTPResponse {
@@ -29144,6 +29653,13 @@ final class DownloadManager: ObservableObject {
                 "runtimePeerCount": job.metadata["aria2_peer_count"] ?? "",
                 "metadata": job.metadata
             ]
+            object["displayStatus"] = job.statusAPIValue
+            object["partialFailure"] = job.partialFailureCounts != nil
+            if let counts = job.partialFailureCounts {
+                object["successfulFiles"] = counts.succeeded
+                object["failedFiles"] = counts.failed
+                object["totalFiles"] = counts.total
+            }
             let legacy = OriginalHDT.lightTaskObject(
                 job,
                 pageCount: max(job.completed, job.total)
@@ -29953,6 +30469,9 @@ final class DownloadManager: ObservableObject {
         if m3u8Resolver.canResolve(url) {
             return ("hls", "M3U8", true)
         }
+        if pawchiveResolver.canResolve(url, siteAddresses: pawchiveSiteAddresses) {
+            return ("gallery", "Kemono friends", true)
+        }
 
         let resolverChecks: [(type: String, resolver: String, canResolve: (URL) -> Bool)] = [
             ("gallery", "Hitomi", { self.hitomiResolver.canResolve($0) }),
@@ -30321,7 +30840,7 @@ final class DownloadManager: ObservableObject {
         } catch {
             return LocalHTTPResponse.jsonObject([
                 "ok": false,
-                "error": error.localizedDescription,
+                "error": AppLocalization.errorText(error),
                 "res": "error"
             ], status: 400)
         }
@@ -30389,7 +30908,7 @@ final class DownloadManager: ObservableObject {
         } catch {
             return LocalHTTPResponse.jsonObject([
                 "ok": false,
-                "error": error.localizedDescription,
+                "error": AppLocalization.errorText(error),
                 "res": "error"
             ], status: 400)
         }
@@ -32581,7 +33100,7 @@ final class DownloadManager: ObservableObject {
             do {
                 _ = try Self.assetIndexes(forRangeExpression: range, total: total)
             } catch {
-                return LocalHTTPResponse.jsonObject(["error": error.localizedDescription], status: 400)
+                return LocalHTTPResponse.jsonObject(["error": AppLocalization.errorText(error)], status: 400)
             }
         }
 
@@ -32683,7 +33202,7 @@ final class DownloadManager: ObservableObject {
             }
             return LocalHTTPResponse.jsonObject(apiTextObject(selection: selection, request: request))
         } catch {
-            return LocalHTTPResponse.jsonObject(["error": error.localizedDescription], status: 400)
+            return LocalHTTPResponse.jsonObject(["error": AppLocalization.errorText(error)], status: 400)
         }
     }
 
@@ -32701,7 +33220,7 @@ final class DownloadManager: ObservableObject {
             }
             return apiTextDetailPage(selection: selection, auth: auth, standaloneAuth: standaloneAuth)
         } catch {
-            return apiMessagePage(title: "Text could not be read", message: error.localizedDescription)
+            return apiMessagePage(title: "Text could not be read", message: AppLocalization.errorText(error))
         }
     }
 
@@ -34948,7 +35467,7 @@ final class DownloadManager: ObservableObject {
                 "remainingFileCount": remaining
             ])
         } catch {
-            return LocalHTTPResponse.jsonObject(["error": error.localizedDescription], status: 400)
+            return LocalHTTPResponse.jsonObject(["error": AppLocalization.errorText(error)], status: 400)
         }
     }
 
@@ -37834,10 +38353,13 @@ final class DownloadManager: ObservableObject {
             "danbooru.donmai.us",
             "danbooru.test",
             "gelbooru.com",
+            "www.gelbooru.com",
             "gelbooru.test",
             "yande.re",
             "yandere.test",
             "rule34.xxx",
+            "www.rule34.xxx",
+            "api.rule34.xxx",
             "rule34.test"
         ]
         let candidate: URL?

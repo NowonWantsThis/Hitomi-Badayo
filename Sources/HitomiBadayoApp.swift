@@ -8,12 +8,13 @@ private extension NSWindow {
 }
 
 @MainActor
-final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
+final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate, ApplicationTerminationPreparing {
     weak var manager: DownloadManager?
     var shortcutController: AppShortcutController?
     private var sheetObservers: [NSObjectProtocol] = []
     private var menuObservers: [NSObjectProtocol] = []
     private var isApplyingMainMenuLocalization = false
+    private let terminationPreparation = ApplicationTerminationPreparation()
     private weak var modalQuitItem: NSMenuItem?
     private var standardQuitTarget: AnyObject?
     private var standardQuitAction: Selector?
@@ -31,9 +32,30 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated {
                     self?.localizeTrackedMenu(menu)
                 }
+            },
+            center.addObserver(
+                forName: NSWindow.didBecomeKeyNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        self?.installStableMainMenu()
+                    }
+                }
             }
         ]
         installStableMainMenu()
+        // SwiftUI can finish materializing the standard Edit/Window menus
+        // after applicationDidFinishLaunching. Reapply localization on the
+        // next main-loop turn so a clean install starts in English even when
+        // the macOS display language is different.
+        DispatchQueue.main.async { [weak self] in
+            self?.installStableMainMenu()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.installStableMainMenu()
+        }
         sheetObservers = [
             center.addObserver(
                 forName: NSWindow.willBeginSheetNotification,
@@ -65,7 +87,35 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        .terminateNow
+        guard manager?.requiresBrowserDPIProxyRestorationBeforeTermination == true,
+              !terminationPreparation.isPrepared else {
+            return .terminateNow
+        }
+        prepareForApplicationTermination { restored in
+            guard restored else { return }
+            sender.terminate(nil)
+        }
+        return .terminateCancel
+    }
+
+    func prepareForApplicationTermination(
+        _ completion: @escaping @MainActor (Bool) -> Void
+    ) {
+        terminationPreparation.prepare(
+            operation: { [weak manager] in
+                guard let manager,
+                      manager.requiresBrowserDPIProxyRestorationBeforeTermination else {
+                    return true
+                }
+                return await manager.restoreBrowserDPIProxyBeforeTermination()
+            },
+            completion: { [weak manager] restored in
+                if !restored {
+                    manager?.addSummary = "Restore network settings before quitting"
+                }
+                completion(restored)
+            }
+        )
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -90,6 +140,10 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate {
         guard let menu = AppMainMenuPruner.makeStableMainMenu(
             from: NSApplication.shared.mainMenu
         ) else { return }
+        AppMainMenuPruner.simplify(
+            menu,
+            language: self.manager?.interfaceLanguage ?? .english
+        )
         if let application = NSApplication.shared as? HitomiBadayoApplication {
             application.installStableMainMenu(menu)
         } else {

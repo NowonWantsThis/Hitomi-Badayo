@@ -93,10 +93,15 @@ struct OriginalJobInfoDocument: Equatable {
         let time = date.isEmpty ? "" : "\(date)\(elapsed)"
         let ytdl = first(metadata, ["ytdlp_version", "yt_dlp_version", "ytdl_version", "ytdl"]) ?? ""
         let segment = first(metadata, ["segment_count", "total_segments", "v3"]) ?? ""
+        let fileResult = job.partialFailureCounts.map {
+            "\($0.succeeded) succeeded / \($0.failed) failed / \($0.total) total"
+        } ?? "\(job.completed) completed / \(job.total) total"
 
         let propertyLines = [
             job.title,
             "",
+            "status: \(job.statusDisplayText())",
+            "files: \(fileResult)",
             "version: \(itemVersion)\(versionSuffix)",
             "platform / locale: \(platform) / \(locale)",
             "order / group / uid: \(order) / \(group) / \(job.id.uuidString)",

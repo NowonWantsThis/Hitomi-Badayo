@@ -507,12 +507,12 @@ final class LoginBrowserWindowController: NSObject, NSWindowDelegate, WKNavigati
     private static func windowTitle(for policy: LoginBrowserAutoImportPolicy) -> String {
         switch policy {
         case .none: return AppLocalization.text("Login Browser")
-        case .pixivSession: return AppLocalization.text("로그인 | pixiv - 웹브라우저")
-        case .chzzkSession: return AppLocalization.text("로그인 | Chzzk - 웹브라우저")
-        case .naverSession: return AppLocalization.text("로그인 | Naver Cafe - 웹브라우저")
-        case .twitterSession: return AppLocalization.text("로그인 | Twitter/X - 웹브라우저")
-        case .pornhubSession: return AppLocalization.text("로그인 | Pornhub Premium - 웹브라우저")
-        case .arcaliveSession: return AppLocalization.text("로그인 | Arcalive - 웹브라우저")
+        case .pixivSession: return AppLocalization.text("Sign In | pixiv - Web Browser")
+        case .chzzkSession: return AppLocalization.text("Sign In | Chzzk - Web Browser")
+        case .naverSession: return AppLocalization.text("Sign In | Naver Cafe - Web Browser")
+        case .twitterSession: return AppLocalization.text("Sign In | Twitter/X - Web Browser")
+        case .pornhubSession: return AppLocalization.text("Sign In | Pornhub Premium - Web Browser")
+        case .arcaliveSession: return AppLocalization.text("Sign In | Arcalive - Web Browser")
         }
     }
 
@@ -631,7 +631,7 @@ final class LoginBrowserWindowController: NSObject, NSWindowDelegate, WKNavigati
         } catch {
             statusLabel.stringValue = AppLocalization.format(
                 "Download failed: %@",
-                error.localizedDescription
+                AppLocalization.errorText(error)
             )
             completionHandler(nil)
         }
@@ -652,7 +652,7 @@ final class LoginBrowserWindowController: NSObject, NSWindowDelegate, WKNavigati
         activeDownloads.removeValue(forKey: key)
         statusLabel.stringValue = (error as NSError).code == NSURLErrorCancelled
             ? AppLocalization.text("Download cancelled.")
-            : AppLocalization.format("Download failed: %@", error.localizedDescription)
+            : AppLocalization.format("Download failed: %@", AppLocalization.errorText(error))
     }
 
     func download(
@@ -750,7 +750,7 @@ final class LoginBrowserWindowController: NSObject, NSWindowDelegate, WKNavigati
         Task { @MainActor in
             statusLabel.stringValue = AppLocalization.format(
                 "Load failed: %@",
-                error.localizedDescription
+                AppLocalization.errorText(error)
             )
         }
     }
@@ -759,7 +759,7 @@ final class LoginBrowserWindowController: NSObject, NSWindowDelegate, WKNavigati
         Task { @MainActor in
             statusLabel.stringValue = AppLocalization.format(
                 "Load failed: %@",
-                error.localizedDescription
+                AppLocalization.errorText(error)
             )
         }
     }

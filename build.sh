@@ -32,10 +32,13 @@ if [[ "${autofill_guard}" != "true" ]]; then
     exit 1
 fi
 
-if [[ -f "${CONTENTS}/Resources/Tools/aria2c" ]]; then
-    chmod 755 "${CONTENTS}/Resources/Tools/aria2c"
-    codesign --force --sign - "${CONTENTS}/Resources/Tools/aria2c"
-fi
+for bundled_tool in aria2c spoofdpi; do
+    bundled_tool_path="${CONTENTS}/Resources/Tools/${bundled_tool}"
+    if [[ -f "${bundled_tool_path}" ]]; then
+        chmod 755 "${bundled_tool_path}"
+        codesign --force --sign - "${bundled_tool_path}"
+    fi
+done
 
 while IFS= read -r -d '' candidate; do
     /usr/bin/file -b "${candidate}" | grep -Fq 'Mach-O' || continue

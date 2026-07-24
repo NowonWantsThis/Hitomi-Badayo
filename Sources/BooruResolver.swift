@@ -11,16 +11,63 @@ enum BooruProvider: String {
         if host == "danbooru.donmai.us" || host == "danbooru.test" {
             return .danbooru
         }
-        if host == "gelbooru.com" || host == "gelbooru.test" {
+        if host == "gelbooru.com" || host == "www.gelbooru.com" || host == "gelbooru.test" {
             return .gelbooru
         }
         if host == "yande.re" || host == "yandere.test" {
             return .yandere
         }
-        if host == "rule34.xxx" || host == "rule34.test" {
+        if host == "rule34.xxx" ||
+            host == "www.rule34.xxx" ||
+            host == "api.rule34.xxx" ||
+            host == "rule34.test" {
             return .rule34
         }
         return nil
+    }
+}
+
+private actor BooruHTMLRequestGate {
+    static let shared = BooruHTMLRequestGate()
+
+    private var nextAllowedAt: [String: Date] = [:]
+    private var requestCounts: [String: Int] = [:]
+
+    func wait(for provider: BooruProvider) async throws {
+        let key = provider.rawValue
+        let now = Date()
+        let scheduled = max(now, nextAllowedAt[key] ?? now)
+        let count = (requestCounts[key] ?? 0) + 1
+        requestCounts[key] = count
+
+        var interval = Self.minimumInterval(for: provider)
+        if provider == .rule34, count.isMultiple(of: 24) {
+            interval += 10
+        }
+        nextAllowedAt[key] = scheduled.addingTimeInterval(interval)
+
+        let delay = scheduled.timeIntervalSince(now)
+        if delay > 0 {
+            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        }
+    }
+
+    func postpone(_ provider: BooruProvider, seconds: TimeInterval) {
+        let key = provider.rawValue
+        let postponed = Date().addingTimeInterval(max(0, seconds))
+        nextAllowedAt[key] = max(nextAllowedAt[key] ?? postponed, postponed)
+    }
+
+    private static func minimumInterval(for provider: BooruProvider) -> TimeInterval {
+#if TESTING
+        return 0
+#else
+        switch provider {
+        case .rule34: return 0.75
+        case .gelbooru: return 0.25
+        case .danbooru, .yandere: return 0
+        }
+#endif
     }
 }
 
@@ -56,6 +103,7 @@ final class BooruResolver {
     typealias RenderedHTMLProvider = @Sendable (URL, HTTPRequestOptions) async throws -> String
 
     static let defaultCollectionAssetLimit = 2_000
+    static let danbooruMediaUserAgent = "HitomiBadayo-Native/1.0"
     private static let maximumCollectionPages = 1_000
 
     private let renderedHTMLProvider: RenderedHTMLProvider?
@@ -74,7 +122,25 @@ final class BooruResolver {
         assetLimit: Int? = nil
     ) async throws -> ResolvedDownload {
         let request = try apiRequest(for: url)
+        if (request.provider == .gelbooru || request.provider == .rule34),
+           isDapiPostPage(url, provider: request.provider) {
+            return try await resolvePostPage(
+                url,
+                provider: request.provider,
+                titleHint: request.titleHint,
+                headers: headers
+            )
+        }
         if request.pagination != .none {
+            if (request.provider == .gelbooru || request.provider == .rule34),
+               isDapiListingPage(url, provider: request.provider) {
+                return try await resolveDapiHTMLCollection(
+                    sourceURL: url,
+                    request: request,
+                    headers: headers,
+                    assetLimit: assetLimit
+                )
+            }
             return try await resolveCollection(
                 sourceURL: url,
                 request: request,
@@ -98,8 +164,9 @@ final class BooruResolver {
                 referer: url.absoluteString
             )
         } catch where request.provider == .danbooru && Self.danbooruPostID(in: url) != nil {
-            return try await resolveDanbooruPostPage(
+            return try await resolvePostPage(
                 url,
+                provider: .danbooru,
                 titleHint: request.titleHint,
                 headers: headers
             )
@@ -175,36 +242,238 @@ final class BooruResolver {
         return resolved
     }
 
-    private func resolveDanbooruPostPage(
+    private func resolveDapiHTMLCollection(
+        sourceURL: URL,
+        request: BooruAPIRequest,
+        headers: HTTPRequestOptions,
+        assetLimit: Int?
+    ) async throws -> ResolvedDownload {
+        let limit = max(1, assetLimit ?? Self.defaultCollectionAssetLimit)
+        let referer = headers.referer ?? sourceURL.absoluteString
+        var listingURL = sourceURL
+        var assets: [ResolvedAsset] = []
+        var metadata = DownloadMetadata.clean(["search": request.titleHint])
+        var seenPages = Set<String>()
+        var seenPosts = Set<String>()
+        var seenAssets = Set<String>()
+        var pageCount = 0
+        var failedPostCount = 0
+        var failedPostIDs: [String] = []
+        var firstPostError: Error?
+
+        while assets.count < limit && pageCount < Self.maximumCollectionPages {
+            try Task.checkCancellation()
+            let pageIdentity = URLIdentity.normalize(listingURL.absoluteString)
+            guard seenPages.insert(pageIdentity).inserted else { break }
+
+            let html = try await dapiHTML(
+                from: listingURL,
+                provider: request.provider,
+                referer: referer,
+                headers: headers
+            ) { html in
+                !Self.dapiPostURLs(
+                    fromHTML: html,
+                    baseURL: listingURL,
+                    provider: request.provider
+                ).isEmpty || Self.isDapiListingDocument(html, provider: request.provider)
+            }
+            let postURLs = Self.dapiPostURLs(
+                fromHTML: html,
+                baseURL: listingURL,
+                provider: request.provider
+            )
+            guard !postURLs.isEmpty else { break }
+            pageCount += 1
+
+            for postURL in postURLs {
+                try Task.checkCancellation()
+                let postIdentity = Self.dapiPostIdentity(postURL)
+                guard seenPosts.insert(postIdentity).inserted else { continue }
+
+                do {
+                    let post = try await resolvePostPage(
+                        postURL,
+                        provider: request.provider,
+                        titleHint: Self.dapiPostTitle(for: postURL, provider: request.provider),
+                        headers: headers
+                    )
+                    for (key, value) in post.metadata where metadata[key] == nil {
+                        metadata[key] = value
+                    }
+                    for asset in post.assets {
+                        let identity = "\(postIdentity)|\(URLIdentity.normalize(asset.remoteURL.absoluteString))"
+                        guard seenAssets.insert(identity).inserted else { continue }
+                        assets.append(asset)
+                        if assets.count == limit { break }
+                    }
+                } catch {
+                    try Task.checkCancellation()
+                    failedPostCount += 1
+                    if let id = Self.dapiQueryValue("id", in: postURL)?.trimmed, !id.isEmpty {
+                        failedPostIDs.append(id)
+                    }
+                    if firstPostError == nil {
+                        firstPostError = error
+                    }
+                }
+
+                if assets.count == limit { break }
+            }
+
+            if assets.count == limit { break }
+            guard let nextURL = Self.dapiNextListingURL(
+                fromHTML: html,
+                currentURL: listingURL,
+                provider: request.provider
+            ) else {
+                break
+            }
+            listingURL = nextURL
+        }
+
+        if assets.isEmpty, let firstPostError {
+            throw firstPostError
+        }
+        guard !assets.isEmpty else { throw NativeDownloadError.noFiles }
+
+        let title = request.titleHint.sanitizedFilename(maxLength: 120)
+        let imageCount = assets.filter { Self.isImage($0.remoteURL) }.count
+        let videoCount = assets.filter { Self.isVideo($0.remoteURL) }.count
+        metadata["tag"] = metadata["tag"] ?? request.titleHint
+        metadata["tags"] = metadata["tags"] ?? request.titleHint
+        metadata["category"] = metadata["category"] ?? request.titleHint
+        metadata["type"] = "post"
+        metadata["media_type"] = Self.mediaType(imageCount: imageCount, videoCount: videoCount)
+        metadata["media_count"] = String(assets.count)
+        if imageCount > 0 {
+            metadata["image_count"] = String(imageCount)
+        }
+        if videoCount > 0 {
+            metadata["video_count"] = String(videoCount)
+        }
+        metadata["site"] = request.provider.rawValue
+        metadata["provider"] = request.provider.rawValue
+        metadata["api_url"] = sourceURL.absoluteString
+        metadata["url"] = sourceURL.absoluteString
+        metadata["source_url"] = sourceURL.absoluteString
+        metadata["page_url"] = sourceURL.absoluteString
+        metadata["title"] = title
+        metadata["page_count"] = String(pageCount)
+        metadata["post_count"] = String(seenPosts.count)
+        if failedPostCount > 0 {
+            metadata["failed_post_count"] = String(failedPostCount)
+            metadata["failed_post_ids"] = failedPostIDs.joined(separator: ",")
+            metadata["incomplete_gallery"] = "true"
+            metadata["failed_file_count"] = String(failedPostCount)
+            metadata["successful_file_count"] = String(assets.count)
+            metadata["downloaded_file_count"] = String(assets.count)
+            metadata["total_file_count"] = String(assets.count + failedPostCount)
+        }
+        metadata["resolver_api"] = "HTML"
+        metadata["original_contract"] = "\(request.provider.rawValue.lowercased())-html-collection"
+
+        return ResolvedDownload(
+            title: title,
+            folderName: "\(request.provider.rawValue) \(title)".sanitizedFilename(maxLength: 120),
+            assets: assets,
+            metadata: metadata
+        )
+    }
+
+    private func resolvePostPage(
         _ url: URL,
+        provider: BooruProvider,
         titleHint: String,
         headers: HTTPRequestOptions
     ) async throws -> ResolvedDownload {
         let referer = headers.referer ?? url.absoluteString
+        if provider == .gelbooru || provider == .rule34 {
+            let html = try await dapiHTML(
+                from: url,
+                provider: provider,
+                referer: referer,
+                headers: headers
+            ) { html in
+                Self.htmlMediaURL(fromHTML: html, pageURL: url) != nil
+            }
+            var resolved = try Self.resolvedDownload(
+                fromHTML: html,
+                pageURL: url,
+                provider: provider,
+                titleHint: titleHint
+            )
+            resolved.metadata["resolver_api"] = "HTML"
+            resolved.metadata["original_contract"] = Self.htmlPostContract(for: provider)
+            return resolved
+        }
+
         do {
             let html = try await HTTPClient.shared.string(
                 from: url,
                 referer: referer,
                 userAgent: headers.userAgent
             )
-            return try Self.resolvedDownload(
+            var resolved = try Self.resolvedDownload(
                 fromHTML: html,
                 pageURL: url,
-                provider: .danbooru,
+                provider: provider,
                 titleHint: titleHint
             )
+            resolved.metadata["resolver_api"] = "HTML"
+            resolved.metadata["original_contract"] = Self.htmlPostContract(for: provider)
+            return resolved
         } catch {
             let html = try await renderedHTML(for: url, headers: headers)
             var resolved = try Self.resolvedDownload(
                 fromHTML: html,
                 pageURL: url,
-                provider: .danbooru,
+                provider: provider,
                 titleHint: titleHint
             )
             resolved.metadata["resolver_api"] = "Rendered HTML"
-            resolved.metadata["original_contract"] = "danbooru-4.2-improved-clf2"
+            resolved.metadata["original_contract"] = Self.htmlPostContract(for: provider)
             return resolved
         }
+    }
+
+    private func dapiHTML(
+        from url: URL,
+        provider: BooruProvider,
+        referer: String,
+        headers: HTTPRequestOptions,
+        validation: (String) -> Bool
+    ) async throws -> String {
+        let delays: [TimeInterval] = [3, 8, 15, 30]
+        var lastError: Error = NativeDownloadError.noFiles
+
+        for attempt in 0...delays.count {
+            try Task.checkCancellation()
+            try await BooruHTMLRequestGate.shared.wait(for: provider)
+            do {
+                let html = try await HTTPClient.shared.string(
+                    from: url,
+                    referer: referer,
+                    userAgent: headers.userAgent,
+                    retryLimitOverride: 0
+                )
+                guard validation(html) else {
+                    throw NativeDownloadError.unsupported(
+                        "\(provider.rawValue) returned an incomplete HTML page."
+                    )
+                }
+                return html
+            } catch {
+                try Task.checkCancellation()
+                lastError = error
+                guard attempt < delays.count else { break }
+                await BooruHTMLRequestGate.shared.postpone(provider, seconds: delays[attempt])
+            }
+        }
+
+        throw NativeDownloadError.unsupported(
+            "\(provider.rawValue) did not return a usable page after repeated native retries. \(lastError.localizedDescription)"
+        )
     }
 
     private func renderedDanbooruPosts(
@@ -310,6 +579,95 @@ final class BooruResolver {
         return output
     }
 
+    static func dapiPostURLs(
+        fromHTML html: String,
+        baseURL: URL,
+        provider: BooruProvider
+    ) -> [URL] {
+        var output: [URL] = []
+        var seen = Set<String>()
+        for anchor in regexSnippets(#"<a\b[^>]*>"#, in: html) {
+            for href in attributeValues(named: ["href"], in: anchor) {
+                guard let candidate = absoluteURL(htmlDecoded(href), baseURL: baseURL),
+                      BooruProvider.provider(for: candidate) == provider,
+                      dapiQueryValue("page", in: candidate)?.lowercased() == "post",
+                      dapiQueryValue("s", in: candidate)?.lowercased() == "view",
+                      let id = dapiQueryValue("id", in: candidate)?.trimmed,
+                      id.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil else {
+                    continue
+                }
+                let identity = "\(provider.rawValue):\(id)"
+                if seen.insert(identity).inserted {
+                    output.append(candidate)
+                }
+            }
+        }
+        return output
+    }
+
+    static func dapiNextListingURL(
+        fromHTML html: String,
+        currentURL: URL,
+        provider: BooruProvider
+    ) -> URL? {
+        let currentOffset = Int(dapiQueryValue("pid", in: currentURL) ?? "") ?? 0
+        var nextOffset: Int?
+        for anchor in regexSnippets(#"<a\b[^>]*>"#, in: html) {
+            for href in attributeValues(named: ["href"], in: anchor) {
+                guard let candidate = absoluteURL(htmlDecoded(href), baseURL: currentURL),
+                      BooruProvider.provider(for: candidate) == provider,
+                      dapiQueryValue("page", in: candidate)?.lowercased() == "post",
+                      dapiQueryValue("s", in: candidate)?.lowercased() == "list",
+                      let rawOffset = dapiQueryValue("pid", in: candidate),
+                      let offset = Int(rawOffset),
+                      offset > currentOffset else {
+                    continue
+                }
+                nextOffset = min(nextOffset ?? offset, offset)
+            }
+        }
+        guard let nextOffset else { return nil }
+        return replacingQueryValue("pid", with: String(nextOffset), in: currentURL)
+    }
+
+    private static func dapiQueryValue(_ name: String, in url: URL) -> String? {
+        URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?
+            .value
+    }
+
+    private static func dapiPostIdentity(_ url: URL) -> String {
+        if let id = dapiQueryValue("id", in: url)?.trimmed, !id.isEmpty {
+            return "id:\(id)"
+        }
+        return "url:\(URLIdentity.normalize(url.absoluteString))"
+    }
+
+    private static func dapiPostTitle(for url: URL, provider: BooruProvider) -> String {
+        guard let id = dapiQueryValue("id", in: url)?.trimmed, !id.isEmpty else {
+            return "\(provider.rawValue) post"
+        }
+        return "\(provider.rawValue) \(id)"
+    }
+
+    private static func isDapiListingDocument(_ html: String, provider: BooruProvider) -> Bool {
+        let marker = html.lowercased()
+        switch provider {
+        case .rule34:
+            return marker.contains("rule 34") &&
+                marker.contains("rel=\"canonical\"") &&
+                marker.contains("page=post") &&
+                marker.contains("s=list")
+        case .gelbooru:
+            return marker.contains("gelbooru") &&
+                (marker.contains("thumbnail-container") ||
+                    marker.contains("nobody here but us chickens"))
+        case .danbooru, .yandere:
+            return false
+        }
+    }
+
     func apiRequest(for url: URL) throws -> BooruAPIRequest {
         guard let provider = BooruProvider.provider(for: url) else {
             throw NativeDownloadError.unsupported("Unsupported booru host.")
@@ -340,7 +698,8 @@ final class BooruResolver {
                 remoteURL: remote,
                 filename: filename,
                 metadata: assetMetadata(from: post, provider: provider, remote: remote, referer: referer, index: assets.count + 1),
-                referer: referer
+                referer: referer,
+                userAgent: provider == .danbooru ? danbooruMediaUserAgent : nil
             ))
             metadata = metadata.merging(postMetadata(from: post)) { current, _ in current }
         }
@@ -398,7 +757,8 @@ final class BooruResolver {
             remoteURL: remote,
             filename: filename,
             metadata: assetMetadata(from: post, provider: provider, remote: remote, referer: pageURL.absoluteString, index: 1),
-            referer: pageURL.absoluteString
+            referer: pageURL.absoluteString,
+            userAgent: provider == .danbooru ? danbooruMediaUserAgent : nil
         )
 
         let title = titleHint.sanitizedFilename(maxLength: 120)
@@ -570,6 +930,41 @@ final class BooruResolver {
             return true
         }
         return queryValue("page", in: url)?.lowercased() == "favorites"
+    }
+
+    private func isDapiPostPage(_ url: URL, provider: BooruProvider) -> Bool {
+        guard BooruProvider.provider(for: url) == provider,
+              provider == .gelbooru || provider == .rule34,
+              queryValue("page", in: url)?.lowercased() == "post",
+              queryValue("s", in: url)?.lowercased() == "view",
+              let id = queryValue("id", in: url)?.trimmed,
+              !id.isEmpty else {
+            return false
+        }
+        return id.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil
+    }
+
+    private func isDapiListingPage(_ url: URL, provider: BooruProvider) -> Bool {
+        guard BooruProvider.provider(for: url) == provider,
+              provider == .gelbooru || provider == .rule34,
+              queryValue("page", in: url)?.lowercased() == "post",
+              queryValue("s", in: url)?.lowercased() == "list" else {
+            return false
+        }
+        return true
+    }
+
+    private static func htmlPostContract(for provider: BooruProvider) -> String {
+        switch provider {
+        case .danbooru:
+            return "danbooru-4.2-improved-clf2"
+        case .gelbooru:
+            return "gelbooru-html"
+        case .rule34:
+            return "rule34-html"
+        case .yandere:
+            return "booru-html"
+        }
     }
 
     private func favoriteUserID(in url: URL) -> String? {
@@ -1001,6 +1396,14 @@ final class BooruResolver {
 
     private static func htmlPostID(fromHTML html: String, pageURL: URL) -> String? {
         if let id = danbooruPostID(in: pageURL) {
+            return id
+        }
+        if let id = URLComponents(url: pageURL, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name.caseInsensitiveCompare("id") == .orderedSame })?
+            .value?
+            .trimmed,
+           id.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil {
             return id
         }
         return firstCapture(#"\bdata-id\s*=\s*(?:"([0-9]+)"|'([0-9]+)'|([0-9]+))"#, in: html) ??

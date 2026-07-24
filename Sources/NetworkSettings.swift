@@ -8,12 +8,26 @@ struct NetworkSettings: Equatable {
     private static let proxyEnabledKey = "proxyEnabled"
     private static let proxyURLStringKey = "proxyURLString"
     private static let proxyBypassListKey = "proxyBypassList"
+    private static let browserDPIBypassEnabledKey = "browserDPIBypassEnabled"
+    private static let browserDPIBypassPortKey = "browserDPIBypassPort"
+    private static let defaultBrowserDPIBypassPort = 8_080
 
     static func load(defaults: UserDefaults = .standard) -> NetworkSettings {
-        NetworkSettings(
+        let bypassList = defaults.string(forKey: proxyBypassListKey) ?? ""
+        if defaults.bool(forKey: browserDPIBypassEnabledKey) {
+            let savedPort = defaults.integer(forKey: browserDPIBypassPortKey)
+            let port = normalizedProxyPort(savedPort) ?? defaultBrowserDPIBypassPort
+            return NetworkSettings(
+                proxyEnabled: true,
+                proxyURLString: "http://127.0.0.1:\(port)",
+                proxyBypassList: bypassList
+            )
+        }
+
+        return NetworkSettings(
             proxyEnabled: defaults.object(forKey: proxyEnabledKey) as? Bool ?? false,
             proxyURLString: defaults.string(forKey: proxyURLStringKey) ?? "",
-            proxyBypassList: defaults.string(forKey: proxyBypassListKey) ?? ""
+            proxyBypassList: bypassList
         )
     }
 

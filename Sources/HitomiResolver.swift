@@ -3,14 +3,48 @@ import JavaScriptCore
 
 @MainActor
 final class HitomiResolver {
-    private let scriptEngine = HitomiScriptEngine()
+    private let scriptEngine = HitomiScriptEngine.shared
+    private let defaultResolutionAttempts = 8
+    nonisolated static let requestUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+#if TESTING
+    private let resolutionRetryDelayNanoseconds: UInt64 = 0
+#else
+    private let resolutionRetryDelayNanoseconds: UInt64 = 500_000_000
+#endif
 
     func canResolve(_ url: URL) -> Bool {
         let host = url.host?.lowercased() ?? ""
         return host == "hitomi.la" || host.hasSuffix(".hitomi.la")
     }
 
-    func resolve(_ url: URL, preferWebP: Bool) async throws -> ResolvedDownload {
+    func resolve(
+        _ url: URL,
+        preferWebP: Bool,
+        maximumAttempts: Int? = nil
+    ) async throws -> ResolvedDownload {
+        let attemptCount = max(1, maximumAttempts ?? defaultResolutionAttempts)
+        var lastError: Error?
+
+        for attempt in 0..<attemptCount {
+            try Task.checkCancellation()
+            do {
+                return try await resolveOnce(url, preferWebP: preferWebP)
+            } catch {
+                try Self.rethrowIfCancelled(error)
+                lastError = error
+            }
+
+            if attempt + 1 < attemptCount, resolutionRetryDelayNanoseconds > 0 {
+                try await Task.sleep(nanoseconds: resolutionRetryDelayNanoseconds)
+            }
+        }
+
+        throw lastError ?? NativeDownloadError.invalidGalleryData
+    }
+
+    private func resolveOnce(_ url: URL, preferWebP: Bool) async throws -> ResolvedDownload {
         let galleryID = try galleryID(from: url)
         let referer = "https://hitomi.la/reader/\(galleryID).html"
         let gallery = try await fetchGallery(id: galleryID, referer: referer)
@@ -22,12 +56,12 @@ final class HitomiResolver {
         if gallery.videoFilename?.trimmed.isEmpty == false {
             var thumbnailURL: URL?
             if let thumbnailFile = galleryFiles.first,
-               let thumbnailString = await scriptEngine.imageURL(
+               let resolvedThumbnail = try? await scriptEngine.imageURL(
                     galleryID: galleryID,
                     file: thumbnailFile,
                     preferWebP: true
                ) {
-                thumbnailURL = URL(string: thumbnailString)
+                thumbnailURL = resolvedThumbnail
             }
             if let video = Self.videoDownload(
                 gallery: gallery,
@@ -46,14 +80,11 @@ final class HitomiResolver {
 
         var assets: [ResolvedAsset] = []
         for (index, file) in galleryFiles.enumerated() {
-            guard let urlString = await scriptEngine.imageURL(
+            let remote = try await scriptEngine.imageURL(
                 galleryID: galleryID,
                 file: file,
                 preferWebP: preferWebP
-            ),
-                  let remote = URL(string: urlString) else {
-                continue
-            }
+            )
 
             let filename = Self.sourceFilename(for: file, remoteURL: remote, preferWebP: preferWebP)
             let pageReferer = Self.imageReferer(galleryID: galleryID, index: index + 1)
@@ -68,11 +99,18 @@ final class HitomiResolver {
             downloadMetadata["asset_concurrency_cap"] = "8"
             downloadMetadata["continue_asset_failures"] = "true"
             downloadMetadata["hitomi_asset"] = "true"
+            downloadMetadata["hitomi_lazy_asset"] = "true"
             assets.append(ResolvedAsset(
                 remoteURL: remote,
                 filename: filename,
                 metadata: downloadMetadata,
-                referer: pageReferer
+                referer: pageReferer,
+                userAgent: Self.requestUserAgent,
+                hitomiImageDescriptor: HitomiImageDescriptor(
+                    galleryID: galleryID,
+                    file: file,
+                    preferWebP: preferWebP
+                )
             ))
         }
 
@@ -86,6 +124,45 @@ final class HitomiResolver {
             assets: assets,
             metadata: galleryMetadata
         )
+    }
+
+    nonisolated static func isLazyImageAsset(_ asset: ResolvedAsset) -> Bool {
+        asset.hitomiImageDescriptor != nil &&
+            asset.metadata["hitomi_lazy_asset"] == "true"
+    }
+
+    nonisolated static func resolveLazyImageAsset(_ asset: ResolvedAsset) async throws -> ResolvedAsset {
+        guard let descriptor = asset.hitomiImageDescriptor else {
+            return asset
+        }
+
+        let remote = try await HitomiScriptEngine.shared.imageURL(
+            galleryID: descriptor.galleryID,
+            file: descriptor.file,
+            preferWebP: descriptor.preferWebP
+        )
+        var resolved = asset
+        resolved.remoteURL = remote
+        resolved.metadata["image_url"] = remote.absoluteString
+        resolved.metadata["media_url"] = remote.absoluteString
+        resolved.metadata["source_url"] = remote.absoluteString
+        resolved.metadata["format"] = mediaFormat(for: remote, fallbackName: descriptor.file.name)
+        resolved.metadata["media_format"] = resolved.metadata["format"]
+        return resolved
+    }
+
+    nonisolated private static func rethrowIfCancelled(_ error: Error) throws {
+        try Task.checkCancellation()
+        if error is CancellationError {
+            throw CancellationError()
+        }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            throw CancellationError()
+        }
+        if let nativeError = error as? NativeDownloadError,
+           case .cancelled = nativeError {
+            throw CancellationError()
+        }
     }
 
     // The improved original sets Downloader_hitomi.NO_LIMIT, so this must not
@@ -175,7 +252,8 @@ final class HitomiResolver {
                 remoteURL: videoURL,
                 filename: filename,
                 metadata: assetMetadata,
-                referer: videoURL.absoluteString
+                referer: videoURL.absoluteString,
+                userAgent: requestUserAgent
             )],
             metadata: galleryMetadata
         )
@@ -339,7 +417,8 @@ final class HitomiResolver {
                 let script = try await HTTPClient.shared.string(
                     from: url,
                     referer: referer,
-                    retryLimitOverride: 0
+                    userAgent: Self.requestUserAgent,
+                    retryLimitOverride: 3
                 )
                 guard let json = script.jsonObjectLiteralFromJavaScriptAssignment(),
                       let data = json.data(using: .utf8) else {
@@ -371,17 +450,49 @@ final class HitomiResolver {
     }
 }
 
-@MainActor
-final class HitomiScriptEngine {
+actor HitomiScriptEngine {
+    static let shared = HitomiScriptEngine()
+
     private var context: JSContext?
     private var loadedAt: Date?
+    private let maximumInitializationAttempts = 4
 
-    func imageURL(galleryID: String, file: HitomiFile, preferWebP: Bool) async -> String? {
-        do {
+    func imageURL(galleryID: String, file: HitomiFile, preferWebP: Bool) async throws -> URL {
+        var lastError: Error?
+
+        for attempt in 0..<maximumInitializationAttempts {
+            do {
+                return try await evaluateImageURL(
+                    galleryID: galleryID,
+                    file: file,
+                    preferWebP: preferWebP
+                )
+            } catch {
+                try Self.rethrowIfCancelled(error)
+                lastError = error
+                context = nil
+                loadedAt = nil
+            }
+
+            if attempt + 1 < maximumInitializationAttempts {
+                try await Self.waitBeforeInitializationRetry()
+            }
+        }
+
+        throw lastError ?? NativeDownloadError.invalidGalleryData
+    }
+
+    private func evaluateImageURL(
+        galleryID: String,
+        file: HitomiFile,
+        preferWebP: Bool
+    ) async throws -> URL {
             let context = try await context()
             let encoder = JSONEncoder()
             let data = try encoder.encode(file)
-            guard let json = String(data: data, encoding: .utf8) else { return nil }
+            guard let json = String(data: data, encoding: .utf8) else {
+                throw NativeDownloadError.invalidGalleryData
+            }
 
             let currentDomain = context
                 .evaluateScript("typeof domain2 !== 'undefined' ? domain2 : ''")?
@@ -399,12 +510,9 @@ final class HitomiScriptEngine {
                   let scheme = url.scheme?.lowercased(),
                   scheme == "http" || scheme == "https",
                   url.host?.isEmpty == false else {
-                return nil
+                throw NativeDownloadError.invalidGalleryData
             }
-            return value
-        } catch {
-            return nil
-        }
+            return url
     }
 
     nonisolated static func imageURLCall(
@@ -432,7 +540,7 @@ final class HitomiScriptEngine {
     }
 
     private func context() async throws -> JSContext {
-        if let context, let loadedAt, Date().timeIntervalSince(loadedAt) < 3600 {
+        if let context, let loadedAt, Date().timeIntervalSince(loadedAt) < 1_800 {
             return context
         }
 
@@ -442,12 +550,14 @@ final class HitomiScriptEngine {
                 let common = try await HTTPClient.shared.string(
                     from: urls.common,
                     referer: "https://hitomi.la/",
-                    retryLimitOverride: 1
+                    userAgent: HitomiResolver.requestUserAgent,
+                    retryLimitOverride: 3
                 )
                 let gg = try await HTTPClient.shared.string(
                     from: urls.gg,
                     referer: "https://hitomi.la/",
-                    retryLimitOverride: 1
+                    userAgent: HitomiResolver.requestUserAgent,
+                    retryLimitOverride: 3
                 )
 
                 guard let newContext = JSContext() else {
@@ -474,6 +584,28 @@ final class HitomiScriptEngine {
             }
         }
         throw lastError ?? NativeDownloadError.invalidGalleryData
+    }
+
+    private nonisolated static func rethrowIfCancelled(_ error: Error) throws {
+        try Task.checkCancellation()
+        if error is CancellationError {
+            throw CancellationError()
+        }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            throw CancellationError()
+        }
+        if let nativeError = error as? NativeDownloadError,
+           case .cancelled = nativeError {
+            throw CancellationError()
+        }
+    }
+
+    private nonisolated static func waitBeforeInitializationRetry() async throws {
+#if TESTING
+        return
+#else
+        try await Task.sleep(nanoseconds: 500_000_000)
+#endif
     }
 
     private static let bootstrapScript = """

@@ -38,6 +38,13 @@ When the user explicitly installs managed tools, the app downloads:
 The app may also load source-site pages in an embedded WebKit login window.
 Logging into a third-party site is governed by that site's privacy policy.
 
+The optional Browser DPI Bypass starts the bundled SpoofDPI helper as a local
+HTTP proxy bound to `127.0.0.1`. It does not listen on the Mac's external
+network interfaces. When the user points macOS Web Proxy and Secure Web Proxy
+settings to that address, compatible browser traffic passes through the local
+helper before reaching the requested site. The app reads the effective system
+proxy state to show whether both settings match; it does not upload that state.
+
 ## Browser cookie import
 
 Cookie import is optional and user initiated. When used, the app reads the

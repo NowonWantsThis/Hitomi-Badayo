@@ -24,7 +24,7 @@ private struct EditablePresetComboBox: NSViewRepresentable {
         comboBox.placeholderString = AppLocalization.text(placeholder)
         comboBox.controlSize = .regular
         comboBox.font = .systemFont(ofSize: NSFont.systemFontSize)
-        comboBox.setAccessibilityLabel(AppLocalization.text("편집 가능한 이름 형식"))
+        comboBox.setAccessibilityLabel(AppLocalization.text("Editable Naming Format"))
         comboBox.setAccessibilityIdentifier(accessibilityIdentifier)
         synchronize(comboBox, coordinator: context.coordinator)
         return comboBox
@@ -33,7 +33,7 @@ private struct EditablePresetComboBox: NSViewRepresentable {
     func updateNSView(_ comboBox: NSComboBox, context: Context) {
         context.coordinator.parent = self
         comboBox.placeholderString = AppLocalization.text(placeholder)
-        comboBox.setAccessibilityLabel(AppLocalization.text("편집 가능한 이름 형식"))
+        comboBox.setAccessibilityLabel(AppLocalization.text("Editable Naming Format"))
         comboBox.setAccessibilityIdentifier(accessibilityIdentifier)
         synchronize(comboBox, coordinator: context.coordinator)
     }
@@ -135,7 +135,7 @@ private struct FlatOpacitySlider: View {
             )
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(AppLocalization.text("창 투명도"))
+        .accessibilityLabel(AppLocalization.text("Window Opacity"))
         .accessibilityValue("\(Int((value * 100).rounded()))%")
         .accessibilityAdjustableAction { direction in
             switch direction {
@@ -181,13 +181,13 @@ private final class QueueThumbnailScaleMenuView: NSView {
 
         let imageView = NSImageView(image: NSImage(
             systemSymbolName: "photo",
-            accessibilityDescription: AppLocalization.text("썸네일 크기")
+            accessibilityDescription: AppLocalization.text("Thumbnail Size")
         ) ?? NSImage())
         imageView.symbolConfiguration = .init(pointSize: 13, weight: .regular)
         imageView.contentTintColor = .secondaryLabelColor
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
-        titleField.stringValue = "\(AppLocalization.text("썸네일 크기")) \(scale.label)"
+        titleField.stringValue = "\(AppLocalization.text("Thumbnail Size")) \(scale.label)"
         titleField.font = .menuFont(ofSize: 0)
         titleField.translatesAutoresizingMaskIntoConstraints = false
 
@@ -198,7 +198,7 @@ private final class QueueThumbnailScaleMenuView: NSView {
         slider.controlSize = .small
         slider.target = self
         slider.action = #selector(sliderChanged(_:))
-        slider.setAccessibilityLabel(AppLocalization.text("썸네일 크기"))
+        slider.setAccessibilityLabel(AppLocalization.text("Thumbnail Size"))
         slider.setAccessibilityValueDescription(scale.label)
         slider.translatesAutoresizingMaskIntoConstraints = false
 
@@ -232,7 +232,7 @@ private final class QueueThumbnailScaleMenuView: NSView {
         let scale = QueueThumbnailScale.normalized(index: Int(sender.doubleValue.rounded()))
         sender.doubleValue = Double(scale.rawValue)
         sender.setAccessibilityValueDescription(scale.label)
-        titleField.stringValue = "\(AppLocalization.text("썸네일 크기")) \(scale.label)"
+        titleField.stringValue = "\(AppLocalization.text("Thumbnail Size")) \(scale.label)"
         change(scale)
     }
 }
@@ -259,7 +259,7 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSButton {
         let button = NSButton(
-            title: AppLocalization.text("옵션", language: interfaceLanguage),
+            title: AppLocalization.text("Options", language: interfaceLanguage),
             target: context.coordinator,
             action: #selector(Coordinator.showMenu(_:))
         )
@@ -278,7 +278,7 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
     }
 
     private func configureTitle(_ button: NSButton) {
-        let title = AppLocalization.text("옵션", language: interfaceLanguage)
+        let title = AppLocalization.text("Options", language: interfaceLanguage)
         let font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
         button.font = font
         button.contentTintColor = .labelColor
@@ -318,7 +318,7 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
             let menu = NSMenu()
             menu.autoenablesItems = false
 
-            let viewMenu = NSMenu(title: AppLocalization.text("보기"))
+            let viewMenu = NSMenu(title: AppLocalization.text("View"))
             viewMenu.autoenablesItems = false
             for mode in QueueViewMode.allCases {
                 let item = QueueActionMenuItem(
@@ -332,21 +332,21 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
             }
             viewMenu.addItem(.separator())
             viewMenu.addItem(QueueActionMenuItem(
-                title: "보기 전환",
+                title: "Switch View",
                 systemImage: "arrow.left.arrow.right",
                 keyEquivalent: "v",
                 modifierMask: .option,
                 handler: configuration.toggleQueueViewMode
             ))
 
-            let viewTitle = AppLocalization.text("보기")
+            let viewTitle = AppLocalization.text("View")
             let viewItem = NSMenuItem(title: viewTitle, action: nil, keyEquivalent: "")
             viewItem.image = menuImage(named: configuration.queueViewMode.systemImage, title: viewTitle)
             viewItem.submenu = viewMenu
             menu.addItem(viewItem)
 
             let hideItem = QueueActionMenuItem(
-                title: "썸네일 숨기기",
+                title: "Hide Thumbnails",
                 systemImage: "photo.slash",
                 keyEquivalent: "t",
                 modifierMask: .option
@@ -365,23 +365,23 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
             menu.addItem(.separator())
 
             menu.addItem(QueueActionMenuItem(
-                title: "설정...",
+                title: "Settings...",
                 systemImage: "gearshape",
                 handler: configuration.openSettings
             ))
             menu.addItem(QueueActionMenuItem(
-                title: "글꼴...",
+                title: "Font...",
                 systemImage: "textformat",
                 handler: configuration.openFontSettings
             ))
             menu.addItem(QueueActionMenuItem(
-                title: "단축키...",
+                title: "Shortcuts...",
                 systemImage: "keyboard",
                 handler: configuration.openShortcutSettings
             ))
             menu.addItem(.separator())
 
-            let appearanceMenu = NSMenu(title: AppLocalization.text("화면 모드"))
+            let appearanceMenu = NSMenu(title: AppLocalization.text("Appearance"))
             appearanceMenu.autoenablesItems = false
             for mode in AppAppearanceMode.allCases {
                 let item = QueueActionMenuItem(
@@ -393,7 +393,7 @@ private struct CompactOptionsMenuButton: NSViewRepresentable {
                 item.state = configuration.appearanceMode == mode ? .on : .off
                 appearanceMenu.addItem(item)
             }
-            let appearanceTitle = AppLocalization.text("화면 모드")
+            let appearanceTitle = AppLocalization.text("Appearance")
             let appearanceItem = NSMenuItem(title: appearanceTitle, action: nil, keyEquivalent: "")
             appearanceItem.image = menuImage(named: "circle.lefthalf.filled", title: appearanceTitle)
             appearanceItem.submenu = appearanceMenu
@@ -883,7 +883,7 @@ private struct DuplicateJobConfirmationView: View {
                     .frame(width: 54, height: 54)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("중복 작업")
+                    Text("Duplicate Tasks")
                         .font(.headline)
                     Text(message)
                         .fixedSize(horizontal: false, vertical: true)
@@ -897,10 +897,10 @@ private struct DuplicateJobConfirmationView: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                Button("취소", action: cancel)
+                Button("Cancel", action: cancel)
                     .keyboardShortcut(.cancelAction)
                     .frame(minWidth: 82)
-                Button("확인", action: confirm)
+                Button("OK", action: confirm)
                     .keyboardShortcut(.defaultAction)
                     .frame(minWidth: 82)
             }
@@ -1064,7 +1064,7 @@ struct ContentView: View {
             ProgressWindowView(manager: manager)
         }
         .sheet(isPresented: $manager.showingAbout) {
-            AboutView()
+            AboutView(manager: manager)
         }
         .sheet(isPresented: $manager.showingHelp) {
             HelpView()
@@ -1092,22 +1092,22 @@ struct ContentView: View {
             Text(manager.storageWarningText)
         }
         .alert(manager.queueGroupPromptTitle, isPresented: $manager.showingJobGroupPrompt) {
-            TextField("그룹 이름", text: $manager.jobGroupNameDraft)
+            TextField("Group Name", text: $manager.jobGroupNameDraft)
             Button(manager.queueGroupPromptButtonTitle) {
                 manager.savePendingJobGroup()
             }
             .disabled(manager.jobGroupNameDraft.trimmed.isEmpty)
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelPendingJobGroup()
             }
         } message: {
             Text(manager.queueGroupPromptMessage)
         }
-        .alert("그룹을 제거할까요?", isPresented: $manager.showingQueueGroupRemovalConfirmation) {
-            Button("제거", role: .destructive) {
+        .alert("Remove this group?", isPresented: $manager.showingQueueGroupRemovalConfirmation) {
+            Button("Remove", role: .destructive) {
                 manager.removePendingQueueGroup()
             }
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelPendingQueueGroupRemoval()
             }
         } message: {
@@ -1116,15 +1116,15 @@ struct ContentView: View {
             Text(AppLocalization.format(
                 "Only \"%@\" will be removed. Its %@ tasks and downloaded files will be kept.",
                 language: manager.interfaceLanguage,
-                group?.name ?? AppLocalization.text("이 그룹", language: manager.interfaceLanguage),
+                group?.name ?? AppLocalization.text("This Group", language: manager.interfaceLanguage),
                 String(count)
             ))
         }
-        .alert("그룹 작업을 다시 시작할까요?", isPresented: $manager.showingQueueGroupRetryConfirmation) {
-            Button("다시 시작") {
+        .alert("Restart tasks in this group?", isPresented: $manager.showingQueueGroupRetryConfirmation) {
+            Button("Restart") {
                 manager.retryPendingQueueGroup()
             }
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelPendingQueueGroupRetry()
             }
         } message: {
@@ -1136,11 +1136,11 @@ struct ContentView: View {
                 String(count)
             ))
         }
-        .alert("목록에서 제거할까요?", isPresented: $manager.showingJobRemovalConfirmation) {
-            Button("제거", role: .destructive) {
+        .alert("Remove from the list?", isPresented: $manager.showingJobRemovalConfirmation) {
+            Button("Remove", role: .destructive) {
                 manager.removePendingJobs()
             }
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelPendingJobRemoval()
             }
         } message: {
@@ -1162,21 +1162,21 @@ struct ContentView: View {
         } message: {
             Text("Remove \(manager.bookmarks.count) bookmark(s)? Queued jobs and downloaded files will not be deleted.")
         }
-        .alert("불완전한 작업을 다시 시작할까요?", isPresented: $manager.showingRetryIncompleteJobsConfirmation) {
-            Button("다시 시작") {
+        .alert("Restart incomplete tasks?", isPresented: $manager.showingRetryIncompleteJobsConfirmation) {
+            Button("Restart") {
                 manager.retryPendingIncompleteJobs()
             }
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelPendingIncompleteJobRetry()
             }
         } message: {
             Text(manager.retryIncompleteJobsConfirmationMessage)
         }
-        .alert("완료된 작업을 제거할까요?", isPresented: $manager.showingCompletedJobsRemovalConfirmation) {
-            Button("제거", role: .destructive) {
+        .alert("Remove completed tasks?", isPresented: $manager.showingCompletedJobsRemovalConfirmation) {
+            Button("Remove", role: .destructive) {
                 manager.removePendingCompletedJobs()
             }
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelPendingCompletedJobRemoval()
             }
         } message: {
@@ -1201,12 +1201,12 @@ struct ContentView: View {
                     }
                 }
                 if manager.outputDeletionCandidates.count > 1 {
-                    Button("모든 다운로드 결과물", role: .destructive) {
+                    Button("All Downloaded Output", role: .destructive) {
                         manager.trashOutputCandidates(Set(manager.outputDeletionCandidates.map(\.id)))
                     }
                 }
             }
-            Button("취소", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 manager.cancelDeletingOutput()
             }
         } message: {
@@ -1465,6 +1465,12 @@ struct ContentView: View {
         } else if environment["HITOMI_NATIVE_UI_TEST_HITOMI_SETTINGS"] == "1" {
             await Task.yield()
             manager.openSettingsWindow(category: .hitomi)
+        } else if environment["HITOMI_NATIVE_UI_TEST_PIXIV_SETTINGS"] == "1" {
+            await Task.yield()
+            manager.openSettingsWindow(category: .pixiv)
+        } else if environment["HITOMI_NATIVE_UI_TEST_KEMONO_FRIENDS_SETTINGS"] == "1" {
+            await Task.yield()
+            manager.openSettingsWindow(category: .kemonoFriends)
         } else if environment["HITOMI_NATIVE_UI_TEST_SOCIAL_SETTINGS"] == "1" {
             await Task.yield()
             manager.openSettingsWindow(category: .social)
@@ -1477,6 +1483,77 @@ struct ContentView: View {
         } else if environment["HITOMI_NATIVE_UI_TEST_SETTINGS"] == "1" {
             await Task.yield()
             manager.openSettingsWindow(category: .advanced)
+        }
+        if environment["HITOMI_NATIVE_UI_TEST_ABOUT"] == "1" {
+            await Task.yield()
+            manager.showingAbout = true
+        }
+        if let auxiliaryWindow = environment["HITOMI_NATIVE_UI_TEST_AUXILIARY_WINDOW"]?.trimmed.lowercased(),
+           !auxiliaryWindow.isEmpty {
+            configureAuxiliaryLocalizationUITestFixture(
+                window: auxiliaryWindow,
+                outputPath: environment["HITOMI_NATIVE_UI_TEST_OUTPUT_PATH"]?.trimmed
+            )
+        }
+    }
+
+    private func configureAuxiliaryLocalizationUITestFixture(window: String, outputPath: String?) {
+        let configuredOutputPath = outputPath ?? ""
+        let fixtureOutputPath = configuredOutputPath.isEmpty
+            ? FileManager.default.temporaryDirectory.path
+            : configuredOutputPath
+        let source = "https://fixture.test/artist/sample"
+        let completedAt = Date(timeIntervalSince1970: 1_784_680_800)
+        let metadata = [
+            "artist": "Sekiya Asami",
+            "creator": "Sekiya Asami",
+            "site": "Fixture",
+            "file_count": "12"
+        ]
+        let fixture = DownloadJob(
+            source: source,
+            title: "Sekiya Asami - Localization Fixture",
+            status: .finished,
+            progress: 1,
+            completed: 12,
+            total: 12,
+            outputPath: fixtureOutputPath,
+            metadata: metadata
+        )
+        manager.jobs = [fixture]
+        manager.history = [
+            DownloadHistoryEntry(
+                source: source,
+                normalizedSource: source,
+                title: fixture.title,
+                outputPath: fixtureOutputPath,
+                completedAt: completedAt,
+                metadata: metadata
+            )
+        ]
+        manager.activityLog = [
+            ActivityLogEntry(
+                timestamp: completedAt,
+                category: "Download",
+                message: "Done"
+            )
+        ]
+
+        switch window {
+        case "font":
+            manager.showingFontSettings = true
+        case "statistics":
+            manager.showingStatistics = true
+        case "activity":
+            manager.showingActivityLog = true
+        case "history":
+            manager.showingHistoryWindow = true
+        case "directories":
+            manager.showingDirectories = true
+        case "artists":
+            manager.showingArtistRecommendations = true
+        default:
+            break
         }
     }
 
@@ -1631,7 +1708,7 @@ struct ContentView: View {
     }
 
     private var statusColorSummary: String {
-        manager.jobStatusColorPalette == .defaultPalette ? "기본 팔레트" : "사용자 팔레트"
+        manager.jobStatusColorPalette == .defaultPalette ? "Default Palette" : "Custom Palette"
     }
 
     private var canStartQueue: Bool {
@@ -1701,14 +1778,14 @@ struct ContentView: View {
                 Button {
                     manager.startQueue()
                 } label: {
-                    Label("대기열 시작", systemImage: "play.fill")
+                    Label("Start Queue", systemImage: "play.fill")
                 }
                 .disabled(manager.isRunning || !canStartQueue)
 
                 Button {
                     manager.cancelQueue()
                 } label: {
-                    Label("대기열 중지", systemImage: "stop.fill")
+                    Label("Stop Queue", systemImage: "stop.fill")
                 }
                 .disabled(!manager.isRunning)
 
@@ -1716,17 +1793,17 @@ struct ContentView: View {
                 Button {
                     manager.pasteAndDownloadURLs()
                 } label: {
-                    Label("붙여넣고 추가", systemImage: "doc.on.clipboard")
+                    Label("Paste and Add", systemImage: "doc.on.clipboard")
                 }
                 Button {
                     manager.addLocalFilesAndFolders()
                 } label: {
-                    Label("파일 또는 폴더 추가...", systemImage: "folder.badge.plus")
+                    Label("Add Files or Folders...", systemImage: "folder.badge.plus")
                 }
                 Button {
                     manager.beginCreatingQueueGroup()
                 } label: {
-                    Label("새 그룹 만들기", systemImage: "folder.badge.plus")
+                    Label("New Group", systemImage: "folder.badge.plus")
                 }
                 .keyboardShortcut("g", modifiers: .command)
 
@@ -1734,12 +1811,12 @@ struct ContentView: View {
                 Button {
                     manager.importOriginalTasks()
                 } label: {
-                    Label("작업 가져오기...", systemImage: "square.and.arrow.down")
+                    Label("Import Tasks...", systemImage: "square.and.arrow.down")
                 }
                 Button {
                     manager.exportOriginalTasks()
                 } label: {
-                    Label("작업 내보내기...", systemImage: "square.and.arrow.up")
+                    Label("Export Tasks...", systemImage: "square.and.arrow.up")
                 }
                 .disabled(
                     (manager.jobs.isEmpty && manager.queueGroups.isEmpty) ||
@@ -1752,11 +1829,11 @@ struct ContentView: View {
                 Button {
                     requestClearFinished()
                 } label: {
-                    Label("완료된 작업 모두 제거", systemImage: "checkmark.circle")
+                    Label("Remove All Completed Tasks", systemImage: "checkmark.circle")
                 }
                 .disabled(manager.removableFinishedJobCount == 0)
             } label: {
-                compactMenuTitle("작업")
+                compactMenuTitle("Task")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -1766,33 +1843,33 @@ struct ContentView: View {
                 Button {
                     manager.showingSearcher = true
                 } label: {
-                    Label("검색기...", systemImage: "magnifyingglass")
+                    Label("Searcher...", systemImage: "magnifyingglass")
                 }
                 Button {
                     manager.importPythonScript()
                 } label: {
-                    Label("스크립트 가져오기...", systemImage: "doc.badge.plus")
+                    Label("Import Script...", systemImage: "doc.badge.plus")
                 }
 
                 Divider()
                 Button {
                     manager.openDuplicateImageFinder()
                 } label: {
-                    Label("중복 이미지 찾기...", systemImage: "photo.on.rectangle")
+                    Label("Find Duplicate Images...", systemImage: "photo.on.rectangle")
                 }
                 .accessibilityIdentifier("tools.duplicate-image-finder")
 
                 Button {
                     manager.showingArtistRecommendations = true
                 } label: {
-                    Label("작가 추천...", systemImage: "person.2")
+                    Label("Artist Recommendations...", systemImage: "person.2")
                 }
                 .accessibilityIdentifier("tools.artist-recommendations")
 
                 Button {
                     manager.selectRandomVisibleJob()
                 } label: {
-                    Label("랜덤으로 하나 선택", systemImage: "dice")
+                    Label("Pick One at Random", systemImage: "dice")
                 }
                 .disabled(!manager.canSelectRandomVisibleJob)
                 .accessibilityIdentifier("tools.select-random-job")
@@ -1800,7 +1877,7 @@ struct ContentView: View {
                 Button {
                     manager.copyGalleryNumbersInSaveFolder()
                 } label: {
-                    Label("저장 폴더의 갤러리 번호 모두 복사", systemImage: "number.square")
+                    Label("Copy All Gallery IDs in Save Folder", systemImage: "number.square")
                 }
                 .disabled(manager.isCopyingGalleryNumbers)
                 .accessibilityIdentifier("tools.copy-gallery-ids")
@@ -1809,25 +1886,25 @@ struct ContentView: View {
                 Button {
                     manager.showingHistoryWindow = true
                 } label: {
-                    Label("작업 기록...", systemImage: "clock.arrow.circlepath")
+                    Label("History...", systemImage: "clock.arrow.circlepath")
                 }
                 Button {
                     manager.showingStatistics = true
                 } label: {
-                    Label("정보 및 통계...", systemImage: "chart.bar.xaxis")
+                    Label("Info & Statistics...", systemImage: "chart.bar.xaxis")
                 }
                 Button {
                     manager.showingActivityLog = true
                 } label: {
-                    Label("활동 로그...", systemImage: "doc.text.magnifyingglass")
+                    Label("Activity Log...", systemImage: "doc.text.magnifyingglass")
                 }
                 Button {
                     manager.showingDirectories = true
                 } label: {
-                    Label("다운로드 폴더...", systemImage: "folder")
+                    Label("Download Folder...", systemImage: "folder")
                 }
             } label: {
-                compactMenuTitle("도구")
+                compactMenuTitle("Tools")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -1855,15 +1932,15 @@ struct ContentView: View {
                 Button {
                     manager.showingHelp = true
                 } label: {
-                    Label("도움말", systemImage: "questionmark.circle")
+                    Label("Help", systemImage: "questionmark.circle")
                 }
                 Button {
                     manager.showingAbout = true
                 } label: {
-                    Label("Hitomi Badayo 정보", systemImage: "info.circle")
+                    Label("About Hitomi Badayo", systemImage: "info.circle")
                 }
             } label: {
-                compactMenuTitle("도움말")
+                compactMenuTitle("Help")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -1919,8 +1996,8 @@ struct ContentView: View {
                     .frame(width: scaled(22), height: scaled(26))
             }
             .buttonStyle(.plain)
-            .help(AppLocalization.text("빠른 실행 도구 모음 사용자 지정", language: manager.interfaceLanguage))
-            .accessibilityLabel(AppLocalization.text("빠른 실행 도구 모음 사용자 지정", language: manager.interfaceLanguage))
+            .help(AppLocalization.text("Customize Quick Access Toolbar", language: manager.interfaceLanguage))
+            .accessibilityLabel(AppLocalization.text("Customize Quick Access Toolbar", language: manager.interfaceLanguage))
             .accessibilityIdentifier("quick-access.customize")
 
             FlatOpacitySlider(value: Binding(
@@ -1961,7 +2038,7 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .help(AppLocalization.text(
-                manager.isQueueEnabled ? "대기열 일시 정지" : "대기열 다시 시작",
+                manager.isQueueEnabled ? "Pause Queue" : "Resume Queue",
                 language: manager.interfaceLanguage
             ))
 
@@ -1975,28 +2052,28 @@ struct ContentView: View {
                         .frame(width: scaled(32), height: scaled(38))
                 }
                 .buttonStyle(.plain)
-                .help(AppLocalization.text("붙여넣고 추가", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Paste and Add", language: manager.interfaceLanguage))
                 .contextMenu {
                     Button {
                         manager.pasteURLs()
                     } label: {
-                        Label("붙여넣기", systemImage: "doc.on.clipboard")
+                        Label("Paste", systemImage: "doc.on.clipboard")
                     }
                     Button {
                         manager.pasteAndDownloadURLs()
                     } label: {
-                        Label("붙여넣고 추가", systemImage: "text.badge.plus")
+                        Label("Paste and Add", systemImage: "text.badge.plus")
                     }
                     Divider()
                     Button {
                         manager.addLocalFilesAndFolders()
                     } label: {
-                        Label("파일 또는 폴더 추가...", systemImage: "folder.badge.plus")
+                        Label("Add Files or Folders...", systemImage: "folder.badge.plus")
                     }
                     Button {
                         manager.importURLList()
                     } label: {
-                        Label("URL 목록 가져오기...", systemImage: "square.and.arrow.down")
+                        Label("Import URL List...", systemImage: "square.and.arrow.down")
                     }
                 }
 
@@ -2004,7 +2081,7 @@ struct ContentView: View {
                     get: { manager.inputText },
                     set: { manager.setInputText($0) }
                 ), cursorUTF16Offset: manager.inputCursorUTF16Offset,
-                placeholder: "URL을 입력하세요", fontSize: scaled(15), onFocusChange: {
+                placeholder: "Enter a URL", fontSize: scaled(15), onFocusChange: {
                     manager.setURLInputFocused($0)
                 }, onCursorChange: {
                     manager.setInputCursorUTF16Offset($0)
@@ -2097,17 +2174,17 @@ struct ContentView: View {
                     )
             }
             .buttonStyle(.plain)
-            .help(AppLocalization.text("대기열에 추가", language: manager.interfaceLanguage))
+            .help(AppLocalization.text("Add to Queue", language: manager.interfaceLanguage))
             .contextMenu {
                 Button {
                     manager.addMP3AudioURLs()
                 } label: {
-                    Label("MP3 오디오로 추가", systemImage: "music.note")
+                    Label("Add as MP3 Audio", systemImage: "music.note")
                 }
                 Button {
                     manager.bookmarkInputURLs()
                 } label: {
-                    Label("북마크", systemImage: "star")
+                    Label("Bookmark", systemImage: "star")
                 }
             }
         }
@@ -2291,17 +2368,20 @@ struct ContentView: View {
             Button {
                 manager.clearCookies()
             } label: {
-                Label("쿠키 및 로그인 세션 삭제", systemImage: "trash")
+                Label("Delete Cookies and Login Sessions", systemImage: "trash")
                     .labelStyle(.iconOnly)
             }
             .disabled(manager.isClearingCookies)
             .help(AppLocalization.text(
-                "앱 쿠키와 내장 브라우저 로그인 세션 모두 삭제",
+                "Delete app cookies and embedded-browser login sessions",
                 language: manager.interfaceLanguage
             ))
             .accessibilityIdentifier("toolbar.clear-cookies")
 
-            Text(manager.cookieSummary)
+            Text(AppLocalization.statusText(
+                manager.cookieSummary,
+                language: manager.interfaceLanguage
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -2603,14 +2683,20 @@ struct ContentView: View {
                     }
                 }
 
-                Text(manager.queueCompletionActionStatus)
+                Text(AppLocalization.statusText(
+                    manager.queueCompletionActionStatus,
+                    language: manager.interfaceLanguage
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
             if !manager.addSummary.isEmpty {
-                Text(manager.addSummary)
+                Text(AppLocalization.statusText(
+                    manager.addSummary,
+                    language: manager.interfaceLanguage
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -3102,7 +3188,10 @@ struct ContentView: View {
                     )
                     .help("One live or recording URL per line")
 
-                Text(manager.autoRecordStatus)
+                Text(AppLocalization.statusText(
+                    manager.autoRecordStatus,
+                    language: manager.interfaceLanguage
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -4126,6 +4215,7 @@ struct ContentView: View {
                                 JobRow(
                                 job: job,
                                 isSelected: manager.selectedJobIDs.contains(job.id),
+                                queueIsPaused: !manager.isQueueEnabled,
                                 showsDownloadDate: manager.showDownloadDate,
                                 statusColorPalette: manager.jobStatusColorPalette,
                                 groupOptions: manager.queueGroupOptions,
@@ -4428,6 +4518,7 @@ struct ContentView: View {
         JobRow(
             job: job,
             isSelected: manager.selectedJobIDs.contains(job.id),
+            queueIsPaused: !manager.isQueueEnabled,
             showsDownloadDate: manager.showDownloadDate,
             statusColorPalette: manager.jobStatusColorPalette,
             groupOptions: manager.queueGroupOptions,
@@ -4648,7 +4739,7 @@ struct ContentView: View {
             Image(systemName: "line.3.horizontal.decrease")
                 .foregroundStyle(.secondary)
 
-            TextField("대기열 필터", text: $manager.queueFilter)
+            TextField("Filter Queue", text: $manager.queueFilter)
                 .textFieldStyle(.plain)
                 .frame(maxWidth: scaled(230))
 
@@ -4671,7 +4762,7 @@ struct ContentView: View {
                 .lineLimit(1)
 
             Menu {
-                Picker("정렬", selection: Binding(
+                Picker("Sort", selection: Binding(
                     get: { manager.queueSortMode },
                     set: { manager.setQueueSortMode($0) }
                 )) {
@@ -4684,7 +4775,7 @@ struct ContentView: View {
                     manager.setQueueSortDescending(!manager.queueSortDescending)
                 } label: {
                     Label(
-                        manager.queueSortDescending ? "내림차순" : "오름차순",
+                        manager.queueSortDescending ? "Descending" : "Ascending",
                         systemImage: manager.queueSortDescending ? "arrow.down" : "arrow.up"
                     )
                 }
@@ -4694,48 +4785,48 @@ struct ContentView: View {
                     Button {
                         manager.openOutputBrowserView(for: selectedQueueJobs)
                     } label: {
-                        Label("선택한 결과물 보기", systemImage: "eye")
+                        Label("Preview Selected Output", systemImage: "eye")
                     }
                     .disabled(!manager.canOpenOutputBrowserView(for: selectedQueueJobs))
 
                     Button {
                         manager.beginEditingJobComments(for: selectedQueueJobs)
                     } label: {
-                        Label("선택한 코멘트 수정...", systemImage: "text.bubble")
+                        Label("Edit Selected Comments...", systemImage: "text.bubble")
                     }
 
                     Button {
                         manager.beginMovingOutputs(for: selectedQueueJobs)
                     } label: {
-                        Label("선택한 결과물 이동...", systemImage: "folder.badge.plus")
+                        Label("Move Selected Output...", systemImage: "folder.badge.plus")
                     }
                     .disabled(!manager.canMoveOutputs(for: selectedQueueJobs))
 
                     Button {
                         manager.retryJobs(selectedQueueJobs)
                     } label: {
-                        Label("선택한 작업 다시 시작", systemImage: "arrow.clockwise")
+                        Label("Restart Selected Tasks", systemImage: "arrow.clockwise")
                     }
                     .disabled(!manager.canRetryJobs(for: selectedQueueJobs))
 
                     Button {
                         manager.moveSelectedJobsUp()
                     } label: {
-                        Label("위로 이동", systemImage: "chevron.up")
+                        Label("Move Up", systemImage: "chevron.up")
                     }
                     .disabled(!manager.canMoveSelectedJobsUp())
 
                     Button {
                         manager.moveSelectedJobsDown()
                     } label: {
-                        Label("아래로 이동", systemImage: "chevron.down")
+                        Label("Move Down", systemImage: "chevron.down")
                     }
                     .disabled(!manager.canMoveSelectedJobsDown())
 
                     Button {
                         manager.clearSelectedJobs()
                     } label: {
-                        Label("선택 해제", systemImage: "xmark.circle")
+                        Label("Clear Selection", systemImage: "xmark.circle")
                     }
                 }
 
@@ -4743,7 +4834,7 @@ struct ContentView: View {
                 Button {
                     requestClearFinished()
                 } label: {
-                    Label("완료된 작업 모두 제거", systemImage: "checkmark.circle")
+                    Label("Remove All Completed Tasks", systemImage: "checkmark.circle")
                 }
                 .disabled(manager.removableFinishedJobCount == 0)
             } label: {
@@ -4753,7 +4844,7 @@ struct ContentView: View {
             .menuIndicator(.hidden)
             .fixedSize()
             .help(selectedQueueJobs.isEmpty
-                ? AppLocalization.text("대기열 옵션", language: manager.interfaceLanguage)
+                ? AppLocalization.text("Queue Options", language: manager.interfaceLanguage)
                 : AppLocalization.format(
                     "%@ selected",
                     language: manager.interfaceLanguage,
@@ -4776,7 +4867,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(manager.queueFilter.trimmed.isEmpty ? Color.secondary : Color.accentColor)
-                .help(AppLocalization.text("필터 및 정렬", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Filter and Sort", language: manager.interfaceLanguage))
 
                 Button {
                     manager.showingSearcher = true
@@ -4786,7 +4877,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .help(AppLocalization.text("검색", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Search", language: manager.interfaceLanguage))
 
                 CompactLinearProgress(value: overallQueueProgress)
                     .frame(maxWidth: .infinity)
@@ -4804,7 +4895,7 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .lineLimit(1)
-                    .help(knownQueueSizeText.isEmpty ? "대기열 진행률" : knownQueueSizeText)
+                    .help(knownQueueSizeText.isEmpty ? "Queue Progress" : knownQueueSizeText)
             }
 
             HStack(spacing: scaled(12)) {
@@ -4814,13 +4905,13 @@ struct ContentView: View {
                     Button {
                         manager.openDownloadDirectory()
                     } label: {
-                        Label("다운로드 폴더 열기", systemImage: "folder")
+                        Label("Open Download Folder", systemImage: "folder")
                     }
 
                     Button {
                         manager.showingDirectories = true
                     } label: {
-                        Label("알려진 결과 폴더...", systemImage: "list.bullet.rectangle")
+                        Label("Known Output Folders...", systemImage: "list.bullet.rectangle")
                     }
                 } label: {
                     Image(systemName: "folder.fill")
@@ -4830,7 +4921,7 @@ struct ContentView: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .foregroundStyle(.secondary)
-                .help(AppLocalization.text("폴더 바로가기", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Folder Shortcuts", language: manager.interfaceLanguage))
             }
         }
         .padding(.horizontal, scaled(10))
@@ -4852,7 +4943,7 @@ struct ContentView: View {
             Button {
                 manager.saveCurrentQueueFilterBookmark()
             } label: {
-                Label("필터 저장", systemImage: "bookmark")
+                Label("Save Filter", systemImage: "bookmark")
             }
             .disabled(manager.queueFilter.trimmed.isEmpty)
 
@@ -4875,7 +4966,7 @@ struct ContentView: View {
                         }
                     }
                 } label: {
-                    Label("필터 제거", systemImage: "trash")
+                    Label("Remove Filter", systemImage: "trash")
                 }
             }
 
@@ -4883,12 +4974,12 @@ struct ContentView: View {
             Button {
                 manager.importQueueFilterBookmarks()
             } label: {
-                Label("필터 가져오기...", systemImage: "square.and.arrow.down")
+                Label("Import Filters...", systemImage: "square.and.arrow.down")
             }
             Button {
                 manager.exportQueueFilterBookmarks()
             } label: {
-                Label("필터 내보내기...", systemImage: "square.and.arrow.up")
+                Label("Export Filters...", systemImage: "square.and.arrow.up")
             }
             .disabled(manager.queueFilterBookmarks.isEmpty)
         } label: {
@@ -4897,7 +4988,7 @@ struct ContentView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(AppLocalization.text("필터 북마크", language: manager.interfaceLanguage))
+        .help(AppLocalization.text("Filter Bookmarks", language: manager.interfaceLanguage))
     }
 
     private var duplicateImageFolderMenu: some View {
@@ -4990,7 +5081,7 @@ struct ContentView: View {
             Image(systemName: "arrow.down.circle")
                 .font(.system(size: scaled(42), weight: .light))
                 .foregroundStyle(.secondary)
-            Text("대기열이 비어 있습니다")
+            Text("The queue is empty")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -5001,7 +5092,7 @@ struct ContentView: View {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: scaled(38), weight: .light))
                 .foregroundStyle(.secondary)
-            Text("일치하는 작업이 없습니다")
+            Text("No matching tasks")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -5038,8 +5129,8 @@ struct YouTubeCodecPriorityMenu: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help(AppLocalization.text("선호하는 YouTube 비디오 코덱 순서", language: manager.interfaceLanguage))
-        .accessibilityLabel(AppLocalization.text("YouTube 코덱 우선순위", language: manager.interfaceLanguage))
+        .help(AppLocalization.text("Preferred YouTube video codec order", language: manager.interfaceLanguage))
+        .accessibilityLabel(AppLocalization.text("YouTube Codec Priority", language: manager.interfaceLanguage))
         .accessibilityValue(label)
         .accessibilityIdentifier("settings.youtube-codec-priority")
     }
@@ -5066,7 +5157,7 @@ struct SettingsWindowView: View {
 
     private var statusColorSummary: String {
         localized(
-            manager.jobStatusColorPalette == .defaultPalette ? "기본 팔레트" : "사용자 팔레트"
+            manager.jobStatusColorPalette == .defaultPalette ? "Default Palette" : "Custom Palette"
         )
     }
 
@@ -5097,7 +5188,7 @@ struct SettingsWindowView: View {
             VStack(spacing: 0) {
                 header
 
-                ScrollView(.vertical, showsIndicators: false) {
+                ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: 18) {
                         selectedCategoryContent
 
@@ -5133,14 +5224,14 @@ struct SettingsWindowView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localized("설정"))
+            Text(localized("Settings"))
                 .font(.headline)
 
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .frame(width: 16)
-                TextField(localized("검색"), text: $manager.settingsWindowFilter)
+                TextField(localized("Search"), text: $manager.settingsWindowFilter)
                     .textFieldStyle(.roundedBorder)
                 if !manager.settingsWindowFilter.trimmed.isEmpty {
                     Button {
@@ -5149,7 +5240,7 @@ struct SettingsWindowView: View {
                         Image(systemName: "xmark.circle.fill")
                     }
                     .buttonStyle(.borderless)
-                    .help(AppLocalization.text("검색 지우기", language: manager.interfaceLanguage))
+                    .help(AppLocalization.text("Clear Search", language: manager.interfaceLanguage))
                 }
             }
 
@@ -5173,8 +5264,7 @@ struct SettingsWindowView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: manager.settingsWindowCategory.systemImage)
-                .font(.title3)
+            SettingsCategoryIcon(category: manager.settingsWindowCategory, size: 18)
                 .foregroundStyle(.secondary)
                 .frame(width: 24)
 
@@ -5195,7 +5285,7 @@ struct SettingsWindowView: View {
                 Image(systemName: "xmark.circle.fill")
             }
             .buttonStyle(.borderless)
-            .help(AppLocalization.text("설정 닫기", language: manager.interfaceLanguage))
+            .help(AppLocalization.text("Close Settings", language: manager.interfaceLanguage))
             .accessibilityIdentifier("settings.close")
         }
         .padding(.horizontal, 18)
@@ -5224,6 +5314,8 @@ struct SettingsWindowView: View {
             hitomiSettings
         case .pixiv:
             pixivSettings
+        case .kemonoFriends:
+            kemonoFriendsSettings
         case .youtube:
             youtubeSettings
         case .social:
@@ -5235,8 +5327,8 @@ struct SettingsWindowView: View {
 
     private var generalSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("언어", systemImage: "globe") {
-                settingsRow("표시 언어", detail: "설정, 메뉴 및 우클릭 메뉴") {
+            settingsSection("Language", systemImage: "globe") {
+                settingsRow("Display Language", detail: "Settings, menus, and context menus") {
                     trailingSettingsControl {
                         Picker("", selection: Binding(
                             get: { manager.interfaceLanguage },
@@ -5249,27 +5341,27 @@ struct SettingsWindowView: View {
                         .labelsHidden()
                         .pickerStyle(.menu)
                         .fixedSize()
-                        .accessibilityLabel(AppLocalization.text("표시 언어", language: manager.interfaceLanguage))
+                        .accessibilityLabel(AppLocalization.text("Display Language", language: manager.interfaceLanguage))
                         .accessibilityIdentifier("settings.interface-language")
                     }
                 }
             }
 
-            settingsSection("저장 폴더", systemImage: "folder") {
-                settingsRow("저장 위치", detail: "다운로드 기준 폴더") {
+            settingsSection("Save Folder", systemImage: "folder") {
+                settingsRow("Save Location", detail: "Base download folder") {
                     HStack(spacing: 8) {
                         Text(manager.destinationPath)
                             .font(.caption)
                             .lineLimit(2)
                             .truncationMode(.middle)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        iconButton("folder", help: "다운로드 폴더 선택") {
+                        iconButton("folder", help: "Choose Download Folder") {
                             manager.chooseDestination()
                         }
                     }
                 }
 
-                settingsRow("소스별 폴더", detail: "사이트별 하위 폴더") {
+                settingsRow("Folders by Source", detail: "Site-specific subfolders") {
                     VStack(alignment: .trailing, spacing: 5) {
                         sourceFolderProfileMenu
 
@@ -5294,10 +5386,10 @@ struct SettingsWindowView: View {
                             )
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 186)
-                            .accessibilityLabel(AppLocalization.text("소스 폴더 이름", language: manager.interfaceLanguage))
+                            .accessibilityLabel(AppLocalization.text("Source Folder Name", language: manager.interfaceLanguage))
                             .accessibilityIdentifier("settings.source-folder-name")
 
-                            iconButton("arrow.counterclockwise", help: "소스 폴더 이름 초기화") {
+                            iconButton("arrow.counterclockwise", help: "Reset Source Folder Name") {
                                 manager.resetSourceFolderName(
                                     for: manager.selectedSourceFolderID
                                 )
@@ -5314,7 +5406,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("폴더 구성", detail: "원본 기본값은 소스별 폴더") {
+                settingsRow("Folder Layout", detail: "The original default is folders by source") {
                     trailingSettingsControl {
                         Picker("", selection: Binding(
                             get: { manager.outputSubfolderMode },
@@ -5328,14 +5420,14 @@ struct SettingsWindowView: View {
                         .labelsHidden()
                         .pickerStyle(.menu)
                         .fixedSize()
-                        .accessibilityLabel(AppLocalization.text("다운로드 폴더 구성", language: manager.interfaceLanguage))
+                        .accessibilityLabel(AppLocalization.text("Download Folder Layout", language: manager.interfaceLanguage))
                         .accessibilityIdentifier("settings.output-folder-layout")
                     }
                 }
             }
 
-            settingsSection("대기열", systemImage: "list.bullet.rectangle") {
-                settingsRow("동시 작업", detail: "함께 실행할 대기열 작업") {
+            settingsSection("Queue", systemImage: "list.bullet.rectangle") {
+                settingsRow("Concurrent Tasks", detail: "Queue tasks to run together") {
                     Stepper(value: $manager.jobConcurrency, in: 1...12) {
                         Text("\(manager.jobConcurrency)")
                             .monospacedDigit()
@@ -5343,7 +5435,7 @@ struct SettingsWindowView: View {
                     .frame(maxWidth: 150, alignment: .trailing)
                 }
 
-                settingsRow("작업당 스레드", detail: "항목별 동시 파일 수") {
+                settingsRow("Threads per Task", detail: "Concurrent files per item") {
                     Stepper(value: $manager.concurrency, in: 1...24) {
                         Text("\(manager.concurrency)")
                             .monospacedDigit()
@@ -5351,7 +5443,7 @@ struct SettingsWindowView: View {
                     .frame(maxWidth: 150, alignment: .trailing)
                 }
 
-                settingsRow("미완료 다시 시도", detail: "실패한 다운로드 재시도") {
+                settingsRow("Retry Incomplete", detail: "Retry failed downloads") {
                     trailingSettingsControl {
                         HStack(spacing: 10) {
                             incompleteRetryDelayMenu
@@ -5363,17 +5455,17 @@ struct SettingsWindowView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .fixedSize(horizontal: true, vertical: false)
-                            .accessibilityLabel(AppLocalization.text("미완료 다운로드 자동 재시도", language: manager.interfaceLanguage))
+                            .accessibilityLabel(AppLocalization.text("Automatically retry incomplete downloads", language: manager.interfaceLanguage))
                             .accessibilityIdentifier("settings.incomplete-retry-toggle")
                         }
                     }
                 }
 
                 settingsRow(
-                    "중복 URL 건너뛰기",
-                    detail: "이미 추가된 주소를 다시 대기열에 넣지 않음"
+                    "Skip Duplicate URLs",
+                    detail: "Do not queue an address that has already been added"
                 ) {
-                    settingsSwitch("중복 URL 건너뛰기", isOn: Binding(
+                    settingsSwitch("Skip Duplicate URLs", isOn: Binding(
                         get: { manager.skipDuplicates },
                         set: { manager.setSkipDuplicates($0) }
                     ))
@@ -5381,10 +5473,10 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "완료 작업 자동 제거",
-                    detail: "완료된 항목을 대기열에서 자동으로 제거"
+                    "Automatically remove completed tasks",
+                    detail: "Remove completed items from the queue automatically"
                 ) {
-                    settingsSwitch("완료 작업 자동 제거", isOn: Binding(
+                    settingsSwitch("Automatically remove completed tasks", isOn: Binding(
                         get: { manager.autoRemoveFinishedJobs },
                         set: { manager.setAutoRemoveFinishedJobs($0) }
                     ))
@@ -5392,10 +5484,10 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "다운로드 날짜 표시",
-                    detail: "완료된 항목에 다운로드 날짜 표시"
+                    "Show download date",
+                    detail: "Show the download date on completed items"
                 ) {
-                    settingsSwitch("다운로드 날짜 표시", isOn: Binding(
+                    settingsSwitch("Show download date", isOn: Binding(
                         get: { manager.showDownloadDate },
                         set: { manager.setShowDownloadDate($0) }
                     ))
@@ -5403,10 +5495,10 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "재생목록 파일 번호 붙이기",
-                    detail: "재생목록 순서를 파일명 앞에 추가"
+                    "Number playlist files",
+                    detail: "Prefix filenames with their playlist order"
                 ) {
-                    settingsSwitch("재생목록 파일 번호 붙이기", isOn: Binding(
+                    settingsSwitch("Number playlist files", isOn: Binding(
                         get: { manager.numberPlaylistFiles },
                         set: { manager.setNumberPlaylistFiles($0) }
                     ))
@@ -5414,8 +5506,8 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("이름 형식", systemImage: "textformat") {
-                settingsRow("작품 폴더", detail: "원본 프리셋 선택 또는 직접 편집") {
+            settingsSection("Naming", systemImage: "textformat") {
+                settingsRow("Work Folder", detail: "Choose an original preset or edit directly") {
                     editableTemplatePicker(
                         placeholder: DownloadSourceFolderProfile.originalDefaultFolderTemplate,
                         text: Binding(
@@ -5430,7 +5522,7 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "개별 파일",
+                    "Individual Files",
                     detail: AppLocalization.format(
                         "%@ Presets",
                         language: manager.interfaceLanguage,
@@ -5458,7 +5550,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("녹화 파일") {
+                settingsRow("Recording File") {
                     trailingSettingsControl {
                         HStack(spacing: 8) {
                             editableTemplatePicker(
@@ -5480,32 +5572,160 @@ struct SettingsWindowView: View {
     }
 
     private var networkSettings: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            settingsSection("프록시", systemImage: "network") {
-                settingsRow("프록시 사용", detail: "지원하는 모든 다운로드에 프록시 적용") {
-                    settingsSwitch("프록시 사용", isOn: $manager.proxyEnabled)
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            settingsSection("App & Browser DPI Bypass", systemImage: "checkmark.shield") {
+                settingsRow(
+                    "Use App & Browser DPI Bypass",
+                    detail: "Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval may be required"
+                ) {
+                    HStack(spacing: 10) {
+                        Image(systemName: manager.browserDPIBypassSnapshot.phase.systemImage)
+                            .foregroundStyle(browserDPIBypassStatusColor(
+                                manager.browserDPIBypassSnapshot.phase
+                            ))
 
-                settingsRow("URL") {
-                    HStack(spacing: 8) {
-                        TextField("http://127.0.0.1:8080", text: $manager.proxyURLString)
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(!manager.proxyEnabled)
-                        iconButton("checkmark", help: "프록시 설정 저장") {
-                            manager.saveProxySettings()
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(localized(
+                                manager.browserDPIBypassSnapshot.phase.localizationKey
+                            ))
+                            .font(.caption)
+                            .lineLimit(1)
+
+                            if !manager.browserDPIBypassSnapshot.networkService.isEmpty {
+                                Text(manager.browserDPIBypassSnapshot.networkService)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                            }
                         }
+                        .foregroundStyle(.secondary)
+                        .help(localizedStatus(manager.browserDPIBypassSnapshot.diagnostic))
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("settings.browser-dpi-status")
+
+                        settingsSwitch("Use App & Browser DPI Bypass", isOn: Binding(
+                            get: { manager.browserDPIBypassEnabled },
+                            set: { manager.setBrowserDPIBypassEnabled($0) }
+                        ))
+                        .accessibilityIdentifier("settings.browser-dpi-bypass")
+                        .disabled(manager.browserDPIBypassSnapshot.phase.isBusy)
                     }
                 }
 
-                settingsRow("예외 주소") {
-                    TextField("example.com, *.internal.test", text: $manager.proxyBypassList)
-                        .textFieldStyle(.roundedBorder)
-                        .disabled(!manager.proxyEnabled)
+                if !manager.browserDPIBypassSnapshot.diagnostic.isEmpty {
+                    Label {
+                        Text(localizedStatus(manager.browserDPIBypassSnapshot.diagnostic))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier("settings.browser-dpi-diagnostic")
                 }
 
-                settingsRow("공인 IP") {
+                if manager.browserDPIBypassSnapshot.hasRestorableProxySettings {
+                    settingsRow(
+                        "Saved Network Settings",
+                        detail: "Restore settings saved before App & Browser DPI Bypass"
+                    ) {
+                        Button {
+                            manager.restoreBrowserDPIProxySettings()
+                        } label: {
+                            Label(localized("Restore"), systemImage: "arrow.uturn.backward")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(manager.browserDPIBypassSnapshot.phase.isBusy)
+                        .accessibilityIdentifier("settings.browser-dpi-restore")
+                    }
+                }
+
+                Button {
+                    manager.browserDPIAdvancedExpanded.toggle()
+                } label: {
                     HStack(spacing: 8) {
-                        iconButton(manager.isRefreshingPublicIP ? "hourglass" : "arrow.clockwise", help: "공인 IP 확인") {
+                        Image(systemName: manager.browserDPIAdvancedExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .frame(width: 14)
+                        Label(localized("Advanced"), systemImage: "slider.horizontal.3")
+                        Spacer(minLength: 0)
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .accessibilityLabel(localized("Advanced"))
+                .accessibilityValue(localized(manager.browserDPIAdvancedExpanded ? "On" : "Off"))
+                .accessibilityIdentifier("settings.browser-dpi-advanced")
+
+                if manager.browserDPIAdvancedExpanded {
+                    settingsRow(
+                        "Proxy Address",
+                        detail: "Manual setup address for Web Proxy and Secure Web Proxy"
+                    ) {
+                        HStack(spacing: 8) {
+                            Text(manager.browserDPIBypassSnapshot.endpoint.displayValue)
+                                .font(.caption.monospaced())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .textSelection(.enabled)
+                                .layoutPriority(1)
+                                .accessibilityIdentifier("settings.browser-dpi-address")
+                            iconButton("doc.on.doc", help: "Copy Proxy Address") {
+                                manager.copyBrowserDPIProxyAddress()
+                            }
+                            .accessibilityIdentifier("settings.browser-dpi-copy")
+                            iconButton("arrow.clockwise", help: "Refresh Proxy Status") {
+                                manager.refreshBrowserDPIBypassStatus()
+                            }
+                            .accessibilityIdentifier("settings.browser-dpi-refresh")
+                            iconButton("gearshape", help: "Open macOS Proxy Settings") {
+                                manager.openBrowserDPIProxySettings()
+                            }
+                            .accessibilityIdentifier("settings.browser-dpi-open-settings")
+                        }
+                        .controlSize(.small)
+                    }
+                    .padding(.top, 8)
+                }
+            }
+
+            settingsSection("Proxy", systemImage: "network") {
+                settingsRow("Use Proxy", detail: "Apply the proxy to all supported downloads") {
+                    settingsSwitch("Use Proxy", isOn: Binding(
+                        get: { manager.proxyEnabled },
+                        set: { enabled in
+                            manager.proxyEnabled = enabled
+                            if !enabled {
+                                manager.saveProxySettings()
+                            }
+                        }
+                    ))
+                }
+
+                if manager.proxyEnabled {
+                    settingsRow("URL") {
+                        HStack(spacing: 8) {
+                            TextField("http://127.0.0.1:8080", text: $manager.proxyURLString)
+                                .textFieldStyle(.roundedBorder)
+                            iconButton("checkmark", help: "Save Proxy Settings") {
+                                manager.saveProxySettings()
+                            }
+                        }
+                    }
+
+                    settingsRow("Bypass Addresses") {
+                        TextField("example.com, *.internal.test", text: $manager.proxyBypassList)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
+
+                settingsRow("Public IP") {
+                    HStack(spacing: 8) {
+                        iconButton(manager.isRefreshingPublicIP ? "hourglass" : "arrow.clockwise", help: "Check Public IP") {
                             manager.refreshPublicIP()
                         }
                         .disabled(manager.isRefreshingPublicIP)
@@ -5518,19 +5738,19 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("쿠키", systemImage: "key") {
-                settingsRow("가져오기") {
+            settingsSection("Cookies", systemImage: "key") {
+                settingsRow("Import") {
                     HStack(spacing: 8) {
-                        iconButton("key", help: "cookies.txt 또는 Cookie 헤더 가져오기") {
+                        iconButton("key", help: "Import cookies.txt or a Cookie header") {
                             manager.importCookies()
                         }
-                        iconButton("globe", help: "브라우저 쿠키 가져오기") {
+                        iconButton("globe", help: "Import Browser Cookies") {
                             manager.importBrowserCookies()
                         }
-                        iconButton("magnifyingglass", help: "브라우저 쿠키 데이터베이스 찾기") {
+                        iconButton("magnifyingglass", help: "Locate Browser Cookie Database") {
                             manager.importDetectedBrowserCookies()
                         }
-                        iconButton("person.crop.circle.badge.key", help: "로그인 브라우저 열기") {
+                        iconButton("person.crop.circle.badge.key", help: "Open Login Browser") {
                             manager.openLoginBrowser()
                         }
                         cookieClearButton()
@@ -5544,89 +5764,104 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("HTTP API", systemImage: "server.rack") {
-                settingsRow("HTTP API", detail: "로컬 제어 서버 실행") {
+                settingsRow("HTTP API", detail: "Run the local control server") {
                     settingsSwitch("HTTP API", isOn: Binding(
                         get: { manager.httpAPIEnabled },
                         set: { manager.setHTTPAPIEnabled($0) }
                     ))
                 }
 
-                settingsRow(
-                    "이미지 지연 로드",
-                    detail: "HTTP 뷰어에서 보이는 이미지만 불러오기"
-                ) {
-                    settingsSwitch("이미지 지연 로드", isOn: Binding(
-                        get: { manager.httpViewerLazyLoading },
-                        set: { manager.setHTTPViewerLazyLoading($0) }
-                    ))
-                }
+                if manager.httpAPIEnabled {
+                    settingsRow(
+                        "Lazy-load images",
+                        detail: "Load only visible images in the HTTP viewer"
+                    ) {
+                        settingsSwitch("Lazy-load images", isOn: Binding(
+                            get: { manager.httpViewerLazyLoading },
+                            set: { manager.setHTTPViewerLazyLoading($0) }
+                        ))
+                    }
 
-                settingsRow("포트") {
-                    HStack(spacing: 8) {
-                        TextField("8110", text: $manager.httpAPIPortString)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 90)
-                            .disabled(!manager.httpAPIEnabled)
-                        SecureField(localized("비밀번호"), text: $manager.httpAPIPassword)
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(!manager.httpAPIEnabled)
-                        iconButton("checkmark", help: "HTTP API 설정 저장") {
-                            manager.saveHTTPAPISettings()
+                    settingsRow("Port") {
+                        HStack(spacing: 8) {
+                            TextField("8110", text: $manager.httpAPIPortString)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(maxWidth: 90)
+                            SecureField(localized("Password"), text: $manager.httpAPIPassword)
+                                .textFieldStyle(.roundedBorder)
+                            iconButton("checkmark", help: "Save HTTP API Settings") {
+                                manager.saveHTTPAPISettings()
+                            }
                         }
                     }
-                }
 
-                settingsRow("상태") {
-                    Text(localizedStatus(manager.httpAPIStatus))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    settingsRow("Status") {
+                        Text(localizedStatus(manager.httpAPIStatus))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 }
             }
         }
     }
 
+    private func browserDPIBypassStatusColor(_ phase: BrowserDPIBypassPhase) -> Color {
+        switch phase {
+        case .active:
+            return .green
+        case .failed, .conflictingSystemProxy, .restoreRequired:
+            return .red
+        case .starting, .detectingNetwork, .configuringSystemProxy,
+             .restoringSystemProxy, .waitingForSystemProxy,
+             .partiallyConfigured, .waitingForProxyRemoval:
+            return .orange
+        case .off:
+            return .secondary
+        }
+    }
+
     private var liveSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("자동 녹화", systemImage: "record.circle") {
+            settingsSection("Automatic Recording", systemImage: "record.circle") {
                 settingsRow(
-                    "자동 녹화 사용",
-                    detail: "등록한 소스를 일정 간격으로 확인"
+                    "Enable Automatic Recording",
+                    detail: "Check registered sources at a regular interval"
                 ) {
-                    settingsSwitch("자동 녹화 사용", isOn: Binding(
+                    settingsSwitch("Enable Automatic Recording", isOn: Binding(
                         get: { manager.autoRecordEnabled },
                         set: { manager.setAutoRecordEnabled($0) }
                     ))
                 }
 
                 settingsRow(
-                    "자동 녹화 일시 정지",
-                    detail: "설정을 유지한 채 새 녹화 감지 중지"
+                    "Automatic Recording Paused",
+                    detail: "Stop detecting new recordings while keeping the settings"
                 ) {
-                    settingsSwitch("자동 녹화 일시 정지", isOn: Binding(
+                    settingsSwitch("Automatic Recording Paused", isOn: Binding(
                         get: { manager.autoRecordPaused },
                         set: { manager.setAutoRecordPaused($0) }
                     ))
                     .disabled(!manager.autoRecordEnabled)
                 }
 
-                settingsRow("확인 간격") {
+                settingsRow("Check Interval") {
                     HStack(spacing: 8) {
                         TextField("10", text: $manager.autoRecordIntervalMinutesString)
                             .textFieldStyle(.roundedBorder)
                             .frame(maxWidth: 90)
-                        iconButton(manager.isAutoRecordChecking ? "hourglass" : "arrow.clockwise", help: "자동 녹화 소스 지금 확인") {
+                        iconButton(manager.isAutoRecordChecking ? "hourglass" : "arrow.clockwise", help: "Check Automatic Recording Sources Now") {
                             manager.checkAutoRecordNow()
                         }
                         .disabled(manager.isAutoRecordChecking || manager.autoRecordPaused)
-                        iconButton("checkmark", help: "자동 녹화 설정 저장") {
+                        iconButton("checkmark", help: "Save Automatic Recording Settings") {
                             manager.saveAutoRecordSettings()
                         }
                     }
                 }
 
-                settingsRow("소스") {
+                settingsRow("Source") {
                     TextEditor(text: $manager.autoRecordURLsText)
                         .font(.caption)
                         .frame(minHeight: 90)
@@ -5636,7 +5871,7 @@ struct SettingsWindowView: View {
                         )
                 }
 
-                settingsRow("상태") {
+                settingsRow("Status") {
                     Text(localizedStatus(manager.autoRecordStatus))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -5646,35 +5881,35 @@ struct SettingsWindowView: View {
 
             settingsSection("HLS", systemImage: "film.stack") {
                 settingsRow(
-                    "MP4로 리먹스",
-                    detail: "HLS 결과를 MP4 컨테이너로 저장"
+                    "Remux to MP4",
+                    detail: "Save HLS output in an MP4 container"
                 ) {
-                    settingsSwitch("MP4로 리먹스", isOn: $manager.remuxM3U8ToMP4)
+                    settingsSwitch("Remux to MP4", isOn: $manager.remuxM3U8ToMP4)
                 }
 
                 settingsRow(
-                    "실패 항목 건너뛰기",
-                    detail: "일부 세그먼트가 실패해도 다운로드 계속"
+                    "Skip failed items",
+                    detail: "Continue downloading when some segments fail"
                 ) {
-                    settingsSwitch("실패 항목 건너뛰기", isOn: $manager.hlsContinueOnSegmentFailure)
+                    settingsSwitch("Skip failed items", isOn: $manager.hlsContinueOnSegmentFailure)
                 }
 
-                settingsRow("지연") {
+                settingsRow("Delay") {
                     HStack(spacing: 8) {
-                        TextField(localized("지연 (ms)"), text: $manager.m3u8SegmentDelayMillisecondsString)
+                        TextField(localized("Delay (ms)"), text: $manager.m3u8SegmentDelayMillisecondsString)
                             .textFieldStyle(.roundedBorder)
                             .frame(maxWidth: 100)
-                        iconButton("checkmark", help: "HLS 설정 저장") {
+                        iconButton("checkmark", help: "Save HLS Settings") {
                             manager.saveM3U8RemuxSetting()
                         }
                     }
                 }
 
                 settingsRow(
-                    "다운로드 중 잠자기 방지",
-                    detail: "활성 작업이 끝날 때까지 Mac이 잠들지 않도록 함"
+                    "Prevent sleep while downloading",
+                    detail: "Keep the Mac awake until active tasks finish"
                 ) {
-                    settingsSwitch("다운로드 중 잠자기 방지", isOn: Binding(
+                    settingsSwitch("Prevent sleep while downloading", isOn: Binding(
                         get: { manager.preventSleepWhileDownloading },
                         set: { manager.setPreventSleepWhileDownloading($0) }
                     ))
@@ -5685,8 +5920,8 @@ struct SettingsWindowView: View {
 
     private var themeSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("디스플레이", systemImage: "paintbrush") {
-                settingsRow("테마", detail: "기본 또는 스크립트") {
+            settingsSection("Display", systemImage: "paintbrush") {
+                settingsRow("Theme", detail: "Built-in or script") {
                     trailingSettingsControl {
                         VStack(alignment: .trailing, spacing: 6) {
                             HStack(spacing: 8) {
@@ -5694,7 +5929,7 @@ struct SettingsWindowView: View {
                                     get: { manager.selectedPythonThemeKey },
                                     set: { manager.setSelectedPythonThemeKey($0) }
                                 )) {
-                                    Text(localized("기본")).tag("")
+                                    Text(localized("Default")).tag("")
                                     ForEach(manager.availablePythonThemes) { theme in
                                         Text(theme.displayName).tag(theme.key)
                                     }
@@ -5712,7 +5947,7 @@ struct SettingsWindowView: View {
                                     .fixedSize()
                                 }
 
-                                iconButton("puzzlepiece.extension", help: "테마 플러그인 열기") {
+                                iconButton("puzzlepiece.extension", help: "Open Theme Plugin") {
                                     manager.openSettingsWindow(category: .plugins)
                                 }
                             }
@@ -5726,7 +5961,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("화면 모드") {
+                settingsRow("Appearance") {
                     trailingSettingsControl {
                         Picker("", selection: Binding(
                             get: { manager.appAppearanceMode },
@@ -5743,13 +5978,13 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("UI 배율") {
+                settingsRow("UI Scale") {
                     trailingSettingsControl {
                         uiScaleSelector
                     }
                 }
 
-                settingsRow("글꼴", detail: "서체 및 크기") {
+                settingsRow("Font", detail: "Typeface and size") {
                     trailingSettingsControl {
                         HStack(spacing: 10) {
                             Text(manager.interfaceFontSummary)
@@ -5760,7 +5995,7 @@ struct SettingsWindowView: View {
                             Button {
                                 manager.openFontSettings()
                             } label: {
-                                Label(localized("편집"), systemImage: "textformat.size")
+                                Label(localized("Edit"), systemImage: "textformat.size")
                             }
                             .accessibilityIdentifier("settings.font-edit")
                         }
@@ -5768,20 +6003,20 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "저전력 모드",
-                    detail: "썸네일과 시각 효과를 줄여 자원 사용 절약"
+                    "Low Power Mode",
+                    detail: "Reduce thumbnails and visual effects to save resources"
                 ) {
                     trailingSettingsControl {
-                        settingsSwitch("저전력 모드", isOn: Binding(
+                        settingsSwitch("Low Power Mode", isOn: Binding(
                             get: { manager.lowPowerMode },
                             set: { manager.setLowPowerMode($0) }
                         ))
                     }
                 }
 
-                settingsRow("로그인 시 실행", detail: "Mac에 로그인하면 앱 자동 실행") {
+                settingsRow("Launch at Login", detail: "Open the app automatically when you log in to the Mac") {
                     trailingSettingsControl {
-                        settingsSwitch("로그인 시 실행", isOn: Binding(
+                        settingsSwitch("Launch at Login", isOn: Binding(
                             get: { manager.launchAtLoginEnabled },
                             set: { manager.setLaunchAtLoginEnabled($0) }
                         ))
@@ -5789,8 +6024,8 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("대기열 색상", systemImage: "paintpalette") {
-                settingsRow("상태 색상") {
+            settingsSection("Queue Colors", systemImage: "paintpalette") {
+                settingsRow("Status Colors") {
                     trailingSettingsControl {
                         HStack(spacing: 10) {
                             Text(statusColorSummary)
@@ -5801,7 +6036,7 @@ struct SettingsWindowView: View {
                             Button {
                                 manager.beginEditingStatusColors()
                             } label: {
-                                Label(localized("편집"), systemImage: "paintpalette")
+                                Label(localized("Edit"), systemImage: "paintpalette")
                             }
                             .accessibilityIdentifier("settings.status-colors-edit")
                         }
@@ -5809,11 +6044,11 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "중복 미리보기",
-                    detail: "중복 확인 창에 이미지 썸네일 표시"
+                    "Duplicate Preview",
+                    detail: "Show image thumbnails in the duplicate review dialog"
                 ) {
                     trailingSettingsControl {
-                        settingsSwitch("중복 이미지 미리보기 썸네일 표시", isOn: Binding(
+                        settingsSwitch("Show Thumbnails in Duplicate Image Preview", isOn: Binding(
                             get: { manager.showDuplicateImageThumbnails },
                             set: { manager.setDuplicateImageThumbnails($0) }
                         ))
@@ -5821,7 +6056,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("유사도") {
+                settingsRow("Similarity") {
                     trailingSettingsControl {
                         Stepper(value: Binding(
                             get: { manager.duplicateImageSimilarityPercent },
@@ -5835,7 +6070,7 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("작업 태그", systemImage: "tag") {
+            settingsSection("Task Tags", systemImage: "tag") {
                 ForEach(TaskTagColor.allCases) { tag in
                     settingsRow(tag.label) {
                         trailingSettingsControl {
@@ -5864,9 +6099,9 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("초기화") {
+                settingsRow("Reset") {
                     trailingSettingsControl {
-                        iconButton("arrow.counterclockwise", help: "작업 태그 이름 초기화") {
+                        iconButton("arrow.counterclockwise", help: "Reset Task Tag Names") {
                             manager.resetTaskTagNames()
                         }
                         .accessibilityIdentifier("settings.task-tag-reset")
@@ -5920,7 +6155,7 @@ struct SettingsWindowView: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .accessibilityLabel(AppLocalization.text("다운로드 소스", language: manager.interfaceLanguage))
+        .accessibilityLabel(AppLocalization.text("Download Source", language: manager.interfaceLanguage))
         .accessibilityIdentifier("settings.source-folder-menu")
     }
 
@@ -5940,7 +6175,7 @@ struct SettingsWindowView: View {
         )
         .frame(width: 220, height: 26)
         .help(AppLocalization.text(
-            "프리셋을 선택하거나 형식을 직접 편집합니다",
+            "Choose a preset or edit the format directly",
             language: manager.interfaceLanguage
         ))
     }
@@ -5950,15 +6185,15 @@ struct SettingsWindowView: View {
             get: { manager.selectedHitomiFilenameTypeNumber },
             set: { manager.setHitomiFilenameTypeNumber($0) }
         )) {
-            Text(localized("원본 파일명")).tag(0)
-            Text(localized("네 자리 숫자 (0000)")).tag(1)
-            Text(localized("네 자리 숫자 + 원본 파일명")).tag(2)
+            Text(localized("Original Filename")).tag(0)
+            Text(localized("Four-Digit Number (0000)")).tag(1)
+            Text(localized("Four-Digit Number + Original Filename")).tag(2)
         }
         .labelsHidden()
         .pickerStyle(.menu)
         .frame(width: 220, alignment: .trailing)
         .accessibilityLabel(AppLocalization.text(
-            "Hitomi 파일명 형식",
+            "Hitomi Filename Format",
             language: manager.interfaceLanguage
         ))
         .accessibilityValue(manager.selectedSourceFileNameTemplate)
@@ -6013,7 +6248,7 @@ struct SettingsWindowView: View {
     }
 
     private var uiScaleSelector: some View {
-        Picker(localized("UI 배율"), selection: Binding(
+        Picker(localized("UI Scale"), selection: Binding(
             get: { manager.uiScale },
             set: { manager.setUIScale($0) }
         )) {
@@ -6026,7 +6261,7 @@ struct SettingsWindowView: View {
         .labelsHidden()
         .pickerStyle(.menu)
         .fixedSize()
-        .accessibilityLabel(AppLocalization.text("UI 배율", language: manager.interfaceLanguage))
+        .accessibilityLabel(AppLocalization.text("UI Scale", language: manager.interfaceLanguage))
         .accessibilityIdentifier("settings.ui-scale-selector")
     }
 
@@ -6046,7 +6281,7 @@ struct SettingsWindowView: View {
         .fixedSize(horizontal: true, vertical: false)
         .disabled(!manager.retryIncompleteAutomatically)
         .accessibilityLabel(AppLocalization.text(
-            "미완료 재시도 대기 시간",
+            "Incomplete retry delay",
             language: manager.interfaceLanguage
         ))
         .accessibilityValue(manager.incompleteRetryDelay.label(language: manager.interfaceLanguage))
@@ -6055,8 +6290,8 @@ struct SettingsWindowView: View {
 
     private var archiveSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("이미지", systemImage: "photo") {
-                settingsRow("포맷 변환") {
+            settingsSection("Images", systemImage: "photo") {
+                settingsRow("Format Conversion") {
                     Picker("", selection: Binding(
                         get: { manager.imageConversionFormat },
                         set: { manager.setImageConversionFormat($0) }
@@ -6070,13 +6305,13 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("압축 아이콘", systemImage: "archivebox.fill") {
+            settingsSection("Archive Icon", systemImage: "archivebox.fill") {
                 settingsRow(
-                    "누락된 압축 아이콘 숨기기",
-                    detail: "압축 파일이 이동되거나 삭제되면 목록에서 아이콘 숨김"
+                    "Hide Missing Archive Icons",
+                    detail: "Hide the icon when an archive is moved or deleted"
                 ) {
                     settingsSwitch(
-                        "누락된 압축 아이콘 숨기기",
+                        "Hide Missing Archive Icons",
                         isOn: Binding(
                             get: { manager.hideArchiveIndicatorWhenFileMissing },
                             set: { manager.setHideArchiveIndicatorWhenFileMissing($0) }
@@ -6086,11 +6321,11 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("소스별 압축", systemImage: "archivebox") {
+            settingsSection("Archive by Source", systemImage: "archivebox") {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
-                    TextField(localized("소스 검색"), text: $manager.archiveSourceFilter)
+                    TextField(localized("Search Sources"), text: $manager.archiveSourceFilter)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("settings.archive-source-filter")
                     if !manager.archiveSourceFilter.trimmed.isEmpty {
@@ -6100,7 +6335,7 @@ struct SettingsWindowView: View {
                             Image(systemName: "xmark.circle.fill")
                         }
                         .buttonStyle(.borderless)
-                        .help(AppLocalization.text("소스 검색 지우기", language: manager.interfaceLanguage))
+                        .help(AppLocalization.text("Clear Source Search", language: manager.interfaceLanguage))
                     }
                 }
 
@@ -6134,7 +6369,7 @@ struct SettingsWindowView: View {
                     .font(.subheadline)
                     .lineLimit(1)
                 if profile.supportsFolderArchive {
-                    Text(localized("압축 후 원본 폴더 삭제"))
+                    Text(localized("Delete the original folder after archiving"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -6163,7 +6398,7 @@ struct SettingsWindowView: View {
                 .accessibilityIdentifier("settings.archive-mode.\(profile.id)")
 
                 settingsSwitch(
-                    "원본 파일 삭제",
+                    "Delete Original Files",
                     isOn: Binding(
                     get: { manager.sourceArchiveDeletesOriginal(for: profile.id) },
                     set: { manager.setSourceArchiveDeleteOriginal($0, for: profile.id) }
@@ -6177,7 +6412,7 @@ struct SettingsWindowView: View {
                 ))
                 .accessibilityIdentifier("settings.archive-delete.\(profile.id)")
             } else {
-                Text(localized("단일 파일"))
+                Text(localized("Single File"))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .frame(width: 144, alignment: .trailing)
@@ -6190,19 +6425,19 @@ struct SettingsWindowView: View {
 
     private var pluginSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("Python 스크립트", systemImage: "terminal") {
-                settingsRow("실행 환경") {
+            settingsSection("Python Scripts", systemImage: "terminal") {
+                settingsRow("Runtime") {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
-                            TextField(localized("Python 3 자동 선택"), text: $manager.pythonPath)
+                            TextField(localized("Automatically Select Python 3"), text: $manager.pythonPath)
                                 .textFieldStyle(.roundedBorder)
                                 .onSubmit {
                                     manager.savePythonPath()
                                 }
-                            iconButton("folder", help: "Python 3 실행 파일 선택") {
+                            iconButton("folder", help: "Choose Python 3 Executable") {
                                 manager.choosePythonExecutable()
                             }
-                            iconButton("checkmark", help: "Python 경로 저장") {
+                            iconButton("checkmark", help: "Save Python Path") {
                                 manager.savePythonPath()
                             }
                         }
@@ -6213,19 +6448,19 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("스크립트") {
+                settingsRow("Scripts") {
                     HStack(spacing: 8) {
-                        iconButton("doc.badge.plus", help: "현재 세션에 스크립트 가져오기") {
+                        iconButton("doc.badge.plus", help: "Import Script into Current Session") {
                             manager.importPythonScript()
                         }
-                        iconButton("plus", help: "Python 플러그인 설치") {
+                        iconButton("plus", help: "Install Python Plugin") {
                             manager.installPythonPlugin()
                         }
-                        iconButton("arrow.clockwise", help: "Python 스크립트 다시 불러오기") {
+                        iconButton("arrow.clockwise", help: "Reload Python Scripts") {
                             manager.reloadPythonScriptPlugins()
                         }
                         .disabled(manager.isReloadingPythonScripts)
-                        iconButton("folder", help: "Python 플러그인 폴더 보기") {
+                        iconButton("folder", help: "Show Python Plugin Folder") {
                             manager.revealPythonPluginFolder()
                         }
                         Text("\(manager.pythonScriptPlugins.count)")
@@ -6235,7 +6470,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("후크 상태") {
+                settingsRow("Hook Status") {
                     Text(localizedStatus(manager.pythonHookStatus))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -6243,7 +6478,7 @@ struct SettingsWindowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                settingsRow("테마 상태") {
+                settingsRow("Theme Status") {
                     Text(localizedStatus(manager.pythonThemeStatus))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -6252,7 +6487,7 @@ struct SettingsWindowView: View {
                 }
 
                 if manager.pythonScriptPlugins.isEmpty {
-                    Text(localized("Python 스크립트가 없습니다"))
+                    Text(localized("No Python scripts"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -6270,13 +6505,13 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("사이트 규칙", systemImage: "puzzlepiece.extension") {
-                settingsRow("가져오기 / 내보내기") {
+            settingsSection("Site Rules", systemImage: "puzzlepiece.extension") {
+                settingsRow("Import / Export") {
                     HStack(spacing: 8) {
-                        iconButton("square.and.arrow.down", help: "사이트 규칙 가져오기") {
+                        iconButton("square.and.arrow.down", help: "Import Site Rules") {
                             manager.importSiteRules()
                         }
-                        iconButton("square.and.arrow.up", help: "사이트 규칙 내보내기") {
+                        iconButton("square.and.arrow.up", help: "Export Site Rules") {
                             manager.exportSiteRules()
                         }
                         Text("\(manager.siteRules.count)")
@@ -6286,38 +6521,38 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("규칙") {
+                settingsRow("Rules") {
                     HStack(spacing: 8) {
-                        TextField(localized("이름"), text: $manager.newSiteRuleName)
+                        TextField(localized("Name"), text: $manager.newSiteRuleName)
                             .textFieldStyle(.roundedBorder)
                         TextField("host.com", text: $manager.newSiteRuleHost)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("plus", help: "사이트 규칙 저장") {
+                        iconButton("plus", help: "Save Site Rule") {
                             manager.addSiteRule()
                         }
                     }
                 }
 
-                settingsRow("주소 패턴") {
-                    TextField(localized("/path/* 또는 /view?id=*"), text: $manager.newSiteRuleURLPattern)
+                settingsRow("Address Pattern") {
+                    TextField(localized("/path/* or /view?id=*"), text: $manager.newSiteRuleURLPattern)
                         .textFieldStyle(.roundedBorder)
                 }
 
-                settingsRow("명령") {
-                    TextField(localized("명령 {url} {output}"), text: $manager.newSiteRuleCommand)
+                settingsRow("Command") {
+                    TextField(localized("Command {url} {output}"), text: $manager.newSiteRuleCommand)
                         .textFieldStyle(.roundedBorder)
                 }
 
-                settingsRow("헤더") {
+                settingsRow("Headers") {
                     HStack(spacing: 8) {
                         TextField("referer {url}", text: $manager.newSiteRuleReferer)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("사용자 에이전트"), text: $manager.newSiteRuleUserAgent)
+                        TextField(localized("User Agent"), text: $manager.newSiteRuleUserAgent)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
 
-                settingsRow("압축") {
+                settingsRow("Archive") {
                     Picker("", selection: $manager.newSiteRuleArchiveMode) {
                         ForEach(SiteArchiveMode.allCases, id: \.self) { mode in
                             Text(mode.label).tag(mode)
@@ -6328,18 +6563,18 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "압축 후 원본 삭제",
-                    detail: "압축 파일을 만든 뒤 원본 폴더 삭제"
+                    "Delete Original After Archiving",
+                    detail: "Delete the original folder after creating the archive"
                 ) {
                     settingsSwitch(
-                        "압축 후 원본 삭제",
+                        "Delete Original After Archiving",
                         isOn: $manager.newSiteRuleDeleteOriginalAfterArchiving
                     )
                     .disabled(!manager.newSiteRuleArchiveMode.archives)
                 }
 
                 if manager.siteRules.isEmpty {
-                    Text(localized("사이트 규칙이 없습니다"))
+                    Text(localized("No site rules"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -6361,40 +6596,40 @@ struct SettingsWindowView: View {
 
     private var advancedSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("알림", systemImage: "bell") {
-                settingsRow("개별 작업 알림", detail: "각 다운로드가 끝나면 알림 표시") {
-                    settingsSwitch("개별 작업 알림", isOn: Binding(
+            settingsSection("Notifications", systemImage: "bell") {
+                settingsRow("Task Notifications", detail: "Show a notification when each download finishes") {
+                    settingsSwitch("Task Notifications", isOn: Binding(
                         get: { manager.notifyWhenJobCompletes },
                         set: { manager.setNotifyWhenJobCompletes($0) }
                     ))
                     .accessibilityIdentifier("settings.notify-job")
                 }
 
-                settingsRow("대기열 완료 알림", detail: "모든 대기열 작업이 끝나면 알림 표시") {
-                    settingsSwitch("대기열 완료 알림", isOn: Binding(
+                settingsRow("Queue Completion Notification", detail: "Show a notification when every queued task finishes") {
+                    settingsSwitch("Queue Completion Notification", isOn: Binding(
                         get: { manager.notifyWhenQueueCompletes },
                         set: { manager.setNotifyWhenQueueCompletes($0) }
                     ))
                     .accessibilityIdentifier("settings.notify-queue")
                 }
 
-                settingsRow("개별 작업 완료 소리", detail: "각 다운로드가 끝나면 소리 재생") {
-                    settingsSwitch("개별 작업 완료 소리", isOn: Binding(
+                settingsRow("Task Completion Sound", detail: "Play a sound when each download finishes") {
+                    settingsSwitch("Task Completion Sound", isOn: Binding(
                         get: { manager.playSoundWhenJobCompletes },
                         set: { manager.setPlaySoundWhenJobCompletes($0) }
                     ))
                     .accessibilityIdentifier("settings.sound-job")
                 }
 
-                settingsRow("클립보드 추가 소리", detail: "클립보드에서 작업을 추가하면 소리 재생") {
-                    settingsSwitch("클립보드 추가 소리", isOn: Binding(
+                settingsRow("Clipboard Add Sound", detail: "Play a sound when the clipboard adds a task") {
+                    settingsSwitch("Clipboard Add Sound", isOn: Binding(
                         get: { manager.playSoundOnClipboardAdd },
                         set: { manager.setPlaySoundOnClipboardAdd($0) }
                     ))
                     .accessibilityIdentifier("settings.sound-clipboard")
                 }
 
-                settingsRow("완료 후") {
+                settingsRow("After Completion") {
                     Picker("", selection: Binding(
                         get: { manager.queueCompletionAction },
                         set: { manager.setQueueCompletionAction($0) }
@@ -6408,9 +6643,9 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("자동화", systemImage: "bolt") {
-                settingsRow("클립보드 감시", detail: "복사한 지원 URL을 자동으로 감지") {
-                    settingsSwitch("클립보드 감시", isOn: Binding(
+            settingsSection("Automation", systemImage: "bolt") {
+                settingsRow("Monitor Clipboard", detail: "Detect supported URLs that you copy") {
+                    settingsSwitch("Monitor Clipboard", isOn: Binding(
                         get: { manager.clipboardMonitorEnabled },
                         set: { manager.setClipboardMonitorEnabled($0) }
                     ))
@@ -6418,43 +6653,43 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "붙여넣으면 바로 시작",
-                    detail: "앱에 붙여넣은 URL을 추가하고 대기열 시작"
+                    "Start Immediately When Pasted",
+                    detail: "Add URLs pasted into the app and start the queue"
                 ) {
-                    settingsSwitch("붙여넣으면 바로 시작", isOn: Binding(
+                    settingsSwitch("Start Immediately When Pasted", isOn: Binding(
                         get: { manager.startDownloadsOnPaste },
                         set: { manager.setStartDownloadsOnPaste($0) }
                     ))
                     .accessibilityIdentifier("settings.start-on-paste")
                     .help(AppLocalization.text(
-                        "메인 창에서 Command-V를 누르면 클립보드 URL을 추가하고 대기열을 시작합니다",
+                        "Press Command-V in the main window to add clipboard URLs and start the queue",
                         language: manager.interfaceLanguage
                     ))
                 }
 
-                settingsRow("자동 제거 후크") {
+                settingsRow("Auto-remove Hook") {
                     HStack(spacing: 8) {
                         TextField("auto-remove hook {url} {output}", text: $manager.autoRemoveHookCommand)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "자동 제거 후크 저장") {
+                        iconButton("checkmark", help: "Save Auto-remove Hook") {
                             manager.saveAutoRemoveHookCommand()
                         }
                     }
                 }
 
-                settingsRow("후크 상태") {
+                settingsRow("Hook Status") {
                     Text(localizedStatus(manager.autoRemoveHookStatus))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
 
-                settingsRow("단축키", detail: "메뉴 명령") {
+                settingsRow("Shortcuts", detail: "Menu Command") {
                     HStack(spacing: 10) {
                         Button {
                             manager.openShortcutSettings()
                         } label: {
-                            Label(localized("편집"), systemImage: "keyboard")
+                            Label(localized("Edit"), systemImage: "keyboard")
                         }
                         Text(localizedStatus(manager.shortcutSummary))
                             .font(.caption)
@@ -6463,20 +6698,20 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("플로팅 모니터", detail: "항상 위") {
+                settingsRow("Floating Monitor", detail: "Always on top") {
                     HStack(spacing: 10) {
-                        settingsSwitch("플로팅 모니터 표시", isOn: Binding(
+                        settingsSwitch("Show Floating Monitor", isOn: Binding(
                             get: { manager.showingFloatingMonitor },
                             set: { $0 ? manager.openFloatingMonitor() : manager.closeFloatingMonitor() }
                         ))
-                        .help(AppLocalization.text("플로팅 모니터 표시", language: manager.interfaceLanguage))
+                        .help(AppLocalization.text("Show Floating Monitor", language: manager.interfaceLanguage))
 
                         Slider(value: Binding(
                             get: { manager.floatingMonitorOpacity },
                             set: { manager.setFloatingMonitorOpacity($0) }
                         ), in: 0.45...1)
                         .frame(maxWidth: 150)
-                        .help(AppLocalization.text("플로팅 모니터 투명도", language: manager.interfaceLanguage))
+                        .help(AppLocalization.text("Floating Monitor Opacity", language: manager.interfaceLanguage))
 
                         Text(manager.floatingMonitorOpacityPercentText)
                             .font(.caption.monospacedDigit())
@@ -6486,8 +6721,8 @@ struct SettingsWindowView: View {
                 }
             }
 
-            settingsSection("외부 도구", systemImage: "terminal") {
-                settingsRow("상태", detail: "검증된 관리 도구") {
+            settingsSection("External Tools", systemImage: "terminal") {
+                settingsRow("Status", detail: "Verified Managed Tools") {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
                             if manager.isInstallingExternalTools {
@@ -6508,10 +6743,10 @@ struct SettingsWindowView: View {
 
                 settingsRow("yt-dlp") {
                     HStack(spacing: 8) {
-                        TextField(localized("yt-dlp 경로"), text: $manager.ytdlpPath)
+                        TextField(localized("yt-dlp Path"), text: $manager.ytdlpPath)
                             .textFieldStyle(.roundedBorder)
                         toolAvailabilityIcon(.ytdlp)
-                        iconButton("square.and.arrow.down", help: "yt-dlp 설치 또는 업데이트") {
+                        iconButton("square.and.arrow.down", help: "Install or Update yt-dlp") {
                             manager.installManagedExternalTool(.ytdlp)
                         }
                         .disabled(manager.isInstallingExternalTools)
@@ -6520,10 +6755,10 @@ struct SettingsWindowView: View {
 
                 settingsRow("ffmpeg") {
                     HStack(spacing: 8) {
-                        TextField(localized("ffmpeg 경로"), text: $manager.ffmpegPath)
+                        TextField(localized("ffmpeg Path"), text: $manager.ffmpegPath)
                             .textFieldStyle(.roundedBorder)
                         toolAvailabilityIcon(.ffmpeg)
-                        iconButton("square.and.arrow.down", help: "FFmpeg 및 ffprobe 설치 또는 업데이트") {
+                        iconButton("square.and.arrow.down", help: "Install or Update FFmpeg and ffprobe") {
                             manager.installManagedExternalTool(.ffmpeg)
                         }
                         .disabled(manager.isInstallingExternalTools)
@@ -6532,40 +6767,40 @@ struct SettingsWindowView: View {
 
                 settingsRow("aria2c") {
                     HStack(spacing: 8) {
-                        TextField(localized("aria2c 경로"), text: $manager.aria2Path)
+                        TextField(localized("aria2c Path"), text: $manager.aria2Path)
                             .textFieldStyle(.roundedBorder)
                         toolAvailabilityIcon(.aria2c)
-                        iconButton("arrow.clockwise", help: "내장 aria2c 복원") {
+                        iconButton("arrow.clockwise", help: "Restore Bundled aria2c") {
                             manager.installManagedExternalTool(.aria2c)
                         }
                         .disabled(manager.isInstallingExternalTools)
                     }
                 }
 
-                settingsRow("관리") {
+                settingsRow("Manage") {
                     HStack(spacing: 10) {
                         Button {
                             manager.installAllManagedExternalTools()
                         } label: {
-                            Label(localized("모두 설치"), systemImage: "square.and.arrow.down")
+                            Label(localized("Install All"), systemImage: "square.and.arrow.down")
                         }
                         .disabled(manager.isInstallingExternalTools)
 
-                        iconButton("checkmark", help: "외부 도구 경로 저장") {
+                        iconButton("checkmark", help: "Save External Tool Paths") {
                             manager.saveExternalToolPaths()
                         }
 
                         if manager.isInstallingExternalTools {
-                            iconButton("xmark", help: "도구 설치 취소") {
+                            iconButton("xmark", help: "Cancel Tool Installation") {
                                 manager.cancelManagedExternalToolInstallation()
                             }
                         }
 
-                        iconButton("folder", help: "관리 도구 폴더 보기") {
+                        iconButton("folder", help: "Show Managed Tools Folder") {
                             manager.revealManagedExternalTools()
                         }
 
-                        iconButton("trash", help: "다운로드한 관리 도구 제거") {
+                        iconButton("trash", help: "Remove Downloaded Managed Tools") {
                             manager.removeManagedExternalTools()
                         }
                         .disabled(manager.isInstallingExternalTools)
@@ -6574,37 +6809,37 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("ffmpeg", systemImage: "wand.and.stars") {
-                settingsRow("트랜스코딩 사용", detail: "ffmpeg로 다운로드 결과 다시 인코딩") {
-                    settingsSwitch("트랜스코딩 사용", isOn: $manager.ffmpegTranscodeEnabled)
+                settingsRow("Enable Transcoding", detail: "Re-encode downloaded output with ffmpeg") {
+                    settingsSwitch("Enable Transcoding", isOn: $manager.ffmpegTranscodeEnabled)
                 }
 
-                settingsRow("코덱") {
+                settingsRow("Codec") {
                     HStack(spacing: 8) {
-                        TextField(localized("비디오 코덱"), text: $manager.ffmpegVideoCodec)
+                        TextField(localized("Video Codec"), text: $manager.ffmpegVideoCodec)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("오디오 코덱"), text: $manager.ffmpegAudioCodec)
+                        TextField(localized("Audio Codec"), text: $manager.ffmpegAudioCodec)
                             .textFieldStyle(.roundedBorder)
                     }
                     .disabled(!manager.ffmpegTranscodeEnabled)
                 }
 
-                settingsRow("품질") {
+                settingsRow("Quality") {
                     HStack(spacing: 8) {
-                        TextField(localized("비디오 비트레이트"), text: $manager.ffmpegVideoBitrate)
+                        TextField(localized("Video Bitrate"), text: $manager.ffmpegVideoBitrate)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("오디오 비트레이트"), text: $manager.ffmpegAudioBitrate)
+                        TextField(localized("Audio Bitrate"), text: $manager.ffmpegAudioBitrate)
                             .textFieldStyle(.roundedBorder)
                     }
                     .disabled(!manager.ffmpegTranscodeEnabled)
                 }
 
-                settingsRow("프리셋") {
+                settingsRow("Preset") {
                     HStack(spacing: 8) {
                         TextField("CRF", text: $manager.ffmpegCRF)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("프리셋"), text: $manager.ffmpegPreset)
+                        TextField(localized("Preset"), text: $manager.ffmpegPreset)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "ffmpeg 트랜스코딩 옵션 저장") {
+                        iconButton("checkmark", help: "Save FFmpeg Transcoding Options") {
                             manager.saveFFmpegTranscodeOptions()
                         }
                     }
@@ -6617,24 +6852,24 @@ struct SettingsWindowView: View {
     private var hitomiSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Hitomi", systemImage: "photo.on.rectangle") {
-                settingsRow("WebP 우선", detail: "가능하면 WebP 이미지 사용") {
-                    settingsSwitch("WebP 우선", isOn: Binding(
+                settingsRow("Prefer WebP", detail: "Use WebP images when available") {
+                    settingsSwitch("Prefer WebP", isOn: Binding(
                         get: { manager.preferWebP },
                         set: { manager.setPreferWebP($0) }
                     ))
                 }
 
                 settingsRow(
-                    "정보 TXT 저장",
-                    detail: "갤러리 메타데이터를 텍스트 파일로 저장"
+                    "Save Info TXT",
+                    detail: "Save gallery metadata in a text file"
                 ) {
-                    settingsSwitch("정보 TXT 저장", isOn: Binding(
+                    settingsSwitch("Save Info TXT", isOn: Binding(
                         get: { manager.saveHitomiGalleryInfoText },
                         set: { manager.setSaveHitomiGalleryInfoText($0) }
                     ))
                 }
 
-                settingsRow("E-Hentai 소스") {
+                settingsRow("E-Hentai Source") {
                     Picker("", selection: Binding(
                         get: { manager.eHentaiSourceMode },
                         set: { manager.setEHentaiSourceMode($0) }
@@ -6647,68 +6882,68 @@ struct SettingsWindowView: View {
                     .pickerStyle(.menu)
                     .fixedSize(horizontal: true, vertical: false)
                     .help(manager.eHentaiSourceMode.helpText)
-                    .accessibilityLabel(AppLocalization.text("E-Hentai 소스", language: manager.interfaceLanguage))
+                    .accessibilityLabel(AppLocalization.text("E-Hentai Source", language: manager.interfaceLanguage))
                     .accessibilityIdentifier("settings.ehentai-source-mode")
                 }
 
                 settingsRow(
-                    "원본 크기 우선",
-                    detail: "가능하면 E-Hentai 및 ExHentai 원본 크기 파일 사용"
+                    "Prefer Original Size",
+                    detail: "Use original-size E-Hentai and ExHentai files when available"
                 ) {
-                    settingsSwitch("원본 크기 우선", isOn: Binding(
+                    settingsSwitch("Prefer Original Size", isOn: Binding(
                         get: { manager.preferOriginalEHentaiImages },
                         set: { manager.setPreferOriginalEHentaiImages($0) }
                     ))
                     .help(AppLocalization.text(
-                        "가능하면 E-Hentai 및 ExHentai 원본 크기 파일을 사용합니다",
+                        "Use original-size E-Hentai and ExHentai files when available",
                         language: manager.interfaceLanguage
                     ))
                 }
 
                 settingsRow(
-                    "가능하면 일본어 제목 사용",
-                    detail: "일본어 제목이 있으면 저장 이름에 우선 사용"
+                    "Use Japanese title when available",
+                    detail: "Prefer the Japanese title for saved names when available"
                 ) {
-                    settingsSwitch("가능하면 일본어 제목 사용", isOn: Binding(
+                    settingsSwitch("Use Japanese title when available", isOn: Binding(
                         get: { manager.preferJapaneseEHentaiTitle },
                         set: { manager.setPreferJapaneseEHentaiTitle($0) }
                     ))
                     .help(AppLocalization.text(
-                        "일본어 제목이 있으면 E-Hentai 및 ExHentai 저장 이름에 우선 사용합니다",
+                        "Prefer Japanese titles for E-Hentai and ExHentai save names when available",
                         language: manager.interfaceLanguage
                     ))
                     .accessibilityLabel(AppLocalization.text(
-                        "가능하면 일본어 제목 사용",
+                        "Use Japanese title when available",
                         language: manager.interfaceLanguage
                     ))
                     .accessibilityIdentifier("settings.ehentai-japanese-title")
                 }
 
-                settingsRow("제외 태그") {
+                settingsRow("Excluded Tags") {
                     HStack(spacing: 8) {
                         TextField("female:example, male:example", text: $manager.hitomiExcludedTagsText)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "Hitomi 제외 태그 저장") {
+                        iconButton("checkmark", help: "Save Hitomi Excluded Tags") {
                             manager.saveHitomiExcludedTags()
                         }
-                        iconButton("xmark.circle", help: "Hitomi 제외 태그 지우기") {
+                        iconButton("xmark.circle", help: "Clear Hitomi Excluded Tags") {
                             manager.clearHitomiExcludedTags()
                         }
                         .disabled(manager.hitomiExcludedTagsText.trimmed.isEmpty)
                     }
                 }
 
-                settingsRow("태그 번역") {
+                settingsRow("Tag Translation") {
                     HStack(spacing: 8) {
-                        TextField(localized("태그"), text: $manager.searchTagTranslationInput)
+                        TextField(localized("Tag"), text: $manager.searchTagTranslationInput)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("arrow.triangle.2.circlepath", help: "검색 태그 번역") {
+                        iconButton("arrow.triangle.2.circlepath", help: "Translate Search Tags") {
                             manager.translateSearchTagInput()
                         }
-                        iconButton("plus", help: "번역한 태그 삽입") {
+                        iconButton("plus", help: "Insert Translated Tags") {
                             manager.insertTranslatedSearchTag()
                         }
-                        iconButton("arrow.left.arrow.right", help: "검색어를 번역한 태그로 바꾸기") {
+                        iconButton("arrow.left.arrow.right", help: "Replace Search Terms with Translated Tags") {
                             manager.replaceSearchQueryWithTranslatedTag()
                         }
                     }
@@ -6727,7 +6962,7 @@ struct SettingsWindowView: View {
     private var pixivSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Pixiv", systemImage: "p.circle") {
-                settingsRow("우고이라") {
+                settingsRow("Ugoira") {
                     HStack(spacing: 8) {
                         Picker("", selection: $manager.pixivUgoiraFileFormat) {
                             ForEach(PixivUgoiraFileFormat.allCases, id: \.self) { format in
@@ -6736,60 +6971,295 @@ struct SettingsWindowView: View {
                         }
                         .labelsHidden()
                         .frame(maxWidth: 130, alignment: .trailing)
-                        iconButton("checkmark", help: "Pixiv 우고이라 형식 저장") {
+                        iconButton("checkmark", help: "Save Pixiv Ugoira Format") {
                             manager.savePixivUgoiraFileFormat()
                         }
                     }
                 }
-                settingsRow("GIF 팔레트 디더링", detail: "GIF 변환 시 색상 밴딩 완화") {
-                    settingsSwitch("GIF 팔레트 디더링", isOn: $manager.pixivUgoiraDither)
+                settingsRow("GIF palette dithering", detail: "Reduce color banding when converting to GIF") {
+                    settingsSwitch("GIF palette dithering", isOn: $manager.pixivUgoiraDither)
                         .disabled(manager.pixivUgoiraFileFormat != .gif)
                 }
-                settingsRow("품질") {
+                settingsRow("Quality") {
                     HStack(spacing: 10) {
                         Slider(
                             value: Binding(
                                 get: { Double(manager.pixivUgoiraQuality) },
                                 set: { manager.pixivUgoiraQuality = Int($0.rounded()) }
                             ),
-                            in: 1...100,
-                            step: 1
+                            in: 1...100
                         )
+                        .frame(minWidth: 180, idealWidth: 320, maxWidth: 420)
+                        .accessibilityLabel(localized("Quality"))
+                        .accessibilityValue("\(manager.pixivUgoiraQuality)")
+                        .accessibilityIdentifier("settings.pixiv-quality")
                         Text("\(manager.pixivUgoiraQuality)")
                             .monospacedDigit()
-                            .frame(width: 28, alignment: .trailing)
+                            .frame(width: 34, alignment: .trailing)
                     }
+                    .frame(maxWidth: 464, alignment: .trailing)
                     .disabled(!manager.pixivUgoiraFileFormat.requiresFFmpeg)
                 }
             }
         }
     }
 
+    private var kemonoFriendsSettings: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            settingsSection("Kemono friends", systemImage: "network") {
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localized("Archive Addresses"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Text(localized("Archive addresses used for downloads"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    pawchiveSiteAddressList
+                }
+
+                settingsRow(
+                    "Download PSD Originals",
+                    detail: "Also save large PSD source files"
+                ) {
+                    trailingSettingsControl {
+                        settingsSwitch("Download PSD Originals", isOn: Binding(
+                            get: { manager.pawchiveDownloadLargeOriginalFiles },
+                            set: { manager.setPawchiveDownloadLargeOriginalFiles($0) }
+                        ))
+                        .accessibilityIdentifier("settings.pawchive-large-originals")
+                    }
+                }
+            }
+
+            settingsSection("File Types to Download", systemImage: "line.3.horizontal.decrease.circle") {
+                settingsRow("Image Files", detail: "JPEG, PNG, GIF, and more") {
+                    trailingSettingsControl {
+                        settingsSwitch("Image Files", isOn: Binding(
+                            get: { manager.pawchiveDownloadImages },
+                            set: { manager.setPawchiveDownloadImages($0) }
+                        ))
+                        .accessibilityIdentifier("settings.pawchive-file-images")
+                    }
+                }
+
+                settingsRow("Video Files", detail: "MP4, MKV, and more") {
+                    trailingSettingsControl {
+                        settingsSwitch("Video Files", isOn: Binding(
+                            get: { manager.pawchiveDownloadVideos },
+                            set: { manager.setPawchiveDownloadVideos($0) }
+                        ))
+                        .accessibilityIdentifier("settings.pawchive-file-videos")
+                    }
+                }
+
+                settingsRow("HTML Files", detail: "Save post content as HTML") {
+                    trailingSettingsControl {
+                        settingsSwitch("HTML Files", isOn: Binding(
+                            get: { manager.pawchiveDownloadHTML },
+                            set: { manager.setPawchiveDownloadHTML($0) }
+                        ))
+                        .accessibilityIdentifier("settings.pawchive-file-html")
+                    }
+                }
+
+                settingsRow("Other Files", detail: "Archives and other attachments") {
+                    trailingSettingsControl {
+                        settingsSwitch("Other Files", isOn: Binding(
+                            get: { manager.pawchiveDownloadOtherFiles },
+                            set: { manager.setPawchiveDownloadOtherFiles($0) }
+                        ))
+                        .accessibilityIdentifier("settings.pawchive-file-other")
+                    }
+                }
+            }
+        }
+    }
+
+    private var pawchiveSiteAddressList: some View {
+        VStack(spacing: 0) {
+            if manager.pawchiveSiteAddresses.isEmpty && !manager.isAddingPawchiveSiteAddress {
+                Text(localized("No addresses added"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            } else {
+                ForEach(Array(manager.pawchiveSiteAddresses.enumerated()), id: \.element) { index, address in
+                    if index > 0 {
+                        Divider()
+                            .padding(.leading, 38)
+                    }
+
+                    Button {
+                        manager.pawchiveSelectedSiteAddress = address
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "globe")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18)
+                            Text(address)
+                                .font(.system(.caption, design: .monospaced))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                        .background(
+                            manager.pawchiveSelectedSiteAddress == address
+                                ? Color.accentColor.opacity(0.18)
+                                : Color.clear
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(address)
+                    .accessibilityIdentifier("settings.pawchive-address.row")
+                }
+
+                if manager.isAddingPawchiveSiteAddress {
+                    if !manager.pawchiveSiteAddresses.isEmpty {
+                        Divider()
+                            .padding(.leading, 38)
+                    }
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "globe")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 18)
+                        TextField(
+                            localized("Enter an archive address"),
+                            text: $manager.pawchiveSiteAddressDraft
+                        )
+                        .textFieldStyle(.plain)
+                        .onSubmit(commitPawchiveSiteAddress)
+                        .accessibilityIdentifier("settings.pawchive-address.input")
+
+                        iconButton("checkmark", help: "Add archive address") {
+                            commitPawchiveSiteAddress()
+                        }
+                        .disabled(manager.pawchiveSiteAddressDraft.trimmed.isEmpty)
+
+                        iconButton("xmark", help: "Cancel") {
+                            cancelAddingPawchiveSiteAddress()
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 40)
+                }
+            }
+
+            Divider()
+
+            HStack(spacing: 0) {
+                Button {
+                    beginAddingPawchiveSiteAddress()
+                } label: {
+                    Image(systemName: "plus")
+                        .frame(width: 32, height: 26)
+                }
+                .buttonStyle(.plain)
+                .disabled(manager.isAddingPawchiveSiteAddress)
+                .help(localized("Add archive address"))
+                .accessibilityIdentifier("settings.pawchive-address.add")
+
+                Divider()
+                    .frame(height: 18)
+
+                Button {
+                    removeSelectedPawchiveSiteAddress()
+                } label: {
+                    Image(systemName: "minus")
+                        .frame(width: 32, height: 26)
+                }
+                .buttonStyle(.plain)
+                .disabled(manager.pawchiveSelectedSiteAddress.isEmpty)
+                .help(localized("Remove archive address"))
+                .accessibilityIdentifier("settings.pawchive-address.remove")
+
+                Spacer(minLength: 8)
+
+                Button {
+                    manager.resetPawchiveSiteAddresses()
+                    manager.pawchiveSelectedSiteAddress = manager.pawchiveSiteAddresses.first ?? ""
+                    cancelAddingPawchiveSiteAddress()
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .frame(width: 32, height: 26)
+                }
+                .buttonStyle(.plain)
+                .disabled(manager.pawchiveSiteAddresses == PawchiveResolver.defaultSiteAddresses)
+                .help(localized("Restore default archive addresses"))
+                .accessibilityIdentifier("settings.pawchive-address.reset")
+            }
+            .padding(.horizontal, 4)
+        }
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func beginAddingPawchiveSiteAddress() {
+        manager.pawchiveSiteAddressDraft = ""
+        manager.isAddingPawchiveSiteAddress = true
+    }
+
+    private func commitPawchiveSiteAddress() {
+        let normalized = PawchiveResolver.normalizedSiteAddress(manager.pawchiveSiteAddressDraft)
+        manager.addPawchiveSiteAddress()
+        guard let normalized,
+              manager.pawchiveSiteAddresses.contains(where: {
+                  $0.caseInsensitiveCompare(normalized) == .orderedSame
+              }) else {
+            return
+        }
+        manager.pawchiveSelectedSiteAddress = normalized
+        manager.isAddingPawchiveSiteAddress = false
+    }
+
+    private func cancelAddingPawchiveSiteAddress() {
+        manager.pawchiveSiteAddressDraft = ""
+        manager.isAddingPawchiveSiteAddress = false
+    }
+
+    private func removeSelectedPawchiveSiteAddress() {
+        let selected = manager.pawchiveSelectedSiteAddress
+        guard !selected.isEmpty else { return }
+        manager.removePawchiveSiteAddress(selected)
+        manager.pawchiveSelectedSiteAddress = manager.pawchiveSiteAddresses.first ?? ""
+    }
+
     private var youtubeSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("YouTube", systemImage: "play.rectangle") {
-                settingsRow("언어") {
+                settingsRow("Language") {
                     HStack(spacing: 8) {
-                        TextField(localized("언어"), text: $manager.youtubePreferredLanguage)
+                        TextField(localized("Language"), text: $manager.youtubePreferredLanguage)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "YouTube 언어 저장") {
+                        iconButton("checkmark", help: "Save YouTube Language") {
                             manager.saveYouTubePreferredLanguage()
                         }
                     }
                 }
 
-                settingsRow("썸네일 다운로드", detail: "동영상 썸네일을 결과물과 함께 저장") {
+                settingsRow("Download Thumbnail", detail: "Save the video thumbnail with the downloaded output") {
                     trailingSettingsControl {
-                        settingsSwitch("썸네일 다운로드", isOn: Binding(
+                        settingsSwitch("Download Thumbnail", isOn: Binding(
                             get: { manager.youtubeDownloadThumbnail },
                             set: { manager.setYouTubeDownloadThumbnail($0) }
                         ))
                     }
                 }
 
-                settingsRow("재생목록 역순", detail: "재생목록을 끝 항목부터 처리") {
+                settingsRow("Reverse Playlist", detail: "Process the playlist from the last item first") {
                     trailingSettingsControl {
-                        settingsSwitch("재생목록 역순", isOn: Binding(
+                        settingsSwitch("Reverse Playlist", isOn: Binding(
                             get: { manager.youtubeReversePlaylist },
                             set: { manager.setYouTubeReversePlaylist($0) }
                         ))
@@ -6797,25 +7267,25 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "업로드 날짜를 파일 수정일로 사용",
-                    detail: "원본 프로그램 기본값"
+                    "Use Upload Date as File Modification Date",
+                    detail: "Original application default"
                 ) {
                     trailingSettingsControl {
-                        settingsSwitch("업로드 날짜를 파일 수정일로 사용", isOn: Binding(
+                        settingsSwitch("Use Upload Date as File Modification Date", isOn: Binding(
                             get: { manager.youtubeUseUploadDateForFileModificationTime },
                             set: { manager.setYouTubeUseUploadDateForFileModificationTime($0) }
                         ))
                         .accessibilityLabel(AppLocalization.text(
-                            "파일의 수정한 날짜를 업로드 날짜로 변경",
+                            "Set file modification date to upload date",
                             language: manager.interfaceLanguage
                         ))
                         .accessibilityIdentifier("settings.youtube-upload-date-mtime")
                     }
                 }
 
-                settingsRow("챕터 삽입", detail: "동영상 메타데이터에 챕터 저장") {
+                settingsRow("Embed Chapters", detail: "Save chapters in the video metadata") {
                     trailingSettingsControl {
-                        settingsSwitch("챕터 삽입", isOn: Binding(
+                        settingsSwitch("Embed Chapters", isOn: Binding(
                             get: { manager.youtubeEmbedChapters },
                             set: { manager.setYouTubeEmbedChapters($0) }
                         ))
@@ -6823,55 +7293,55 @@ struct SettingsWindowView: View {
                 }
 
                 settingsRow(
-                    "향상된 비트레이트",
-                    detail: "가능한 경우 높은 비트레이트 형식 우선"
+                    "Enhanced Bitrate",
+                    detail: "Prefer higher-bitrate formats when available"
                 ) {
                     trailingSettingsControl {
-                        settingsSwitch("향상된 비트레이트", isOn: Binding(
+                        settingsSwitch("Enhanced Bitrate", isOn: Binding(
                             get: { manager.youtubePreferEnhancedBitrate },
                             set: { manager.setYouTubePreferEnhancedBitrate($0) }
                         ))
                     }
                 }
 
-                settingsRow("해상도") {
+                settingsRow("Resolution") {
                     HStack(spacing: 8) {
                         TextField("1080p", text: $manager.youtubePreferredResolution)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "YouTube 해상도 저장") {
+                        iconButton("checkmark", help: "Save YouTube Resolution") {
                             manager.saveYouTubePreferredResolution()
                         }
                     }
                 }
 
-                settingsRow("오디오") {
+                settingsRow("Audio") {
                     HStack(spacing: 8) {
-                        TextField(localized("오디오 언어"), text: $manager.youtubePreferredAudioLanguage)
+                        TextField(localized("Audio Language"), text: $manager.youtubePreferredAudioLanguage)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "YouTube 오디오 트랙 저장") {
+                        iconButton("checkmark", help: "Save YouTube Audio Tracks") {
                             manager.saveYouTubePreferredAudioLanguage()
                         }
                     }
                 }
 
-                settingsRow("자막", detail: "자동 생성 자막 포함") {
+                settingsRow("Subtitles", detail: "Include automatically generated subtitles") {
                     trailingSettingsControl {
                         HStack(spacing: 8) {
-                            settingsSwitch("자동 생성 자막 포함", isOn: Binding(
+                            settingsSwitch("Include automatically generated subtitles", isOn: Binding(
                                 get: { manager.youtubeDownloadAutoSubtitles },
                                 set: { manager.setYouTubeDownloadAutoSubtitles($0) }
                             ))
                             TextField("all", text: $manager.youtubeSubtitleLanguages)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 90)
-                            iconButton("checkmark", help: "YouTube 자막 설정 저장") {
+                            iconButton("checkmark", help: "Save YouTube Subtitle Settings") {
                                 manager.saveYouTubeSubtitleSettings()
                             }
                         }
                     }
                 }
 
-                settingsRow("코덱 우선순위") {
+                settingsRow("Codec Priority") {
                     trailingSettingsControl {
                         YouTubeCodecPriorityMenu(manager: manager)
                     }
@@ -6882,13 +7352,13 @@ struct SettingsWindowView: View {
 
     private var socialSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("브라우저 로그인", systemImage: "person.crop.circle.badge.key") {
-                settingsRow("쿠키") {
+            settingsSection("Browser Login", systemImage: "person.crop.circle.badge.key") {
+                settingsRow("Cookies") {
                     HStack(spacing: 8) {
-                        iconButton("person.crop.circle.badge.key", help: "로그인 브라우저 열기") {
+                        iconButton("person.crop.circle.badge.key", help: "Open Login Browser") {
                             manager.openLoginBrowser()
                         }
-                        iconButton("globe", help: "브라우저 쿠키 가져오기") {
+                        iconButton("globe", help: "Import Browser Cookies") {
                             manager.importBrowserCookies()
                         }
                         cookieClearButton()
@@ -6902,10 +7372,10 @@ struct SettingsWindowView: View {
 
             settingsSection("Instagram", systemImage: "camera") {
                 settingsRow(
-                    "활성 스토리 포함",
-                    detail: "프로필 다운로드에 현재 스토리 추가"
+                    "Include active stories",
+                    detail: "Add current stories to profile downloads"
                 ) {
-                    settingsSwitch("활성 스토리 포함", isOn: Binding(
+                    settingsSwitch("Include active stories", isOn: Binding(
                         get: { manager.instagramIncludeStories },
                         set: { manager.setInstagramIncludeStories($0) }
                     ))
@@ -6913,29 +7383,29 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("SOOP / Afreeca", systemImage: "antenna.radiowaves.left.and.right") {
-                settingsRow("해상도") {
+                settingsRow("Resolution") {
                     HStack(spacing: 8) {
                         TextField("720p", text: $manager.soopPreferredResolution)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "SOOP/Afreeca 해상도 저장") {
+                        iconButton("checkmark", help: "Save SOOP/Afreeca Resolution") {
                             manager.saveSOOPPreferredResolution()
                         }
                     }
                 }
             }
 
-            settingsSection("검색 도구", systemImage: "text.magnifyingglass") {
-                settingsRow("검색기") {
+            settingsSection("Search Tools", systemImage: "text.magnifyingglass") {
+                settingsRow("Searcher") {
                     HStack(spacing: 8) {
                         Button {
                             manager.showingSearcher = true
                         } label: {
-                            Label(localized("열기"), systemImage: "text.magnifyingglass")
+                            Label(localized("Open"), systemImage: "text.magnifyingglass")
                         }
                         Button {
                             manager.showingHistoryWindow = true
                         } label: {
-                            Label(localized("기록"), systemImage: "clock.arrow.circlepath")
+                            Label(localized("History"), systemImage: "clock.arrow.circlepath")
                         }
                     }
                 }
@@ -6946,40 +7416,40 @@ struct SettingsWindowView: View {
     private var torrentSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("aria2", systemImage: "arrow.down.circle") {
-                settingsRow("파일") {
+                settingsRow("Files") {
                     HStack(spacing: 8) {
-                        TextField(localized("파일 1,3-5"), text: $manager.aria2SelectedFiles)
+                        TextField(localized("Files 1,3-5"), text: $manager.aria2SelectedFiles)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("시드 시간 (분)"), text: $manager.aria2SeedTimeMinutes)
+                        TextField(localized("Seed time (min)"), text: $manager.aria2SeedTimeMinutes)
                             .textFieldStyle(.roundedBorder)
                             .frame(maxWidth: 90)
-                        iconButton("list.bullet.rectangle", help: "토렌트 파일 목록 보기") {
+                        iconButton("list.bullet.rectangle", help: "Show Torrent File List") {
                             manager.previewAria2Files()
                         }
                     }
                 }
 
-                settingsRow("속도 제한") {
+                settingsRow("Speed Limits") {
                     HStack(spacing: 8) {
-                        TextField(localized("다운 2M"), text: $manager.aria2MaxDownloadLimit)
+                        TextField(localized("Down 2M"), text: $manager.aria2MaxDownloadLimit)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("업 512K"), text: $manager.aria2MaxUploadLimit)
+                        TextField(localized("Up 512K"), text: $manager.aria2MaxUploadLimit)
                             .textFieldStyle(.roundedBorder)
-                        TextField(localized("시드 비율"), text: $manager.aria2SeedRatio)
+                        TextField(localized("Seed ratio"), text: $manager.aria2SeedRatio)
                             .textFieldStyle(.roundedBorder)
                             .frame(maxWidth: 90)
                     }
                 }
 
-                settingsRow("익명 모드", detail: "피어 식별 정보를 최소화") {
-                    settingsSwitch("익명 모드", isOn: $manager.aria2AnonymousMode)
+                settingsRow("Anonymous Mode", detail: "Minimize peer-identifying information") {
+                    settingsSwitch("Anonymous Mode", isOn: $manager.aria2AnonymousMode)
                 }
 
-                settingsRow("트래커") {
+                settingsRow("Trackers") {
                     HStack(spacing: 8) {
                         TextField("udp://tracker.example/announce", text: $manager.aria2Trackers)
                             .textFieldStyle(.roundedBorder)
-                        iconButton("checkmark", help: "aria2 옵션 저장") {
+                        iconButton("checkmark", help: "Save aria2 Options") {
                             manager.saveAria2Options()
                         }
                     }
@@ -7111,12 +7581,12 @@ struct SettingsWindowView: View {
         Button {
             manager.clearCookies()
         } label: {
-            Label(localized("쿠키 및 로그인 세션 삭제"), systemImage: "trash")
+            Label(localized("Delete Cookies and Login Sessions"), systemImage: "trash")
                 .labelStyle(.iconOnly)
         }
         .disabled(manager.isClearingCookies)
         .help(AppLocalization.text(
-            "앱 쿠키와 내장 브라우저 로그인 세션 모두 삭제",
+            "Delete app cookies and embedded-browser login sessions",
             language: manager.interfaceLanguage
         ))
         .accessibilityIdentifier("settings.clear-cookies")
@@ -7131,7 +7601,7 @@ struct SettingsCategorySidebarButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: category.systemImage)
+                SettingsCategoryIcon(category: category, size: 17)
                     .frame(width: 18)
                     .foregroundStyle(isSelected ? .primary : .secondary)
 
@@ -7165,6 +7635,27 @@ struct SettingsCategorySidebarButton: View {
         .accessibilityLabel(category.label)
         .accessibilityHint(category.detail)
         .accessibilityIdentifier("settings.category.\(category.rawValue)")
+    }
+}
+
+struct SettingsCategoryIcon: View {
+    let category: SettingsWindowCategory
+    let size: CGFloat
+
+    @ViewBuilder
+    var body: some View {
+        if let letter = category.iconLetter {
+            ZStack {
+                Circle()
+                    .strokeBorder(lineWidth: max(1, size * 0.075))
+                Text(letter)
+                    .font(.system(size: size * 0.64, weight: .semibold, design: .rounded))
+            }
+            .frame(width: size, height: size)
+        } else {
+            Image(systemName: category.systemImage)
+                .font(.system(size: size))
+        }
     }
 }
 
@@ -7951,7 +8442,10 @@ struct ClipboardViewerWindowView: View {
             Spacer()
 
             if !manager.addSummary.isEmpty {
-                Text(manager.addSummary)
+                Text(AppLocalization.statusText(
+                    manager.addSummary,
+                    language: manager.interfaceLanguage
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -8079,7 +8573,14 @@ struct BrowserWindowView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 BrowserInfoRow(title: "Target", value: manager.browserWindowTargetSummary(), systemImage: "link")
-                BrowserInfoRow(title: "Cookies", value: manager.cookieSummary, systemImage: "key")
+                BrowserInfoRow(
+                    title: "Cookies",
+                    value: AppLocalization.statusText(
+                        manager.cookieSummary,
+                        language: manager.interfaceLanguage
+                    ),
+                    systemImage: "key"
+                )
             }
 
             HStack(spacing: 8) {
@@ -8100,11 +8601,11 @@ struct BrowserWindowView: View {
                 Button {
                     manager.clearCookies()
                 } label: {
-                    Label("쿠키 및 로그인 세션 삭제", systemImage: "trash")
+                    Label("Delete Cookies and Login Sessions", systemImage: "trash")
                 }
                 .disabled(manager.isClearingCookies)
                 .help(AppLocalization.text(
-                    "앱 쿠키와 내장 브라우저 로그인 세션 모두 삭제",
+                    "Delete app cookies and embedded-browser login sessions",
                     language: manager.interfaceLanguage
                 ))
                 .accessibilityIdentifier("browser.clear-cookies")
@@ -8138,7 +8639,10 @@ struct BrowserWindowView: View {
             Spacer()
 
             if !manager.addSummary.isEmpty {
-                Text(manager.addSummary)
+                Text(AppLocalization.statusText(
+                    manager.addSummary,
+                    language: manager.interfaceLanguage
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -8980,7 +9484,10 @@ struct TextViewerWindowView: View {
             Spacer()
 
             if !manager.addSummary.isEmpty {
-                Text(manager.addSummary)
+                Text(AppLocalization.statusText(
+                    manager.addSummary,
+                    language: manager.interfaceLanguage
+                ))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -9166,7 +9673,10 @@ struct ProgressWindowView: View {
             Spacer()
 
             if !manager.addSummary.isEmpty {
-                Text(manager.addSummary)
+                Text(AppLocalization.statusText(
+                    manager.addSummary,
+                    language: manager.interfaceLanguage
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -9214,10 +9724,14 @@ struct ProgressWindowJobRow: View {
                 .progressViewStyle(.linear)
 
             HStack(spacing: 8) {
-                Text(job.status.label)
-                Text("\(units.completed)/\(units.total)")
+                if let summary = job.partialFailureSummary() {
+                    Text(summary)
+                } else {
+                    Text(job.statusDisplayText())
+                    Text("\(units.completed)/\(units.total)")
+                }
                 if !job.message.trimmed.isEmpty {
-                    Text(job.message)
+                    Text(AppLocalization.statusText(job.message))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -9231,31 +9745,19 @@ struct ProgressWindowJobRow: View {
     }
 
     private var iconName: String {
-        switch job.status {
-        case .queued: return "clock"
-        case .resolving: return "magnifyingglass"
-        case .downloading: return "arrow.down.circle.fill"
-        case .finished: return "checkmark.circle.fill"
-        case .failed: return "xmark.octagon.fill"
-        case .cancelled: return "stop.circle.fill"
-        }
+        JobStatusStyle.iconName(for: job)
     }
 
     private var statusColor: Color {
-        switch job.status {
-        case .queued: return .secondary
-        case .resolving: return .blue
-        case .downloading: return .accentColor
-        case .finished: return .green
-        case .failed: return .red
-        case .cancelled: return .orange
-        }
+        JobStatusStyle.color(for: job)
     }
 }
 
 struct StatisticsView: View {
     @ObservedObject var manager: DownloadManager
     @Environment(\.dismiss) private var dismiss
+
+    private var language: AppInterfaceLanguage { manager.interfaceLanguage }
 
     var body: some View {
         TimelineView(.periodic(from: Date(), by: 1)) { _ in
@@ -9267,22 +9769,23 @@ struct StatisticsView: View {
     private func content(_ statistics: AppStatistics) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
-                Label("Info & Statistics", systemImage: "chart.bar.xaxis")
+                Label(localized("Info & Statistics"), systemImage: "chart.bar.xaxis")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Spacer()
-                Text(statistics.generatedAt.formatted(date: .omitted, time: .standard))
+                Text(dateText(statistics.generatedAt, dateStyle: .none, timeStyle: .medium))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button("Done") {
+                Button(localized("Done")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .accessibilityLabel(localized("Done"))
             }
 
             Divider()
 
-            StatisticsMonitorPanel(statistics: statistics)
+            StatisticsMonitorPanel(statistics: statistics, language: language)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -9291,11 +9794,11 @@ struct StatisticsView: View {
                         statRow("Version", "\(statistics.appVersion) (\(statistics.appBuild))")
                         statRow("Bundle ID", statistics.bundleIdentifier)
                         statRow("Requires macOS", statistics.minimumSystemVersion)
-                        statRow("Running On", statistics.operatingSystemVersion)
+                        statRow("Running On", operatingSystemText(statistics.operatingSystemVersion))
                     }
 
                     section("Paths") {
-                        statRow("Downloads", statistics.outputRootPath.isEmpty ? "Not set" : statistics.outputRootPath)
+                        statRow("Downloads", statistics.outputRootPath.isEmpty ? localized("Not set") : statistics.outputRootPath)
                         statRow("App Support", statistics.applicationSupportPath)
                         statRow("User Data", statistics.userDataPath)
                     }
@@ -9323,7 +9826,7 @@ struct StatisticsView: View {
                     }
 
                     section("Runtime") {
-                        statRow("Started", statistics.appStartedAt.formatted(date: .abbreviated, time: .standard))
+                        statRow("Started", dateText(statistics.appStartedAt, dateStyle: .medium, timeStyle: .medium))
                         statRow("Elapsed", elapsedText(statistics.appUptimeSeconds))
                         statRow("Download Speed", transferSpeedText(statistics.downloadSpeedBytesPerSecond))
                         statRow("Upload Speed", transferSpeedText(statistics.uploadSpeedBytesPerSecond))
@@ -9334,15 +9837,23 @@ struct StatisticsView: View {
                         statRow("History", "\(statistics.historyCount)")
                         statRow("Bookmarks", "\(statistics.bookmarkCount)")
                         statRow("Filter Bookmarks", "\(statistics.queueFilterBookmarkCount)")
-                        statRow("Site Rules", "\(statistics.enabledSiteRuleCount) / \(statistics.siteRuleCount) enabled")
+                        statRow(
+                            "Site Rules",
+                            AppLocalization.format(
+                                "%@ / %@ enabled",
+                                language: language,
+                                String(statistics.enabledSiteRuleCount),
+                                String(statistics.siteRuleCount)
+                            )
+                        )
                         statRow("Search Providers", "\(statistics.searchProviderCount)")
                         statRow("Duplicate Groups", "\(statistics.duplicateGroupCount)")
                         statRow("Duplicate Extras", "\(statistics.duplicateExtraFileCount)")
                     }
 
                     section("Output") {
-                        statRow("Available", statistics.destinationPathAnalysisSkipped ? "Skipped" : optionalByteText(statistics.destinationAvailableByteCount))
-                        statRow("Volume Size", statistics.destinationPathAnalysisSkipped ? "Skipped" : optionalByteText(statistics.destinationTotalByteCount))
+                        statRow("Available", statistics.destinationPathAnalysisSkipped ? localized("Skipped") : optionalByteText(statistics.destinationAvailableByteCount))
+                        statRow("Volume Size", statistics.destinationPathAnalysisSkipped ? localized("Skipped") : optionalByteText(statistics.destinationTotalByteCount))
                         statRow("Known Queue Size", byteText(statistics.estimatedQueuedByteCount))
                         statRow("Known Paths", "\(statistics.outputPathCount)")
                         statRow("Files", countedText(statistics.outputFileCount, partial: statistics.outputPathAnalysisSkippedCount > 0))
@@ -9353,10 +9864,10 @@ struct StatisticsView: View {
                         }
                         statRow("Auto Remove Finished", onOff(statistics.autoRemoveFinishedJobs))
                         statRow("Auto Remove Hook", optionText(statistics.autoRemoveHookCommand))
-                        statRow("Auto Remove Hook Status", statistics.autoRemoveHookStatus)
+                        statRow("Auto Remove Hook Status", AppLocalization.statusText(statistics.autoRemoveHookStatus, language: language))
                         statRow("Download Date", onOff(statistics.showDownloadDate))
                         if !statistics.diskSpaceWarning.isEmpty {
-                            statRow("Warning", statistics.diskSpaceWarning)
+                            statRow("Warning", AppLocalization.statusText(statistics.diskSpaceWarning, language: language))
                         }
                     }
 
@@ -9367,7 +9878,7 @@ struct StatisticsView: View {
                         statRow("Seed Ratio", optionText(statistics.aria2SeedRatio))
                         statRow("Anonymous Mode", onOff(statistics.aria2AnonymousMode))
                         statRow("HTTP API", onOff(statistics.httpAPIEnabled))
-                        statRow("Public IP", statistics.publicIPStatus)
+                        statRow("Public IP", AppLocalization.statusText(statistics.publicIPStatus, language: language))
                         statRow("Clipboard Watch", onOff(statistics.clipboardMonitorEnabled))
                         statRow("YouTube Thumbnail", onOff(statistics.youtubeDownloadThumbnail))
                         statRow("YouTube Reverse Playlist", onOff(statistics.youtubeReversePlaylist))
@@ -9381,7 +9892,7 @@ struct StatisticsView: View {
                         statRow("YouTube Audio Track", optionText(statistics.youtubePreferredAudioLanguage))
                         statRow("History", onOff(statistics.historyEnabled))
                         statRow("Prevent Sleep", onOff(statistics.preventSleepWhileDownloading))
-                        statRow("Sleep Assertion", statistics.sleepPreventionActive ? "Active" : "Inactive")
+                        statRow("Sleep Assertion", localized(statistics.sleepPreventionActive ? "Active" : "Inactive"))
                     }
 
                     section("Alerts") {
@@ -9389,8 +9900,8 @@ struct StatisticsView: View {
                         statRow("Queue Complete Notification", onOff(statistics.notifyWhenQueueCompletes))
                         statRow("Finished Job Sound", onOff(statistics.playSoundWhenJobCompletes))
                         statRow("Clipboard Add Sound", onOff(statistics.playSoundOnClipboardAdd))
-                        statRow("After Queue Complete", statistics.queueCompletionAction)
-                        statRow("After Complete Status", statistics.queueCompletionActionStatus)
+                        statRow("After Queue Complete", AppLocalization.statusText(statistics.queueCompletionAction, language: language))
+                        statRow("After Complete Status", AppLocalization.statusText(statistics.queueCompletionActionStatus, language: language))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -9399,19 +9910,20 @@ struct StatisticsView: View {
         .padding(20)
         .frame(width: 520)
         .frame(minHeight: 560)
+        .accessibilityIdentifier("auxiliary.statistics")
     }
 
     private func seedTimeText(_ statistics: AppStatistics) -> String {
         let value = statistics.aria2SeedTimeMinutes.trimmed
         if value.isEmpty || value == "0" {
-            return "Off"
+            return localized("Off")
         }
-        return "\(value) min"
+        return AppLocalization.format("%@ min", language: language, value)
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
+            Text(localized(title))
                 .font(.headline)
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 18, verticalSpacing: 6) {
                 content()
@@ -9422,7 +9934,7 @@ struct StatisticsView: View {
 
     private func statRow(_ title: String, _ value: String) -> some View {
         GridRow {
-            Text(title)
+            Text(localized(title))
                 .foregroundStyle(.secondary)
             Text(value)
                 .monospacedDigit()
@@ -9440,20 +9952,20 @@ struct StatisticsView: View {
 
     private func byteText(_ byteCount: Int64, partial: Bool) -> String {
         let text = byteText(byteCount)
-        return partial ? "\(text) counted" : text
+        return partial ? AppLocalization.format("%@ counted", language: language, text) : text
     }
 
     private func countedText(_ count: Int, partial: Bool) -> String {
-        partial ? "\(count) counted" : "\(count)"
+        partial ? AppLocalization.format("%@ counted", language: language, String(count)) : String(count)
     }
 
     private func optionalByteText(_ byteCount: Int64?) -> String {
-        guard let byteCount else { return "Unknown" }
+        guard let byteCount else { return localized("Unknown") }
         return byteText(byteCount)
     }
 
     private func transferSpeedText(_ byteCount: Int64?) -> String {
-        guard let byteCount else { return "Measuring" }
+        guard let byteCount else { return localized("Measuring") }
         return "\(byteText(byteCount))/s"
     }
 
@@ -9463,35 +9975,86 @@ struct StatisticsView: View {
         let minutes = (totalSeconds % 3_600) / 60
         let remaining = totalSeconds % 60
         if hours > 0 {
-            return "\(hours)h \(minutes)m \(remaining)s"
+            return AppLocalization.format(
+                "%@h %@m %@s",
+                language: language,
+                String(hours),
+                String(minutes),
+                String(remaining)
+            )
         }
         if minutes > 0 {
-            return "\(minutes)m \(remaining)s"
+            return AppLocalization.format(
+                "%@m %@s",
+                language: language,
+                String(minutes),
+                String(remaining)
+            )
         }
-        return "\(remaining)s"
+        return AppLocalization.format("%@s", language: language, String(remaining))
     }
 
     private func optionText(_ value: String) -> String {
-        value.trimmed.isEmpty ? "Not set" : value.trimmed
+        value.trimmed.isEmpty
+            ? localized("Not set")
+            : AppLocalization.statusText(value.trimmed, language: language)
     }
 
     private func onOff(_ enabled: Bool) -> String {
-        enabled ? "On" : "Off"
+        localized(enabled ? "On" : "Off")
     }
 
     private func toolStatusText(_ tool: ExternalToolStatus) -> String {
         guard tool.isAvailable else {
-            return tool.configuredPath.isEmpty ? "Not found" : "Missing: \(tool.configuredPath)"
+            return tool.configuredPath.isEmpty
+                ? localized("Not found")
+                : AppLocalization.format("Missing: %@", language: language, tool.configuredPath)
         }
         if tool.configuredPath.isEmpty {
-            return "Found: \(tool.resolvedPath)"
+            return AppLocalization.format("Found: %@", language: language, tool.resolvedPath)
         }
-        return "Configured: \(tool.resolvedPath)"
+        return AppLocalization.format("Configured: %@", language: language, tool.resolvedPath)
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: language)
+    }
+
+    private func dateText(
+        _ date: Date,
+        dateStyle: DateFormatter.Style,
+        timeStyle: DateFormatter.Style
+    ) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.dateStyle = dateStyle
+        formatter.timeStyle = timeStyle
+        return formatter.string(from: date)
+    }
+
+    private func operatingSystemText(_ rawValue: String) -> String {
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        let components = [version.majorVersion, version.minorVersion, version.patchVersion]
+        let lastIndex = version.patchVersion == 0 ? 1 : 2
+        let versionText = components[0...lastIndex].map(String.init).joined(separator: ".")
+        if let buildRange = rawValue.range(
+            of: #"[0-9]{2}[A-Za-z][A-Za-z0-9]+"#,
+            options: .regularExpression
+        ) {
+            return AppLocalization.format(
+                "Version %@ (Build %@)",
+                language: language,
+                versionText,
+                String(rawValue[buildRange])
+            )
+        }
+        return AppLocalization.format("Version %@", language: language, versionText)
     }
 }
 
 private struct StatisticsMonitorPanel: View {
     let statistics: AppStatistics
+    let language: AppInterfaceLanguage
 
     private var downloadFraction: Double {
         AppStatistics.speedFraction(statistics.downloadSpeedBytesPerSecond)
@@ -9505,14 +10068,14 @@ private struct StatisticsMonitorPanel: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 16) {
                 usageColumn(
-                    title: "Download",
+                    title: localized("Download"),
                     value: transferSpeedText(statistics.downloadSpeedBytesPerSecond),
                     fraction: downloadFraction,
                     color: .accentColor
                 )
 
                 usageColumn(
-                    title: "Upload",
+                    title: localized("Upload"),
                     value: transferSpeedText(statistics.uploadSpeedBytesPerSecond),
                     fraction: uploadFraction,
                     color: .orange
@@ -9522,19 +10085,22 @@ private struct StatisticsMonitorPanel: View {
             StatisticsPlotView(values: [
                 (label: "DL", fraction: downloadFraction, color: .accentColor),
                 (label: "UL", fraction: uploadFraction, color: .orange),
-                (label: "Active", fraction: statistics.queueActiveFraction, color: .blue),
-                (label: "Done", fraction: statistics.queueCompletedFraction, color: .green),
-                (label: "Disk", fraction: statistics.destinationUsedFraction ?? 0, color: .purple)
+                (label: localized("Active"), fraction: statistics.queueActiveFraction, color: .blue),
+                (label: localized("Done"), fraction: statistics.queueCompletedFraction, color: .green),
+                (label: localized("Disk"), fraction: statistics.destinationUsedFraction ?? 0, color: .purple)
             ])
             .frame(height: 78)
 
             HStack(spacing: 14) {
                 Label(optionalByteText(statistics.downloadedSinceLaunchByteCount), systemImage: "arrow.down.circle")
-                    .help("Downloaded since launch")
+                    .help(localized("Downloaded since launch"))
                 Label(elapsedText(statistics.appUptimeSeconds), systemImage: "timer")
-                    .help("Elapsed time")
-                Label("\(statistics.activeJobs) active", systemImage: "bolt")
-                    .help("Resolving and downloading jobs")
+                    .help(localized("Elapsed time"))
+                Label(
+                    AppLocalization.format("%@ active", language: language, String(statistics.activeJobs)),
+                    systemImage: "bolt"
+                )
+                    .help(localized("Resolving and downloading jobs"))
                 Spacer()
             }
             .font(.caption)
@@ -9579,12 +10145,12 @@ private struct StatisticsMonitorPanel: View {
     }
 
     private func optionalByteText(_ byteCount: Int64?) -> String {
-        guard let byteCount else { return "Downloaded unknown" }
-        return "\(byteText(byteCount)) downloaded"
+        guard let byteCount else { return localized("Downloaded unknown") }
+        return AppLocalization.format("%@ downloaded", language: language, byteText(byteCount))
     }
 
     private func transferSpeedText(_ byteCount: Int64?) -> String {
-        guard let byteCount else { return "Measuring" }
+        guard let byteCount else { return localized("Measuring") }
         return "\(byteText(byteCount))/s"
     }
 
@@ -9594,12 +10160,27 @@ private struct StatisticsMonitorPanel: View {
         let minutes = (totalSeconds % 3_600) / 60
         let remaining = totalSeconds % 60
         if hours > 0 {
-            return "\(hours)h \(minutes)m \(remaining)s"
+            return AppLocalization.format(
+                "%@h %@m %@s",
+                language: language,
+                String(hours),
+                String(minutes),
+                String(remaining)
+            )
         }
         if minutes > 0 {
-            return "\(minutes)m \(remaining)s"
+            return AppLocalization.format(
+                "%@m %@s",
+                language: language,
+                String(minutes),
+                String(remaining)
+            )
         }
-        return "\(remaining)s"
+        return AppLocalization.format("%@s", language: language, String(remaining))
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: language)
     }
 }
 
@@ -9640,20 +10221,22 @@ struct ActivityLogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Label("Log", systemImage: "doc.text.magnifyingglass")
+                Label(localized("Log"), systemImage: "doc.text.magnifyingglass")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Spacer()
-                Toggle("Auto Refresh && Scroll", isOn: $manager.activityLogAutoRefreshAndScroll)
+                Toggle(localized("Auto Refresh && Scroll"), isOn: $manager.activityLogAutoRefreshAndScroll)
                     .toggleStyle(.checkbox)
-                Button("Clear") {
+                Button(localized("Clear")) {
                     manager.clearActivityLog()
                 }
                 .disabled(manager.activityLog.isEmpty)
-                Button("Done") {
+                .accessibilityLabel(localized("Clear"))
+                Button(localized("Done")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .accessibilityLabel(localized("Done"))
             }
 
             Divider()
@@ -9662,12 +10245,12 @@ struct ActivityLogView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 5) {
                         if manager.activityLog.isEmpty {
-                            Text("No log entries")
+                            Text(localized("No log entries"))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             ForEach(manager.activityLog) { entry in
-                                ActivityLogRow(entry: entry)
+                                ActivityLogRow(entry: entry, language: manager.interfaceLanguage)
                             }
                         }
                         Color.clear
@@ -9694,6 +10277,11 @@ struct ActivityLogView: View {
         .padding(20)
         .frame(width: 680)
         .frame(minHeight: 520)
+        .accessibilityIdentifier("auxiliary.activity-log")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: manager.interfaceLanguage)
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
@@ -9708,20 +10296,29 @@ struct ActivityLogView: View {
 
 private struct ActivityLogRow: View {
     var entry: ActivityLogEntry
+    var language: AppInterfaceLanguage
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(entry.timestamp.formatted(date: .abbreviated, time: .standard))
+            Text(formattedTimestamp)
                 .foregroundStyle(.secondary)
                 .frame(width: 150, alignment: .leading)
-            Text(entry.category)
+            Text(AppLocalization.text(entry.category, language: language))
                 .foregroundStyle(.secondary)
                 .frame(width: 76, alignment: .leading)
-            Text(entry.message)
+            Text(AppLocalization.statusText(entry.message, language: language))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .font(.system(.caption, design: .monospaced))
         .textSelection(.enabled)
+    }
+
+    private var formattedTimestamp: String {
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+        return formatter.string(from: entry.timestamp)
     }
 }
 
@@ -9731,11 +10328,11 @@ struct DirectoriesView: View {
 
     var body: some View {
         let entries = manager.outputDirectoryEntries()
-        let text = manager.outputDirectoriesText(entries: entries)
+        let text = manager.outputDirectoriesText(entries: entries, language: manager.interfaceLanguage)
 
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Label("Dirs", systemImage: "folder")
+                Label(localized("Dirs"), systemImage: "folder")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Spacer()
@@ -9743,18 +10340,21 @@ struct DirectoriesView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                Button("Copy") {
+                Button(localized("Copy")) {
                     copy(text)
                 }
                 .disabled(entries.isEmpty)
-                Button("Open First") {
+                .accessibilityLabel(localized("Copy"))
+                Button(localized("Open First")) {
                     openFirstDirectory(entries)
                 }
                 .disabled(firstOpenableDirectory(entries) == nil)
-                Button("Done") {
+                .accessibilityLabel(localized("Open First"))
+                Button(localized("Done")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .accessibilityLabel(localized("Done"))
             }
 
             Divider()
@@ -9776,6 +10376,11 @@ struct DirectoriesView: View {
         .padding(20)
         .frame(width: 680)
         .frame(minHeight: 480)
+        .accessibilityIdentifier("auxiliary.directories")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: manager.interfaceLanguage)
     }
 
     private func copy(_ text: String) {
@@ -9798,11 +10403,11 @@ struct HistoryWindowView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let text = manager.historyPlainText()
+        let text = manager.historyPlainText(language: manager.interfaceLanguage)
 
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Label("History", systemImage: "clock.arrow.circlepath")
+                Label(localized("History"), systemImage: "clock.arrow.circlepath")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Spacer()
@@ -9810,14 +10415,16 @@ struct HistoryWindowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                Button("Copy") {
+                Button(localized("Copy")) {
                     copy(text)
                 }
                 .disabled(manager.history.isEmpty)
-                Button("Done") {
+                .accessibilityLabel(localized("Copy"))
+                Button(localized("Done")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .accessibilityLabel(localized("Done"))
             }
 
             TextEditor(text: .constant(text))
@@ -9833,6 +10440,11 @@ struct HistoryWindowView: View {
         .padding(20)
         .frame(width: 720)
         .frame(minHeight: 520)
+        .accessibilityIdentifier("auxiliary.history")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: manager.interfaceLanguage)
     }
 
     private func copy(_ text: String) {
@@ -9970,7 +10582,10 @@ struct SearcherWindowView: View {
                 .toggleStyle(.checkbox)
 
                 if !manager.addSummary.trimmed.isEmpty {
-                    Text(manager.addSummary)
+                    Text(AppLocalization.statusText(
+                        manager.addSummary,
+                        language: manager.interfaceLanguage
+                    ))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -10751,6 +11366,7 @@ private struct MetadataAnalysisEntryRow: View {
 }
 
 struct AboutView: View {
+    @ObservedObject var manager: DownloadManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -10771,39 +11387,48 @@ struct AboutView: View {
                     Text(about.displayName)
                         .font(.title2)
                         .fontWeight(.semibold)
-                    Text("Current: \(about.currentVersionText)")
+                    Text(AppLocalization.format(
+                        "Current: %@",
+                        language: manager.interfaceLanguage,
+                        about.currentVersionText
+                    ))
                         .font(.subheadline)
-                    Text("Latest: \(about.latestVersionText)")
+                    Text(AppLocalization.format(
+                        "Latest: %@",
+                        language: manager.interfaceLanguage,
+                        localized(about.latestVersionText)
+                    ))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Button("Done") {
+                Button(localized("Done")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .accessibilityLabel(localized("Done"))
             }
 
             Divider()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    AboutPanel(title: "About") {
-                        Text(about.developedBy)
+                    AboutPanel(title: localized("About")) {
+                        Text(localized(about.developedBy))
                         Text("\(about.architecture) · macOS \(about.minimumSystemVersion)+")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
 
-                    AboutPanel(title: "Licenses") {
-                        Text(about.licenseSummary)
+                    AboutPanel(title: localized("Licenses")) {
+                        Text(localized(about.licenseSummary))
                     }
 
-                    AboutPanel(title: "History") {
-                        Text(about.historySummary)
+                    AboutPanel(title: localized("History")) {
+                        Text(localized(about.historySummary))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -10813,13 +11438,20 @@ struct AboutView: View {
                 Button {
                     copy(about.currentVersionText)
                 } label: {
-                    Label("Copy Version", systemImage: "doc.on.doc")
+                    Label(localized("Copy Version"), systemImage: "doc.on.doc")
                 }
+                .accessibilityLabel(localized("Copy Version"))
                 Spacer()
             }
         }
         .padding(20)
         .frame(width: 620, height: 620)
+        .environment(\.locale, manager.interfaceLanguage.locale)
+        .accessibilityIdentifier("auxiliary.about")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: manager.interfaceLanguage)
     }
 
     private func copy(_ text: String) {
@@ -10917,7 +11549,7 @@ struct ArtistRecommendationsView: View {
 
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
-                Label("Artist Recommendations", systemImage: "person.2")
+                Label(localized("Artist Recommendations"), systemImage: "person.2")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Spacer()
@@ -10925,17 +11557,18 @@ struct ArtistRecommendationsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                Button("Done") {
+                Button(localized("Done")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .accessibilityLabel(localized("Done"))
             }
 
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .frame(width: 18)
-                TextField("Filter artists", text: $manager.artistRecommendationFilter)
+                TextField(localized("Filter artists"), text: $manager.artistRecommendationFilter)
                     .textFieldStyle(.roundedBorder)
                 if !manager.artistRecommendationFilter.trimmed.isEmpty {
                     Button {
@@ -10944,7 +11577,7 @@ struct ArtistRecommendationsView: View {
                         Image(systemName: "xmark.circle.fill")
                     }
                     .buttonStyle(.borderless)
-                    .help("Clear filter")
+                    .help(localized("Clear filter"))
                 }
                 Button {
                     manager.clearHiddenArtistRecommendations()
@@ -10952,17 +11585,17 @@ struct ArtistRecommendationsView: View {
                     Image(systemName: "arrow.counterclockwise")
                 }
                 .disabled(manager.hiddenArtistRecommendationIDs.isEmpty)
-                .help("Restore hidden artists")
+                .help(localized("Restore hidden artists"))
             }
 
             Divider()
 
             if recommendations.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("No artist signals yet")
+                    Text(localized("No artist signals yet"))
                         .font(.headline)
                     if !manager.artistRecommendationFilter.trimmed.isEmpty || !manager.hiddenArtistRecommendationIDs.isEmpty {
-                        Text("Clear the filter or restore hidden artists to show more recommendations.")
+                        Text(localized("Clear the filter or restore hidden artists to show more recommendations."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -10971,7 +11604,10 @@ struct ArtistRecommendationsView: View {
             } else {
                 List {
                     ForEach(recommendations) { recommendation in
-                        ArtistRecommendationRow(recommendation: recommendation) {
+                        ArtistRecommendationRow(
+                            recommendation: recommendation,
+                            language: manager.interfaceLanguage
+                        ) {
                             manager.applyArtistRecommendation(recommendation)
                             dismiss()
                         } copy: {
@@ -10986,6 +11622,11 @@ struct ArtistRecommendationsView: View {
         }
         .padding(20)
         .frame(width: 640, height: 560)
+        .accessibilityIdentifier("auxiliary.artist-recommendations")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: manager.interfaceLanguage)
     }
 }
 
@@ -11314,6 +11955,7 @@ struct HitomiTasterResultRow: View {
 
 struct ArtistRecommendationRow: View {
     let recommendation: ArtistRecommendation
+    let language: AppInterfaceLanguage
     let apply: () -> Void
     let copy: () -> Void
     let hide: () -> Void
@@ -11359,36 +12001,36 @@ struct ArtistRecommendationRow: View {
                 Image(systemName: "doc.on.doc")
             }
             .buttonStyle(.borderless)
-            .help("Copy artist")
+            .help(localized("Copy artist"))
 
             Button(action: apply) {
                 Image(systemName: "magnifyingglass")
             }
             .buttonStyle(.borderless)
-            .help("Use as search query")
+            .help(localized("Use as search query"))
 
             Button(action: hide) {
                 Image(systemName: "xmark.circle")
             }
             .buttonStyle(.borderless)
-            .help("Hide recommendation")
+            .help(localized("Hide recommendation"))
         }
         .padding(.vertical, 4)
         .contextMenu {
             Button {
                 apply()
             } label: {
-                Label("Use as Search Query", systemImage: "magnifyingglass")
+                Label(localized("Use as Search Query"), systemImage: "magnifyingglass")
             }
             Button {
                 copy()
             } label: {
-                Label("Copy Artist", systemImage: "doc.on.doc")
+                Label(localized("Copy Artist"), systemImage: "doc.on.doc")
             }
             Button(role: .destructive) {
                 hide()
             } label: {
-                Label("Hide", systemImage: "xmark.circle")
+                Label(localized("Hide"), systemImage: "xmark.circle")
             }
         }
     }
@@ -11399,11 +12041,21 @@ struct ArtistRecommendationRow: View {
 
     private var countText: String {
         let parts = [
-            recommendation.jobCount > 0 ? "\(recommendation.jobCount) jobs" : nil,
-            recommendation.historyCount > 0 ? "\(recommendation.historyCount) history" : nil,
-            recommendation.bookmarkCount > 0 ? "\(recommendation.bookmarkCount) bookmarks" : nil
+            recommendation.jobCount > 0
+                ? AppLocalization.format("%@ jobs", language: language, String(recommendation.jobCount))
+                : nil,
+            recommendation.historyCount > 0
+                ? AppLocalization.format("%@ history", language: language, String(recommendation.historyCount))
+                : nil,
+            recommendation.bookmarkCount > 0
+                ? AppLocalization.format("%@ bookmarks", language: language, String(recommendation.bookmarkCount))
+                : nil
         ].compactMap { $0 }
         return parts.isEmpty ? recommendation.queryToken : parts.joined(separator: " - ")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: language)
     }
 }
 
@@ -12695,6 +13347,10 @@ struct SearchResultRow: View {
 }
 
 enum JobStatusStyle {
+    static func iconName(for job: DownloadJob) -> String {
+        job.partialFailureCounts == nil ? iconName(for: job.status) : "exclamationmark.triangle.fill"
+    }
+
     static func iconName(for status: JobStatus) -> String {
         switch status {
         case .queued: return "clock"
@@ -12728,14 +13384,24 @@ enum JobStatusStyle {
         }
     }
 
+    static func color(for job: DownloadJob) -> Color {
+        job.partialFailureCounts == nil ? color(for: job.status) : .orange
+    }
+
     static func color(for status: JobStatus, palette: JobStatusColorPalette) -> Color {
         Color(hexRGB: palette.hex(for: status)) ?? color(for: status)
+    }
+
+    static func color(for job: DownloadJob, palette: JobStatusColorPalette) -> Color {
+        job.partialFailureCounts == nil ? color(for: job.status, palette: palette) : .orange
     }
 }
 
 struct FontSettingsView: View {
     @ObservedObject var manager: DownloadManager
     @Environment(\.dismiss) private var dismiss
+
+    private let defaultSampleKey = "Sekiya Asami / 1234567890 / Download queue"
 
     private var fontFamilySelection: Binding<String> {
         Binding(
@@ -12753,14 +13419,20 @@ struct FontSettingsView: View {
     }
 
     private var sampleText: String {
-        let sample = manager.fontPreviewText.trimmed
-        return sample.isEmpty ? "Sekiya Asami / 1234567890 / Download queue" : sample
+        localizedFontPreviewText(manager.fontPreviewText)
+    }
+
+    private var fontPreviewText: Binding<String> {
+        Binding(
+            get: { localizedFontPreviewText(manager.fontPreviewText) },
+            set: { manager.fontPreviewText = $0 }
+        )
     }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                Label("Font", systemImage: "textformat.size")
+                Label(localized("Font"), systemImage: "textformat.size")
                     .font(.headline)
 
                 Spacer()
@@ -12771,7 +13443,7 @@ struct FontSettingsView: View {
                     Image(systemName: "xmark.circle.fill")
                 }
                 .buttonStyle(.borderless)
-                .help("Close font settings")
+                .help(localized("Close font settings"))
                 .accessibilityIdentifier("font-settings.close")
             }
             .padding(.horizontal, 18)
@@ -12780,14 +13452,14 @@ struct FontSettingsView: View {
 
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .firstTextBaseline, spacing: 14) {
-                    Text("Family")
+                    Text(localized("Family"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(width: 90, alignment: .leading)
 
                     Picker("", selection: fontFamilySelection) {
                         ForEach(manager.interfaceFontFamilyOptions, id: \.self) { family in
-                            Text(family).tag(family)
+                            Text(family == "System" ? localized("System") : family).tag(family)
                         }
                     }
                     .labelsHidden()
@@ -12796,7 +13468,7 @@ struct FontSettingsView: View {
                 }
 
                 HStack(alignment: .firstTextBaseline, spacing: 14) {
-                    Text("Size")
+                    Text(localized("Size"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(width: 90, alignment: .leading)
@@ -12815,11 +13487,11 @@ struct FontSettingsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Sample")
+                    Text(localized("Sample"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
 
-                    TextEditor(text: $manager.fontPreviewText)
+                    TextEditor(text: fontPreviewText)
                         .font(previewFont)
                         .frame(minHeight: 78)
                         .overlay(
@@ -12841,8 +13513,9 @@ struct FontSettingsView: View {
                     Button {
                         manager.resetInterfaceFont()
                     } label: {
-                        Label("Reset", systemImage: "arrow.counterclockwise")
+                        Label(localized("Reset"), systemImage: "arrow.counterclockwise")
                     }
+                    .accessibilityLabel(localized("Reset"))
 
                     Spacer()
 
@@ -12851,16 +13524,32 @@ struct FontSettingsView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
 
-                    Button("Done") {
+                    Button(localized("Done")) {
                         dismiss()
                     }
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityLabel(localized("Done"))
                 }
             }
             .padding(18)
         }
         .frame(width: 560, height: 390)
         .accessibilityIdentifier("font-settings.view")
+    }
+
+    private func localized(_ key: String) -> String {
+        AppLocalization.text(key, language: manager.interfaceLanguage)
+    }
+
+    private func localizedFontPreviewText(_ rawValue: String) -> String {
+        let value = rawValue.trimmed
+        let defaultSamples = Set(
+            AppInterfaceLanguage.allCases.map {
+                AppLocalization.text(defaultSampleKey, language: $0)
+            }
+        )
+        guard value.isEmpty || defaultSamples.contains(value) else { return rawValue }
+        return localized(defaultSampleKey)
     }
 }
 
@@ -13063,17 +13752,24 @@ enum JobInfoExtras {
 
     static func summaryEntries(for job: DownloadJob) -> [JobInfoEntry] {
         var entries = [
-            JobInfoEntry(key: "status", value: job.status.rawValue),
+            JobInfoEntry(key: "status", value: job.statusDisplayText()),
             JobInfoEntry(key: "progress", value: String(format: "%.0f%%", job.progress * 100)),
             JobInfoEntry(key: "completed", value: "\(job.completed) / \(job.total)"),
             JobInfoEntry(key: "pinned", value: job.isPinned ? "Yes" : "No"),
             JobInfoEntry(key: "locked", value: job.isLocked ? "Yes" : "No"),
-            JobInfoEntry(key: "message", value: job.message),
+            JobInfoEntry(key: "message", value: AppLocalization.statusText(job.message)),
             JobInfoEntry(key: "comment", value: job.comment),
             JobInfoEntry(key: "range", value: job.rangeExpression),
             JobInfoEntry(key: "output_path", value: job.outputPath),
             JobInfoEntry(key: "source", value: job.source)
         ]
+        if let counts = job.partialFailureCounts {
+            entries.insert(
+                JobInfoEntry(key: "successful_files", value: "\(counts.succeeded) / \(counts.total)"),
+                at: 3
+            )
+            entries.insert(JobInfoEntry(key: "failed_files", value: String(counts.failed)), at: 4)
+        }
         if let size = JobDisplayMetadata.byteCountText(for: job) {
             entries.insert(JobInfoEntry(key: "known_size", value: size), at: 3)
         }
@@ -13125,6 +13821,8 @@ enum JobInfoExtras {
         case "skipped_segment_indexes": return "Skipped Segment Indexes"
         case "skipped_segment_filenames": return "Skipped Segment Files"
         case "skipped_segment_urls": return "Skipped Segment URLs"
+        case "successful_files": return "Successful Files / Total"
+        case "failed_files": return "Failed Files"
         case "segment_count": return "Segments"
         case "total_segments": return "Total Segments"
         case "media_count": return "Media"
@@ -13549,7 +14247,7 @@ struct QueueGroupRow: View {
                     .frame(width: scaled(24), height: scaled(28))
             }
             .buttonStyle(.plain)
-            .help(AppLocalization.text(group.isExpanded ? "그룹 접기" : "그룹 펼치기"))
+            .help(AppLocalization.text(group.isExpanded ? "Collapse Group" : "Expand Group"))
             .accessibilityIdentifier("queue.group.toggle.\(group.id.uuidString)")
 
             Image(systemName: "folder.fill")
@@ -13563,7 +14261,7 @@ struct QueueGroupRow: View {
                         Image(systemName: "pin.fill")
                             .font(.system(size: scaled(10), weight: .semibold))
                             .foregroundStyle(.secondary)
-                            .help(AppLocalization.text("고정된 그룹"))
+                            .help(AppLocalization.text("Pinned Group"))
                     }
                     ForEach(selectedTagColors) { tag in
                         Circle()
@@ -13600,7 +14298,7 @@ struct QueueGroupRow: View {
             }
             .buttonStyle(.plain)
             .fixedSize()
-            .help(AppLocalization.text("그룹 작업"))
+            .help(AppLocalization.text("Group Actions"))
             .accessibilityIdentifier("queue.group.menu.\(group.id.uuidString)")
         }
         .padding(.horizontal, scaled(8))
@@ -13646,11 +14344,11 @@ struct QueueGroupRow: View {
     private func makeNativeGroupActionMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        addNativeAction(to: menu, title: "이름 변경...", systemImage: "pencil", action: rename)
+        addNativeAction(to: menu, title: "Rename...", systemImage: "pencil", action: rename)
         menu.addItem(.separator())
         addNativeAction(
             to: menu,
-            title: "그룹 안의 모든 작업 다시 시작(S)",
+            title: "Restart All Tasks in Group (S)",
             systemImage: "arrow.clockwise",
             enabled: !jobs.isEmpty,
             action: retryAll
@@ -13658,14 +14356,14 @@ struct QueueGroupRow: View {
         menu.addItem(.separator())
         addNativeAction(
             to: menu,
-            title: group.isPinned ? "고정 해제" : "고정",
+            title: group.isPinned ? "Unpin" : "Pin",
             systemImage: group.isPinned ? "pin.slash" : "pin",
             action: togglePin
         )
         menu.addItem(.separator())
         addNativeTagToolbar(to: menu)
         menu.addItem(.separator())
-        addNativeAction(to: menu, title: "목록에서 제거(R)", systemImage: "xmark", action: removeGroup)
+        addNativeAction(to: menu, title: "Remove from List (R)", systemImage: "xmark", action: removeGroup)
         return menu
     }
 
@@ -13685,7 +14383,7 @@ struct QueueGroupRow: View {
             }
         }
         actions.append(QueueMenuToolbarAction(
-            title: "태그 설정...",
+            title: "Tag Settings...",
             systemImage: "gearshape.fill",
             handler: openTagSettings
         ))
@@ -13715,7 +14413,7 @@ struct QueueGroupRow: View {
             return comment
         }
         if jobs.isEmpty {
-            return AppLocalization.text("빈 그룹")
+            return AppLocalization.text("Empty Group")
         }
         return AppLocalization.format("%@ tasks", String(jobs.count))
     }
@@ -13746,6 +14444,7 @@ private final class JobRowHoverState: ObservableObject {
 struct JobRow: View {
     let job: DownloadJob
     let isSelected: Bool
+    let queueIsPaused: Bool
     let showsDownloadDate: Bool
     let statusColorPalette: JobStatusColorPalette
     let groupOptions: [QueueGroup]
@@ -13958,7 +14657,7 @@ struct JobRow: View {
                     if job.status == .resolving || job.status == .downloading || job.status == .failed || job.status == .cancelled {
                         statusIcon
                             .frame(width: scaled(22), height: scaled(22))
-                            .help(job.message)
+                            .help(statusHelpText)
                             .accessibilityIdentifier("queue.status-indicator.\(job.id.uuidString)")
                     }
 
@@ -14050,13 +14749,15 @@ struct JobRow: View {
                     }
 
                     if job.status == .downloading {
-                        ClockwiseDownloadIndicator(
-                            color: isSelected ? .white : statusColor,
-                            size: scaled(12)
-                        )
+                        downloadActivityIcon
                         .frame(width: scaled(20), height: scaled(20))
-                        .help(job.message)
+                        .help(AppLocalization.statusText(job.message))
                         .accessibilityIdentifier("queue.status-indicator.\(job.id.uuidString)")
+                    } else if job.status == .failed || job.status == .cancelled {
+                        statusIcon
+                            .frame(width: scaled(20), height: scaled(20))
+                            .help(statusHelpText)
+                            .accessibilityIdentifier("queue.status-indicator.\(job.id.uuidString)")
                     }
 
                     Spacer(minLength: 0)
@@ -14091,13 +14792,15 @@ struct JobRow: View {
                     }
 
                     if job.status == .downloading {
-                        ClockwiseDownloadIndicator(
-                            color: isSelected ? .white : statusColor,
-                            size: scaled(12)
-                        )
+                        downloadActivityIcon
                         .frame(width: scaled(20), height: scaled(20))
-                        .help(job.message)
+                        .help(AppLocalization.statusText(job.message))
                         .accessibilityIdentifier("queue.status-indicator.\(job.id.uuidString)")
+                    } else if job.status == .failed || job.status == .cancelled {
+                        statusIcon
+                            .frame(width: scaled(20), height: scaled(20))
+                            .help(statusHelpText)
+                            .accessibilityIdentifier("queue.status-indicator.\(job.id.uuidString)")
                     }
 
                     Spacer(minLength: 0)
@@ -14183,27 +14886,27 @@ struct JobRow: View {
         HStack(spacing: scaled(viewMode == .icon ? 0 : 2)) {
             if canStopLiveRecording() {
                 hoverActionButton(
-                    title: "녹화 중지",
+                    title: "Stop Recording",
                     systemImage: "stop.fill",
                     enabled: true,
                     action: stopLiveRecording
                 )
             } else {
                 hoverActionButton(
-                    title: "미리보기",
+                    title: "Preview",
                     systemImage: "eye.fill",
                     enabled: canPreviewOutput(),
                     action: previewOutput
                 )
             }
             hoverActionButton(
-                title: "출력 폴더 열기",
+                title: "Open Output Folder",
                 systemImage: "folder.fill",
                 enabled: canRevealSelectedOutputs(),
                 action: reveal
             )
             hoverActionButton(
-                title: "작업과 다운로드 파일 삭제",
+                title: "Delete Task and Downloaded Files",
                 systemImage: "trash.fill",
                 enabled: canDeleteSelectedJobsAndOutput(),
                 action: deleteJobAndOutput
@@ -14213,7 +14916,7 @@ struct JobRow: View {
             hoverActionMenu
 
             hoverActionButton(
-                title: "목록에서만 제거",
+                title: "Remove from List Only",
                 systemImage: "xmark",
                 enabled: canRemoveSelectedJobs(),
                 action: remove
@@ -14260,8 +14963,8 @@ struct JobRow: View {
         .buttonStyle(.plain)
         .frame(width: scaled(hoverActionButtonWidth), height: scaled(30))
         .contentShape(Rectangle())
-        .help(AppLocalization.text("상세"))
-        .accessibilityLabel(AppLocalization.text("상세"))
+        .help(AppLocalization.text("More"))
+        .accessibilityLabel(AppLocalization.text("More"))
     }
 
     private func showNativeJobActionMenu() {
@@ -14294,7 +14997,7 @@ struct JobRow: View {
         if canStopLiveRecording() {
             addNativeAction(
                 to: menu,
-                title: "녹화 중지",
+                title: "Stop Recording",
                 systemImage: "stop.circle.fill",
                 action: stopLiveRecording
             )
@@ -14304,7 +15007,7 @@ struct JobRow: View {
         if canDirectDownload() {
             addNativeAction(
                 to: menu,
-                title: "직접 다운로드",
+                title: "Direct Download",
                 systemImage: "arrow.down.circle",
                 action: directDownload
             )
@@ -14313,7 +15016,7 @@ struct JobRow: View {
 
         addNativeAction(
             to: menu,
-            title: "첫 번째 파일 열기(O)",
+            title: "Open First File (O)",
             systemImage: "doc.viewfinder",
             enabled: canOpenFirstSelectedOutputs(),
             keyEquivalent: "\r",
@@ -14322,7 +15025,7 @@ struct JobRow: View {
 
         addNativeAction(
             to: menu,
-            title: "미리보기(P)",
+            title: "Preview (P)",
             systemImage: "eye",
             enabled: canPreviewOutput(),
             keyEquivalent: "v",
@@ -14330,7 +15033,7 @@ struct JobRow: View {
         )
         addNativeAction(
             to: menu,
-            title: "브라우저로 보기(B)",
+            title: "View in Browser (B)",
             systemImage: "safari",
             enabled: canViewOutputInBrowser(),
             keyEquivalent: "\r",
@@ -14341,36 +15044,36 @@ struct JobRow: View {
 
         addNativeAction(
             to: menu,
-            title: "링크 주소 복사(C)",
+            title: "Copy Link Address (C)",
             systemImage: "doc.on.doc",
             keyEquivalent: "c",
             modifierMask: .command,
             action: copySource
         )
-        addNativeAction(to: menu, title: "작가명 복사(A)", systemImage: "person.text.rectangle", enabled: canCopyArtist(), action: copyArtist)
+        addNativeAction(to: menu, title: "Copy Artist Name (A)", systemImage: "person.text.rectangle", enabled: canCopyArtist(), action: copyArtist)
         menu.addItem(.separator())
 
-        addNativeAction(to: menu, title: "다시 시작(S)", systemImage: "arrow.clockwise", enabled: canRetrySelectedJobs(), action: retry)
+        addNativeAction(to: menu, title: "Restart (S)", systemImage: "arrow.clockwise", enabled: canRetrySelectedJobs(), action: retry)
         addNativeAction(
             to: menu,
-            title: "불완전한 작업 모두 다시 시작",
+            title: "Restart All Incomplete Tasks",
             systemImage: "arrow.triangle.2.circlepath",
             enabled: canRetryIncomplete(),
             action: retryIncomplete
         )
         addNativeAction(
             to: menu,
-            title: "완료된 작업 모두 제거",
+            title: "Remove All Completed Tasks",
             systemImage: "xmark.circle",
             enabled: canClearCompleted(),
             action: clearCompleted
         )
-        addNativeAction(to: menu, title: "완료됨으로 표시(D)", systemImage: "checkmark", enabled: canMarkFinished(), action: markFinished)
+        addNativeAction(to: menu, title: "Mark as Completed (D)", systemImage: "checkmark", enabled: canMarkFinished(), action: markFinished)
         menu.addItem(.separator())
 
         addNativeAction(
             to: menu,
-            title: lockActionWillLock() ? "잠금(L)" : "잠금 해제(L)",
+            title: lockActionWillLock() ? "Lock (L)" : "Unlock (L)",
             systemImage: lockActionWillLock() ? "lock" : "lock.open",
             keyEquivalent: "q",
             modifierMask: .control,
@@ -14378,7 +15081,7 @@ struct JobRow: View {
         )
         addNativeAction(
             to: menu,
-            title: pinActionWillPin() ? "고정" : "고정 해제",
+            title: pinActionWillPin() ? "Pin" : "Unpin",
             systemImage: pinActionWillPin() ? "pin" : "pin.slash",
             enabled: canToggleSelectedPins(),
             keyEquivalent: "p",
@@ -14391,7 +15094,7 @@ struct JobRow: View {
 
         addNativeAction(
             to: menu,
-            title: "작업 수정...",
+            title: "Edit Task...",
             systemImage: "pencil",
             enabled: canEdit,
             keyEquivalent: String(UnicodeScalar(0xF705)!),
@@ -14399,22 +15102,22 @@ struct JobRow: View {
         )
         addNativeAction(
             to: menu,
-            title: "코멘트 수정...",
+            title: "Edit Comment...",
             systemImage: job.comment.trimmed.isEmpty ? "text.bubble" : "text.bubble.fill",
             keyEquivalent: "c",
             action: comment
         )
-        addNativeAction(to: menu, title: "폴더 이동...", systemImage: "folder.badge.plus", enabled: canMoveOutput(), action: moveOutput)
+        addNativeAction(to: menu, title: "Move Folder...", systemImage: "folder.badge.plus", enabled: canMoveOutput(), action: moveOutput)
         addNativeAction(
             to: menu,
-            title: "이미지 포맷 변환...",
+            title: "Convert Image Format...",
             systemImage: "photo.badge.arrow.down",
             enabled: canConvertImages(),
             action: convertImages
         )
 
-        let groupMenu = nativeMenu(title: "그룹으로 이동")
-        addNativeAction(to: groupMenu, title: "새 그룹...", systemImage: "folder.badge.plus", action: moveToNewGroup)
+        let groupMenu = nativeMenu(title: "Move to Group")
+        addNativeAction(to: groupMenu, title: "New Group...", systemImage: "folder.badge.plus", action: moveToNewGroup)
         if !groupOptions.isEmpty {
             groupMenu.addItem(.separator())
             for group in groupOptions {
@@ -14430,21 +15133,21 @@ struct JobRow: View {
         groupMenu.addItem(.separator())
         addNativeAction(
             to: groupMenu,
-            title: "그룹 없음",
+            title: "No Group",
             systemImage: currentGroupID == nil ? "checkmark" : "folder.badge.minus"
         ) {
             moveToGroup(nil)
         }
         addNativeSubmenu(
             to: menu,
-            title: "그룹으로 이동",
+            title: "Move to Group",
             systemImage: "folder",
             submenu: groupMenu,
             enabled: canMoveToGroup()
         )
         addNativeAction(
             to: menu,
-            title: "작업 정보...(I)",
+            title: "Task Information... (I)",
             systemImage: "info.circle",
             keyEquivalent: "a",
             action: info
@@ -14452,7 +15155,7 @@ struct JobRow: View {
 
         if hasAria2ContextActions {
             menu.addItem(.separator())
-            let ariaMenu = nativeMenu(title: "aria2 작업")
+            let ariaMenu = nativeMenu(title: "aria2 Actions")
             addNativeAction(to: ariaMenu, title: "Pause aria2c", systemImage: "pause.circle", enabled: canPauseAria2(), action: pauseAria2)
             addNativeAction(to: ariaMenu, title: "Resume aria2c", systemImage: "play.circle", enabled: canResumeAria2(), action: resumeAria2)
             addNativeAction(to: ariaMenu, title: "Apply aria2 Limits", systemImage: "speedometer", enabled: canApplyAria2Limits(), action: applyAria2Limits)
@@ -14460,7 +15163,7 @@ struct JobRow: View {
             addNativeAction(to: ariaMenu, title: "Apply aria2 Seeding", systemImage: "leaf", enabled: canApplyAria2Seeding(), action: applyAria2Seeding)
             addNativeAction(to: ariaMenu, title: "List aria2 Files", systemImage: "list.bullet.rectangle.portrait", enabled: canPreviewAria2Files(), action: previewAria2Files)
             addNativeAction(to: ariaMenu, title: "Show aria2 Peers", systemImage: "person.2", enabled: canRefreshAria2Peers(), action: refreshAria2Peers)
-            addNativeSubmenu(to: menu, title: "aria2 작업", systemImage: "bolt.horizontal", submenu: ariaMenu)
+            addNativeSubmenu(to: menu, title: "aria2 Actions", systemImage: "bolt.horizontal", submenu: ariaMenu)
         }
         return menu
     }
@@ -14469,25 +15172,25 @@ struct JobRow: View {
         let item = NSMenuItem()
         item.view = QueueMenuToolbarView(actions: [
             QueueMenuToolbarAction(
-                title: canStopLiveRecording() ? "녹화 중지" : "미리보기",
+                title: canStopLiveRecording() ? "Stop Recording" : "Preview",
                 systemImage: canStopLiveRecording() ? "stop.fill" : "eye.fill",
                 isEnabled: canStopLiveRecording() || canPreviewOutput(),
                 handler: canStopLiveRecording() ? stopLiveRecording : previewOutput
             ),
             QueueMenuToolbarAction(
-                title: "출력 폴더 열기",
+                title: "Open Output Folder",
                 systemImage: "folder.fill",
                 isEnabled: canRevealSelectedOutputs(),
                 handler: reveal
             ),
             QueueMenuToolbarAction(
-                title: "작업과 다운로드 파일 삭제",
+                title: "Delete Task and Downloaded Files",
                 systemImage: "trash.fill",
                 isEnabled: canDeleteSelectedJobsAndOutput(),
                 handler: deleteJobAndOutput
             ),
             QueueMenuToolbarAction(
-                title: "목록에서만 제거",
+                title: "Remove from List Only",
                 systemImage: "xmark",
                 isEnabled: canRemoveSelectedJobs(),
                 handler: remove
@@ -14512,7 +15215,7 @@ struct JobRow: View {
             }
         }
         actions.append(QueueMenuToolbarAction(
-            title: "태그 설정...",
+            title: "Tag Settings...",
             systemImage: "gearshape.fill",
             handler: openTagSettings
         ))
@@ -14599,14 +15302,14 @@ struct JobRow: View {
                 .frame(width: scaled(32), height: scaled(30))
             }
             .frame(width: scaled(32), height: scaled(30))
-            .help(AppLocalization.text("순서 변경"))
-            .accessibilityLabel(AppLocalization.text("순서 변경"))
+            .help(AppLocalization.text("Reorder"))
+            .accessibilityLabel(AppLocalization.text("Reorder"))
             .accessibilityAddTraits(.isButton)
         } else {
             hoverActionIcon(systemImage: "equal")
                 .opacity(0.35)
-                .help(AppLocalization.text("수동 정렬에서 순서 변경 가능"))
-                .accessibilityLabel(AppLocalization.text("순서 변경 사용 불가"))
+                .help(AppLocalization.text("Reordering is available in manual sort"))
+                .accessibilityLabel(AppLocalization.text("Reordering unavailable"))
         }
     }
 
@@ -14615,35 +15318,35 @@ struct JobRow: View {
         Button {
                 previewOutput()
             } label: {
-                Label("미리보기", systemImage: "eye")
+                Label("Preview", systemImage: "eye")
             }
             .disabled(!canPreviewOutput())
 
             Button {
                 viewOutputInBrowser()
             } label: {
-                Label("브라우저로 보기", systemImage: "safari")
+                Label("View in Browser", systemImage: "safari")
             }
             .disabled(!canViewOutputInBrowser())
 
             Button {
                 reveal()
             } label: {
-                Label("출력 폴더 열기", systemImage: "folder")
+                Label("Open Output Folder", systemImage: "folder")
             }
             .disabled(!canRevealSelectedOutputs())
 
             Button(role: .destructive) {
                 deleteOutput()
             } label: {
-                Label("출력을 휴지통으로 이동", systemImage: "trash")
+                Label("Move Output to Trash", systemImage: "trash")
             }
             .disabled(!canDeleteOutput())
 
             Button(role: .destructive) {
                 remove()
             } label: {
-                Label("작업 제거", systemImage: "xmark")
+                Label("Remove Task", systemImage: "xmark")
             }
             .disabled(!canRemoveSelectedJobs())
 
@@ -14652,14 +15355,14 @@ struct JobRow: View {
             Button {
                 copySource()
             } label: {
-                Label("링크 주소 복사", systemImage: "doc.on.doc")
+                Label("Copy Link Address", systemImage: "doc.on.doc")
             }
             .keyboardShortcut("c", modifiers: .command)
 
             Button {
                 copyArtist()
             } label: {
-                Label("작가명 복사", systemImage: "person.text.rectangle")
+                Label("Copy Artist Name", systemImage: "person.text.rectangle")
             }
             .disabled(!canCopyArtist())
 
@@ -14668,28 +15371,28 @@ struct JobRow: View {
             Button {
                 retry()
             } label: {
-                Label("다시 시작", systemImage: "arrow.clockwise")
+                Label("Restart", systemImage: "arrow.clockwise")
             }
             .disabled(!canRetrySelectedJobs())
 
             Button {
                 retryIncomplete()
             } label: {
-                Label("불완전한 작업 모두 다시 시작", systemImage: "arrow.triangle.2.circlepath")
+                Label("Restart All Incomplete Tasks", systemImage: "arrow.triangle.2.circlepath")
             }
             .disabled(!canRetryIncomplete())
 
             Button(role: .destructive) {
                 clearCompleted()
             } label: {
-                Label("완료된 작업 모두 제거", systemImage: "xmark.circle")
+                Label("Remove All Completed Tasks", systemImage: "xmark.circle")
             }
             .disabled(!canClearCompleted())
 
             Button {
                 markFinished()
             } label: {
-                Label("완료됨으로 표시", systemImage: "checkmark")
+                Label("Mark as Completed", systemImage: "checkmark")
             }
             .disabled(!canMarkFinished())
 
@@ -14699,7 +15402,7 @@ struct JobRow: View {
                 toggleLock()
             } label: {
                 Label(
-                    lockActionWillLock() ? "잠금" : "잠금 해제",
+                    lockActionWillLock() ? "Lock" : "Unlock",
                     systemImage: lockActionWillLock() ? "lock" : "lock.open"
                 )
             }
@@ -14708,7 +15411,7 @@ struct JobRow: View {
                 togglePin()
             } label: {
                 Label(
-                    pinActionWillPin() ? "고정" : "고정 해제",
+                    pinActionWillPin() ? "Pin" : "Unpin",
                     systemImage: pinActionWillPin() ? "pin" : "pin.slash"
                 )
             }
@@ -14729,10 +15432,10 @@ struct JobRow: View {
                 Button {
                     openTagSettings()
                 } label: {
-                    Label("태그 설정...", systemImage: "gearshape")
+                    Label("Tag Settings...", systemImage: "gearshape")
                 }
             } label: {
-                Label("태그", systemImage: "tag")
+                Label("Tag", systemImage: "tag")
             }
 
             Divider()
@@ -14740,27 +15443,27 @@ struct JobRow: View {
             Button {
                 edit()
             } label: {
-                Label("작업 수정...", systemImage: "pencil")
+                Label("Edit Task...", systemImage: "pencil")
             }
             .disabled(!canEdit)
 
             Button {
                 comment()
             } label: {
-                Label("코멘트 수정...", systemImage: job.comment.trimmed.isEmpty ? "text.bubble" : "text.bubble.fill")
+                Label("Edit Comment...", systemImage: job.comment.trimmed.isEmpty ? "text.bubble" : "text.bubble.fill")
             }
 
             Button {
                 moveOutput()
             } label: {
-                Label("폴더 이동...", systemImage: "folder.badge.plus")
+                Label("Move Folder...", systemImage: "folder.badge.plus")
             }
             .disabled(!canMoveOutput())
 
             Button {
                 convertImages()
             } label: {
-                Label("이미지 포맷 변환...", systemImage: "photo.badge.arrow.down")
+                Label("Convert Image Format...", systemImage: "photo.badge.arrow.down")
             }
             .disabled(!canConvertImages())
 
@@ -14768,7 +15471,7 @@ struct JobRow: View {
                 Button {
                     moveToNewGroup()
                 } label: {
-                    Label("새 그룹...", systemImage: "folder.badge.plus")
+                    Label("New Group...", systemImage: "folder.badge.plus")
                 }
                 if !groupOptions.isEmpty {
                     Divider()
@@ -14784,17 +15487,17 @@ struct JobRow: View {
                 Button {
                     moveToGroup(nil)
                 } label: {
-                    Label("그룹 없음", systemImage: currentGroupID == nil ? "checkmark" : "folder.badge.minus")
+                    Label("No Group", systemImage: currentGroupID == nil ? "checkmark" : "folder.badge.minus")
                 }
             } label: {
-                Label("그룹으로 이동", systemImage: "folder")
+                Label("Move to Group", systemImage: "folder")
             }
             .disabled(!canMoveToGroup())
 
             Button {
                 info()
             } label: {
-                Label("작업 정보...", systemImage: "info.circle")
+                Label("Task Information...", systemImage: "info.circle")
             }
 
             Divider()
@@ -14895,7 +15598,7 @@ struct JobRow: View {
                 }
                 .disabled(!canRefreshAria2Peers())
             } label: {
-                Label("추가 작업", systemImage: "ellipsis.circle")
+                Label("More Actions", systemImage: "ellipsis.circle")
             }
     }
 
@@ -15076,6 +15779,12 @@ struct JobRow: View {
     }
 
     private var secondaryStatusText: String? {
+        if queueIsPaused && (job.status == .resolving || job.status == .downloading) {
+            return AppLocalization.text("Pause")
+        }
+        if let partialFailureSummary = job.partialFailureSummary() {
+            return partialFailureSummary
+        }
         if showsDownloadDate,
            let date = JobDisplayMetadata.downloadDateText(for: job) {
             return date
@@ -15085,7 +15794,7 @@ struct JobRow: View {
         }
         if job.status == .resolving || job.status == .downloading || job.status == .failed || job.status == .cancelled {
             let message = job.message.trimmed
-            return message.isEmpty ? job.status.label : message
+            return message.isEmpty ? job.status.label : AppLocalization.statusText(message)
         }
         if let eta = JobDisplayMetadata.etaText(for: job) {
             return eta
@@ -15096,11 +15805,26 @@ struct JobRow: View {
     @ViewBuilder
     private var statusIcon: some View {
         if job.status == .downloading {
-            ClockwiseDownloadIndicator(color: isSelected ? .white : statusColor, size: scaled(12))
+            downloadActivityIcon
         } else {
             Image(systemName: iconName)
                 .font(.system(size: scaled(11), weight: .semibold))
                 .foregroundStyle(isSelected ? Color.white.opacity(0.9) : statusColor)
+        }
+    }
+
+    @ViewBuilder
+    private var downloadActivityIcon: some View {
+        if queueIsPaused {
+            Image(systemName: "pause.circle.fill")
+                .font(.system(size: scaled(12), weight: .semibold))
+                .foregroundStyle(isSelected ? Color.white : statusColor)
+                .accessibilityLabel(AppLocalization.text("Pause"))
+        } else {
+            ClockwiseDownloadIndicator(
+                color: isSelected ? .white : statusColor,
+                size: scaled(12)
+            )
         }
     }
 
@@ -15164,7 +15888,7 @@ struct JobRow: View {
     }
 
     private var iconName: String {
-        JobStatusStyle.iconName(for: job.status)
+        JobStatusStyle.iconName(for: job)
     }
 
     private var selectedTagColors: [TaskTagColor] {
@@ -15182,6 +15906,16 @@ struct JobRow: View {
     }
 
     private var statusColor: Color {
-        JobStatusStyle.color(for: job.status, palette: statusColorPalette)
+        JobStatusStyle.color(for: job, palette: statusColorPalette)
+    }
+
+    private var statusHelpText: String {
+        guard let summary = job.partialFailureSummary() else {
+            return AppLocalization.statusText(job.message)
+        }
+        let message = job.message.trimmed
+        return message.isEmpty
+            ? summary
+            : "\(summary)\n\(AppLocalization.statusText(message))"
     }
 }

@@ -51,6 +51,8 @@ private final class HTTPDownloadProgressDelegate: NSObject, URLSessionDownloadDe
     private var task: URLSessionDownloadTask?
     private var retainedSession: URLSession?
     private var cancellationRequested = false
+    private var pauseRequested = false
+    private var taskSuspendedByPause = false
 
     init(handler: @escaping HTTPDownloadProgressHandler) {
         self.handler = handler
@@ -76,9 +78,15 @@ private final class HTTPDownloadProgressDelegate: NSObject, URLSessionDownloadDe
                 self.task = task
                 retainedSession = session
                 let shouldCancel = cancellationRequested
+                if !shouldCancel {
+                    task.resume()
+                    if pauseRequested {
+                        task.suspend()
+                        taskSuspendedByPause = true
+                    }
+                }
                 lock.unlock()
 
-                task.resume()
                 if shouldCancel {
                     task.cancel()
                 }
@@ -92,8 +100,33 @@ private final class HTTPDownloadProgressDelegate: NSObject, URLSessionDownloadDe
         lock.lock()
         cancellationRequested = true
         let task = task
+        let wasSuspended = taskSuspendedByPause
+        taskSuspendedByPause = false
         lock.unlock()
+        if wasSuspended {
+            task?.resume()
+        }
         task?.cancel()
+    }
+
+    func setPaused(_ paused: Bool) {
+        lock.lock()
+        pauseRequested = paused
+        let task = task
+        let shouldSuspend = paused && task != nil && !taskSuspendedByPause
+        let shouldResume = !paused && taskSuspendedByPause
+        if shouldSuspend {
+            taskSuspendedByPause = true
+        } else if shouldResume {
+            taskSuspendedByPause = false
+        }
+        lock.unlock()
+
+        if shouldSuspend {
+            task?.suspend()
+        } else if shouldResume {
+            task?.resume()
+        }
     }
 
     func urlSession(
@@ -158,6 +191,7 @@ private final class HTTPDownloadProgressDelegate: NSObject, URLSessionDownloadDe
         let retainedError = downloadError
         downloadError = nil
         self.task = nil
+        taskSuspendedByPause = false
         let retainedSession = retainedSession
         self.retainedSession = nil
         lock.unlock()
@@ -206,10 +240,92 @@ final class HTTPClient {
     ]
     private let sessionCacheLock = NSLock()
     private var cachedSessions: [String: URLSession] = [:]
+    private let transferStateLock = NSLock()
+    private var transfersPaused = false
+    private var queueSuspendedSessionTasks: [ObjectIdentifier: URLSessionTask] = [:]
+    private var activeProgressDelegates: [ObjectIdentifier: HTTPDownloadProgressDelegate] = [:]
     private let hitomiWebPRequestLimiter = HTTPRequestRateLimiter(minimumInterval: 1.0 / 3.0)
     private let hitomiOriginalRequestLimiter = HTTPRequestRateLimiter(minimumInterval: 1.0)
 
     private init() {}
+
+    func pauseAllTransfers() {
+        transferStateLock.lock()
+        transfersPaused = true
+        let delegates = Array(activeProgressDelegates.values)
+        transferStateLock.unlock()
+
+        delegates.forEach { $0.setPaused(true) }
+        suspendCachedSessionTasksIfPaused()
+    }
+
+    func resumeAllTransfers() {
+        transferStateLock.lock()
+        transfersPaused = false
+        let tasks = Array(queueSuspendedSessionTasks.values)
+        queueSuspendedSessionTasks.removeAll()
+        let delegates = Array(activeProgressDelegates.values)
+        transferStateLock.unlock()
+
+        tasks.forEach { task in
+            if task.state == .suspended {
+                task.resume()
+            }
+        }
+        delegates.forEach { $0.setPaused(false) }
+    }
+
+    private var areTransfersPaused: Bool {
+        transferStateLock.lock()
+        defer { transferStateLock.unlock() }
+        return transfersPaused
+    }
+
+    private func waitUntilTransfersResume() async throws {
+        while areTransfersPaused {
+            try Task.checkCancellation()
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
+    private func registerProgressDelegate(_ delegate: HTTPDownloadProgressDelegate) {
+        transferStateLock.lock()
+        activeProgressDelegates[ObjectIdentifier(delegate)] = delegate
+        let paused = transfersPaused
+        transferStateLock.unlock()
+        delegate.setPaused(paused)
+    }
+
+    private func unregisterProgressDelegate(_ delegate: HTTPDownloadProgressDelegate) {
+        transferStateLock.lock()
+        activeProgressDelegates.removeValue(forKey: ObjectIdentifier(delegate))
+        transferStateLock.unlock()
+    }
+
+    private func suspendCachedSessionTasksIfPaused() {
+        sessionCacheLock.lock()
+        let sessions = Array(cachedSessions.values)
+        sessionCacheLock.unlock()
+
+        sessions.forEach { session in
+            session.getAllTasks { [weak self] tasks in
+                self?.suspendSessionTasksIfPaused(tasks)
+            }
+        }
+    }
+
+    private func suspendSessionTasksIfPaused(_ tasks: [URLSessionTask]) {
+        transferStateLock.lock()
+        guard transfersPaused else {
+            transferStateLock.unlock()
+            return
+        }
+        for task in tasks where task.state == .running {
+            task.suspend()
+            queueSuspendedSessionTasks[ObjectIdentifier(task)] = task
+        }
+        transferStateLock.unlock()
+    }
 
     private func makeSession(for url: URL) -> URLSession {
         let networkSettings = NetworkSettings.load()
@@ -276,11 +392,16 @@ final class HTTPClient {
     }
 
     func resetCachedSessionsForTesting() {
+        resumeAllTransfers()
         sessionCacheLock.lock()
         let sessions = Array(cachedSessions.values)
         cachedSessions.removeAll()
         sessionCacheLock.unlock()
         sessions.forEach { $0.invalidateAndCancel() }
+    }
+
+    var transfersPausedForTesting: Bool {
+        areTransfersPaused
     }
 #endif
 
@@ -328,6 +449,7 @@ final class HTTPClient {
         for attempt in 0...maxRetryAttempts {
             do {
                 try await waitBeforeImageRequestIfNeeded(url)
+                try await waitUntilTransfersResume()
                 let (data, response) = try await session.data(for: request)
                 await CookieStore.shared.storeCookies(from: response, url: url)
                 if let http = response as? HTTPURLResponse,
@@ -413,6 +535,7 @@ final class HTTPClient {
         }
 
         let session = makeSession(for: url)
+        try await waitUntilTransfersResume()
         let (data, response) = try await session.data(for: request)
         await CookieStore.shared.storeCookies(from: response, url: url)
         try validate(response: response, url: url)
@@ -455,6 +578,7 @@ final class HTTPClient {
         }
 
         let session = makeSession(for: url)
+        try await waitUntilTransfersResume()
         let (data, response) = try await session.data(for: request)
         await CookieStore.shared.storeCookies(from: response, url: url)
         try validate(response: response, url: url)
@@ -517,9 +641,12 @@ final class HTTPClient {
         for attempt in 0...maxRetryAttempts {
             do {
                 try await waitBeforeImageRequestIfNeeded(url)
+                try await waitUntilTransfersResume()
                 let result: (URL, URLResponse)
                 if let progressHandler {
                     let delegate = HTTPDownloadProgressDelegate(handler: progressHandler)
+                    registerProgressDelegate(delegate)
+                    defer { unregisterProgressDelegate(delegate) }
                     result = try await delegate.download(
                         request: request,
                         resumeData: resumeData,
@@ -587,6 +714,7 @@ final class HTTPClient {
         let maxRetryAttempts = retryAttemptLimit(for: url)
         for attempt in 0...maxRetryAttempts {
             do {
+                try await waitUntilTransfersResume()
                 let (_, response) = try await session.data(for: request)
                 await CookieStore.shared.storeCookies(from: response, url: url)
                 if let http = response as? HTTPURLResponse,

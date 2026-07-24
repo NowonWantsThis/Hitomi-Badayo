@@ -18,6 +18,19 @@ helper process.
 The source archive SHA-256 is
 `60a420ad7085eb616cb6e2bdf0a7206d68ff3d37fb5a956dc44242eb2f79b66b`.
 
+## SpoofDPI 1.5.3
+
+Hitomi Badayo bundles the official arm64 macOS `spoofdpi` executable as a
+separate local HTTP proxy helper process for the optional browser DPI bypass.
+
+- Project: https://github.com/xvzc/SpoofDPI
+- License: Apache License 2.0
+- License text: `LICENSES/spoofdpi-Apache-2.0.txt`
+- Upstream release: https://github.com/xvzc/SpoofDPI/releases/tag/v1.5.3
+
+The upstream `spoofdpi_1.5.3_darwin_arm64.tar.gz` archive SHA-256 is
+`4226058c15516f071e5d4495ab7bf6da14c6ead4a16c4c7bc96dd1a720aad295`.
+
 ## ratelimit 2.2.1 compatibility code
 
 `Resources/Python/hitomi_compat_runner.py` contains code adapted from the

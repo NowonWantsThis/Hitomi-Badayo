@@ -13,6 +13,12 @@ enum JobStatus: String, CaseIterable, Codable, Hashable {
     }
 }
 
+struct JobPartialFailureCounts: Equatable {
+    var succeeded: Int
+    var failed: Int
+    var total: Int
+}
+
 enum JobAccessReaction: Equatable {
     case cookies
     case login(provider: String)
@@ -27,9 +33,9 @@ enum JobAccessReaction: Equatable {
     var helpText: String {
         switch self {
         case .cookies:
-            return AppLocalization.text("쿠키를 업데이트하세요")
+            return AppLocalization.text("Update Cookies")
         case .login(let provider):
-            guard !provider.isEmpty else { return AppLocalization.text("로그인") }
+            guard !provider.isEmpty else { return AppLocalization.text("Sign In") }
             return AppLocalization.format("Sign in to %@", provider)
         }
     }
@@ -161,10 +167,10 @@ enum OutputSubfolderMode: String, CaseIterable, Codable {
 
     func label(language: AppInterfaceLanguage) -> String {
         switch self {
-        case .none: return AppLocalization.text("바로 저장", language: language)
-        case .site: return AppLocalization.text("소스별", language: language)
-        case .date: return AppLocalization.text("날짜별", language: language)
-        case .siteAndDate: return AppLocalization.text("소스 + 날짜", language: language)
+        case .none: return AppLocalization.text("Save Directly", language: language)
+        case .site: return AppLocalization.text("By Source", language: language)
+        case .date: return AppLocalization.text("By Date", language: language)
+        case .siteAndDate: return AppLocalization.text("Source + Date", language: language)
         }
     }
 }
@@ -179,12 +185,12 @@ enum QueueSortMode: String, CaseIterable, Codable {
 
     var label: String {
         switch self {
-        case .manual: return AppLocalization.text("수동")
-        case .title: return AppLocalization.text("제목")
-        case .status: return AppLocalization.text("상태")
-        case .site: return AppLocalization.text("사이트")
-        case .progress: return AppLocalization.text("진행률")
-        case .output: return AppLocalization.text("결과물")
+        case .manual: return AppLocalization.text("Manual")
+        case .title: return AppLocalization.text("Title")
+        case .status: return AppLocalization.text("Status")
+        case .site: return AppLocalization.text("Site")
+        case .progress: return AppLocalization.text("Progress")
+        case .output: return AppLocalization.text("Output")
         }
     }
 }
@@ -397,7 +403,7 @@ enum SourceArchiveMode: String, CaseIterable, Codable, Identifiable {
 
     var label: String {
         switch self {
-        case .pass: return AppLocalization.text("통과")
+        case .pass: return AppLocalization.text("Pass")
         case .zip: return "ZIP"
         case .cbz: return "CBZ"
         }
@@ -437,7 +443,7 @@ enum ImageConversionFormat: String, CaseIterable, Codable {
 
     var label: String {
         switch self {
-        case .original: return AppLocalization.text("원본")
+        case .original: return AppLocalization.text("Original")
         case .jpeg: return "JPEG"
         case .png: return "PNG"
         case .tiff: return "TIFF"
@@ -465,20 +471,20 @@ enum EHentaiSourceMode: String, CaseIterable, Codable, Identifiable {
 
     var label: String {
         switch self {
-        case .automatic: return AppLocalization.text("자동 (Hitomi 우선)")
-        case .hitomi: return AppLocalization.text("Hitomi만")
-        case .original: return AppLocalization.text("원본 사이트")
+        case .automatic: return AppLocalization.text("Automatic (Prefer Hitomi)")
+        case .hitomi: return AppLocalization.text("Hitomi Only")
+        case .original: return AppLocalization.text("Original Site")
         }
     }
 
     var helpText: String {
         switch self {
         case .automatic:
-            return AppLocalization.text("일치하는 Hitomi 갤러리를 먼저 찾고, 없으면 E-Hentai 또는 ExHentai 원본 주소를 사용합니다.")
+            return AppLocalization.text("Look for a matching Hitomi gallery first, then use the original E-Hentai or ExHentai URL when none is available.")
         case .hitomi:
-            return AppLocalization.text("일치하는 Hitomi 갤러리만 사용합니다.")
+            return AppLocalization.text("Use only a matching Hitomi gallery.")
         case .original:
-            return AppLocalization.text("입력한 E-Hentai 또는 ExHentai 주소를 그대로 사용합니다.")
+            return AppLocalization.text("Use the entered E-Hentai or ExHentai URL directly.")
         }
     }
 }
@@ -496,13 +502,13 @@ enum TaskTagColor: String, CaseIterable, Codable, Identifiable {
 
     var label: String {
         switch self {
-        case .red: return AppLocalization.text("빨강")
-        case .orange: return AppLocalization.text("주황")
-        case .yellow: return AppLocalization.text("노랑")
-        case .green: return AppLocalization.text("초록")
-        case .blue: return AppLocalization.text("파랑")
-        case .purple: return AppLocalization.text("보라")
-        case .gray: return AppLocalization.text("회색")
+        case .red: return AppLocalization.text("Red")
+        case .orange: return AppLocalization.text("Orange")
+        case .yellow: return AppLocalization.text("Yellow")
+        case .green: return AppLocalization.text("Green")
+        case .blue: return AppLocalization.text("Blue")
+        case .purple: return AppLocalization.text("Purple")
+        case .gray: return AppLocalization.text("Gray")
         }
     }
 
@@ -541,9 +547,9 @@ enum TaskTagRestartDelay: Int, CaseIterable, Codable, Identifiable {
 
     var label: String {
         switch self {
-        case .off: return AppLocalization.text("아무것도 안 함")
-        case .after24Hours: return AppLocalization.text("24 시간 뒤 다시 시작")
-        case .after7Days: return AppLocalization.text("7 일 뒤 다시 시작")
+        case .off: return AppLocalization.text("Do Nothing")
+        case .after24Hours: return AppLocalization.text("Restart after 24 hours")
+        case .after7Days: return AppLocalization.text("Restart after 7 days")
         }
     }
 
@@ -559,9 +565,9 @@ enum QueueCompletionAction: String, CaseIterable, Codable {
 
     var label: String {
         switch self {
-        case .none: return AppLocalization.text("아무것도 안 함")
-        case .openDestination: return AppLocalization.text("폴더 열기")
-        case .quitApp: return AppLocalization.text("앱 종료")
+        case .none: return AppLocalization.text("Do Nothing")
+        case .openDestination: return AppLocalization.text("Open Folder")
+        case .quitApp: return AppLocalization.text("Quit App")
         }
     }
 }
@@ -659,9 +665,9 @@ enum AppAppearanceMode: String, CaseIterable, Codable {
 
     var label: String {
         switch self {
-        case .system: return AppLocalization.text("시스템")
-        case .light: return AppLocalization.text("라이트")
-        case .dark: return AppLocalization.text("다크")
+        case .system: return AppLocalization.text("System")
+        case .light: return AppLocalization.text("Light")
+        case .dark: return AppLocalization.text("Dark")
         }
     }
 }
@@ -672,8 +678,8 @@ enum QueueViewMode: String, CaseIterable, Codable {
 
     var label: String {
         switch self {
-        case .list: return AppLocalization.text("목록")
-        case .icon: return AppLocalization.text("아이콘")
+        case .list: return AppLocalization.text("List")
+        case .icon: return AppLocalization.text("Icons")
         }
     }
 
@@ -860,6 +866,7 @@ enum SettingsWindowCategory: String, CaseIterable, Codable, Hashable, Identifiab
     case advanced
     case hitomi
     case pixiv
+    case kemonoFriends
     case youtube
     case social
     case torrent
@@ -868,47 +875,50 @@ enum SettingsWindowCategory: String, CaseIterable, Codable, Hashable, Identifiab
 
     var label: String {
         switch self {
-        case .general: return AppLocalization.text("일반")
-        case .network: return AppLocalization.text("네트워크")
-        case .live: return AppLocalization.text("녹화")
-        case .theme: return AppLocalization.text("디스플레이")
-        case .archive: return AppLocalization.text("압축")
-        case .plugins: return AppLocalization.text("플러그인")
-        case .advanced: return AppLocalization.text("고급")
+        case .general: return AppLocalization.text("General")
+        case .network: return AppLocalization.text("Network")
+        case .live: return AppLocalization.text("Recording")
+        case .theme: return AppLocalization.text("Display")
+        case .archive: return AppLocalization.text("Archive")
+        case .plugins: return AppLocalization.text("Plugins")
+        case .advanced: return AppLocalization.text("Advanced")
         case .hitomi: return "Hitomi / E(x)Hentai"
         case .pixiv: return "Pixiv"
+        case .kemonoFriends: return "Kemono friends"
         case .youtube: return "YouTube"
-        case .social: return AppLocalization.text("소셜")
-        case .torrent: return AppLocalization.text("토렌트")
+        case .social: return AppLocalization.text("Social")
+        case .torrent: return AppLocalization.text("Torrent")
         }
     }
 
     var detail: String {
         switch self {
         case .general:
-            return AppLocalization.text("저장 폴더, 이름, 대기열")
+            return AppLocalization.text("Save folder, naming, and queue")
         case .network:
-            return AppLocalization.text("프록시, 쿠키, HTTP API")
+            return AppLocalization.text("Proxy, cookies, and HTTP API")
         case .live:
-            return AppLocalization.text("녹화 및 HLS")
+            return AppLocalization.text("Recording and HLS")
         case .theme:
-            return AppLocalization.text("화면 모드, 배율, 색상")
+            return AppLocalization.text("Appearance, scale, and colors")
         case .archive:
-            return AppLocalization.text("ZIP, CBZ, 이미지 출력")
+            return AppLocalization.text("ZIP, CBZ, and image output")
         case .plugins:
-            return AppLocalization.text("스크립트 및 사이트 규칙")
+            return AppLocalization.text("Scripts and site rules")
         case .advanced:
-            return AppLocalization.text("알림, 단축키, 도구")
+            return AppLocalization.text("Notifications, shortcuts, and tools")
         case .hitomi:
-            return AppLocalization.text("WebP, 소스, 태그, 메타데이터")
+            return AppLocalization.text("WebP, sources, tags, and metadata")
         case .pixiv:
-            return AppLocalization.text("우고이라 출력")
+            return AppLocalization.text("Ugoira output")
+        case .kemonoFriends:
+            return AppLocalization.text("Archive Addresses and Original Files")
         case .youtube:
-            return AppLocalization.text("yt-dlp 동영상 옵션")
+            return AppLocalization.text("yt-dlp video options")
         case .social:
             return "Instagram, X, Twitch"
         case .torrent:
-            return AppLocalization.text("aria2 옵션")
+            return AppLocalization.text("aria2 options")
         }
     }
 
@@ -923,6 +933,8 @@ enum SettingsWindowCategory: String, CaseIterable, Codable, Hashable, Identifiab
         case .advanced: return "Advanced alerts shortcuts tools"
         case .hitomi: return "Hitomi E-Hentai ExHentai WebP tags metadata"
         case .pixiv: return "Pixiv ugoira output"
+        case .kemonoFriends:
+            return "Kemono friends Pawchive Kemono Coomer archive mirror domain address PSD original image video HTML attachments file types"
         case .youtube: return "YouTube yt-dlp video options"
         case .social: return "Social Instagram Twitter X Twitch"
         case .torrent: return "Torrent aria2 options"
@@ -940,10 +952,15 @@ enum SettingsWindowCategory: String, CaseIterable, Codable, Hashable, Identifiab
         case .advanced: return "slider.horizontal.3"
         case .hitomi: return "photo.on.rectangle"
         case .pixiv: return "p.circle"
+        case .kemonoFriends: return "circle"
         case .youtube: return "play.rectangle"
         case .social: return "person.2"
         case .torrent: return "arrow.down.circle"
         }
+    }
+
+    var iconLetter: String? {
+        self == .kemonoFriends ? "K" : nil
     }
 
     var searchText: String {
@@ -1062,6 +1079,49 @@ struct DownloadJob: Identifiable, Codable, Equatable {
     var resolvedFilenames: [String] = []
     var resolvedURLs: [String] = []
     var messageHistory: [String] = []
+
+    var partialFailureCounts: JobPartialFailureCounts? {
+        guard status == .failed || status == .finished else { return nil }
+
+        let failed = ["failed_file_count", "incomplete_file_count", "skipped_segment_count"]
+            .compactMap { Int(metadata[$0]?.trimmed ?? "") }
+            .filter { $0 > 0 }
+            .max() ?? 0
+        let reportedSucceeded = ["successful_file_count", "downloaded_file_count"]
+            .compactMap { Int(metadata[$0]?.trimmed ?? "") }
+            .filter { $0 >= 0 }
+            .max()
+        let isMarkedIncomplete = metadata["incomplete_gallery"]?.trimmed.lowercased() == "true"
+        guard failed > 0, isMarkedIncomplete || reportedSucceeded != nil else { return nil }
+
+        let reportedTotal = Int(metadata["total_file_count"]?.trimmed ?? "") ?? 0
+        let inferredSucceeded = reportedSucceeded ?? max(0, max(total, reportedTotal) - failed)
+        let resolvedTotal = max(total, reportedTotal, inferredSucceeded + failed)
+        let succeeded = min(resolvedTotal, max(0, inferredSucceeded))
+        guard resolvedTotal > 0, succeeded > 0, succeeded < resolvedTotal else { return nil }
+
+        return JobPartialFailureCounts(succeeded: succeeded, failed: failed, total: resolvedTotal)
+    }
+
+    func statusDisplayText(language: AppInterfaceLanguage = AppLocalization.currentLanguage()) -> String {
+        partialFailureCounts == nil
+            ? AppLocalization.text(status.rawValue, language: language)
+            : AppLocalization.text("Partial Failure", language: language)
+    }
+
+    func partialFailureSummary(language: AppInterfaceLanguage = AppLocalization.currentLanguage()) -> String? {
+        guard let counts = partialFailureCounts else { return nil }
+        return AppLocalization.format(
+            "Partial failure · %@ succeeded / %@ total",
+            language: language,
+            String(counts.succeeded),
+            String(counts.total)
+        )
+    }
+
+    var statusAPIValue: String {
+        partialFailureCounts == nil ? status.rawValue : "Partial Failure"
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -1638,10 +1698,10 @@ enum SiteArchiveMode: String, Codable, CaseIterable {
 
     var label: String {
         switch self {
-        case .default: return AppLocalization.text("기본값")
+        case .default: return AppLocalization.text("Default")
         case .zip: return "ZIP"
         case .cbz: return "CBZ"
-        case .none: return AppLocalization.text("압축 안 함")
+        case .none: return AppLocalization.text("Do Not Archive")
         }
     }
 
@@ -1981,11 +2041,11 @@ enum MetadataFinderField: String, CaseIterable, Codable, Identifiable {
 
     var originalLabel: String {
         switch self {
-        case .artist: return "작가"
-        case .group: return "그룹"
-        case .series: return "시리즈"
-        case .character: return "캐릭터"
-        case .tag: return "태그"
+        case .artist: return "Artist"
+        case .group: return "Group"
+        case .series: return "Series"
+        case .character: return "Character"
+        case .tag: return "Tag"
         }
     }
 }
@@ -2217,9 +2277,15 @@ struct PythonSegmentDecorator: Hashable {
     let streamIndex: Int
 }
 
+struct HitomiImageDescriptor: Hashable {
+    let galleryID: String
+    let file: HitomiFile
+    let preferWebP: Bool
+}
+
 struct ResolvedAsset: Identifiable, Hashable {
     let id = UUID()
-    let remoteURL: URL
+    var remoteURL: URL
     var filename: String
     var metadata: [String: String] = [:]
     var referer: String?
@@ -2232,6 +2298,7 @@ struct ResolvedAsset: Identifiable, Hashable {
     var lezhinImageShuffle: LezhinImageShuffle? = nil
     var pythonSegmentDecorator: PythonSegmentDecorator? = nil
     var alternativeRemoteURLs: [URL] = []
+    var hitomiImageDescriptor: HitomiImageDescriptor? = nil
 
     var additionalHeaderFields: [String: String] {
         additionalHeaders.reduce(into: [String: String]()) { result, header in

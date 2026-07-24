@@ -24,14 +24,14 @@ enum QuickAccessCommand: String, CaseIterable, Codable, Identifiable {
 
     private var labelKey: String {
         switch self {
-        case .save: return "저장"
-        case .group: return "새 그룹 만들기"
-        case .view: return "보기"
-        case .random: return "랜덤으로 하나 선택"
-        case .top: return "항상 위"
-        case .darkMode: return "다크 모드"
-        case .loadCookie: return "쿠키 불러오기..."
-        case .webBrowser: return "내장 웹브라우저"
+        case .save: return "Save"
+        case .group: return "New Group"
+        case .view: return "View"
+        case .random: return "Pick One at Random"
+        case .top: return "Always on top"
+        case .darkMode: return "Dark Mode"
+        case .loadCookie: return "Load Cookies..."
+        case .webBrowser: return "Built-in Web Browser"
         }
     }
 
@@ -192,7 +192,7 @@ struct QuickAccessCustomizationView: View {
                 Image(systemName: "bolt.circle.fill")
                     .foregroundStyle(Color.accentColor)
                 Text(AppLocalization.text(
-                    "빠른 실행 도구 모음 사용자 지정",
+                    "Customize Quick Access Toolbar",
                     language: manager.interfaceLanguage
                 ))
                     .font(.headline)
@@ -204,7 +204,7 @@ struct QuickAccessCustomizationView: View {
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .help(AppLocalization.text("닫기", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Close", language: manager.interfaceLanguage))
                 .accessibilityIdentifier("quick-access.close")
             }
             .padding(.horizontal, 16)
@@ -214,7 +214,7 @@ struct QuickAccessCustomizationView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Text(AppLocalization.text(
-                    "드래그 & 드랍해서 바꾸세요:",
+                    "Drag and drop to reorder:",
                     language: manager.interfaceLanguage
                 ))
                     .font(.title3)
@@ -250,7 +250,7 @@ struct QuickAccessCustomizationView: View {
                 }
                 .buttonStyle(.plain)
                 .help(AppLocalization.text(
-                    manager.areAllQuickAccessCommandsEnabled ? "선택 해제" : "Select All",
+                    manager.areAllQuickAccessCommandsEnabled ? "Clear Selection" : "Select All",
                     language: manager.interfaceLanguage
                 ))
                 .accessibilityIdentifier("quick-access.toggle-all")
@@ -258,7 +258,7 @@ struct QuickAccessCustomizationView: View {
                 Button {
                     dismiss()
                 } label: {
-                    Text(AppLocalization.text("확인", language: manager.interfaceLanguage))
+                    Text(AppLocalization.text("OK", language: manager.interfaceLanguage))
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
@@ -285,7 +285,7 @@ struct QuickAccessCustomizationView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(commandLabel)
             .accessibilityValue(AppLocalization.text(
-                item.isEnabled ? "켜짐" : "꺼짐",
+                item.isEnabled ? "On" : "Off",
                 language: manager.interfaceLanguage
             ))
             .accessibilityIdentifier("quick-access.toggle.\(item.command.rawValue)")

@@ -17,6 +17,7 @@ final class EHentaiSourceResolver {
     private let hitomiResolver: HitomiResolver
     private let eHentaiResolver: EHentaiResolver
     private let maximumSourceCycles = 8
+    private var originalGalleryURLCache: [String: URL] = [:]
 #if TESTING
     private let sourceRetryDelayNanoseconds: UInt64 = 0
 #else
@@ -69,7 +70,11 @@ final class EHentaiSourceResolver {
             if mode != .original {
                 onStage?("Checking Hitomi mirror (\(cycle + 1)/\(maximumSourceCycles))")
                 do {
-                    var download = try await hitomiResolver.resolve(hitomiURL, preferWebP: preferWebP)
+                    var download = try await hitomiResolver.resolve(
+                        hitomiURL,
+                        preferWebP: preferWebP,
+                        maximumAttempts: 1
+                    )
                     download.metadata = Self.sourceMetadata(
                         download.metadata,
                         originalURL: sourceURL,
@@ -136,6 +141,110 @@ final class EHentaiSourceResolver {
         throw lastError ?? NativeDownloadError.noFiles
     }
 
+    func resolveHitomiSource(
+        _ sourceURL: URL,
+        preferWebP: Bool,
+        headers: HTTPRequestOptions,
+        preferOriginalImages: Bool,
+        preferJapaneseTitle: Bool = false,
+        onFallbackToOriginal: (() -> Void)? = nil,
+        onStage: ((String) -> Void)? = nil
+    ) async throws -> EHentaiSourceResolution {
+        guard let galleryID = HitomiResolver.galleryID(from: sourceURL),
+              let hitomiURL = HitomiResolver.canonicalGalleryURL(galleryID: galleryID) else {
+            throw NativeDownloadError.missingGalleryID(sourceURL.absoluteString)
+        }
+
+        var lastError: Error?
+        var lastHitomiError: Error?
+        var reportedFallback = false
+
+        for cycle in 0..<maximumSourceCycles {
+            try Task.checkCancellation()
+            onStage?("Reading Hitomi gallery (\(cycle + 1)/\(maximumSourceCycles))")
+            do {
+                var download = try await hitomiResolver.resolve(
+                    hitomiURL,
+                    preferWebP: preferWebP,
+                    maximumAttempts: 1
+                )
+                download.metadata = Self.sourceMetadata(
+                    download.metadata,
+                    originalURL: sourceURL,
+                    selectedURL: hitomiURL,
+                    hitomiURL: hitomiURL,
+                    mode: .automatic,
+                    selectedSource: .hitomi,
+                    hitomiError: lastHitomiError,
+                    usedFallback: false
+                )
+                download.metadata["source_attempt_cycle"] = String(cycle + 1)
+                return EHentaiSourceResolution(
+                    download: download,
+                    sourceURL: sourceURL,
+                    selectedSource: .hitomi,
+                    usedFallback: false
+                )
+            } catch {
+                try Self.rethrowIfCancelled(error)
+                lastError = error
+                lastHitomiError = error
+            }
+
+            if cycle > 0 {
+                if !reportedFallback {
+                    reportedFallback = true
+                    onFallbackToOriginal?()
+                }
+                onStage?("Looking for original E-Hentai gallery (\(cycle + 1)/\(maximumSourceCycles))")
+                do {
+                    let originalURL: URL
+                    if let cached = originalGalleryURLCache[galleryID] {
+                        originalURL = cached
+                    } else {
+                        originalURL = try await eHentaiResolver.findGalleryURL(
+                            galleryID: galleryID,
+                            headers: headers
+                        )
+                        originalGalleryURLCache[galleryID] = originalURL
+                    }
+
+                    var download = try await resolveOriginal(
+                        originalURL,
+                        submittedSourceURL: sourceURL,
+                        mode: .automatic,
+                        headers: headers,
+                        preferOriginalImages: preferOriginalImages,
+                        preferJapaneseTitle: preferJapaneseTitle,
+                        hitomiURL: hitomiURL,
+                        hitomiError: lastHitomiError,
+                        usedFallback: true
+                    )
+                    download.metadata["source_attempt_cycle"] = String(cycle + 1)
+                    return EHentaiSourceResolution(
+                        download: download,
+                        sourceURL: originalURL,
+                        selectedSource: .original,
+                        usedFallback: true
+                    )
+                } catch {
+                    try Self.rethrowIfCancelled(error)
+                    lastError = error
+                    if let cached = originalGalleryURLCache[galleryID],
+                       Self.shouldDiscardCachedOriginalURL(after: error, url: cached) {
+                        originalGalleryURLCache.removeValue(forKey: galleryID)
+                    }
+                }
+            }
+
+            if cycle + 1 < maximumSourceCycles, sourceRetryDelayNanoseconds > 0 {
+                try await Task.sleep(nanoseconds: sourceRetryDelayNanoseconds)
+            }
+        }
+
+        throw lastError ?? NativeDownloadError.noFiles
+    }
+
     private func resolveOriginal(
         _ sourceURL: URL,
         submittedSourceURL: URL? = nil,
@@ -188,6 +297,15 @@ final class EHentaiSourceResolver {
 
     private nonisolated static func originalSourceLabel(_ url: URL) -> String {
         url.host?.lowercased().contains("exhentai") == true ? "ExHentai gallery" : "E-Hentai gallery"
+    }
+
+    private nonisolated static func shouldDiscardCachedOriginalURL(after error: Error, url: URL) -> Bool {
+        guard EHentaiResolver.galleryID(from: url) != nil else { return true }
+        if let nativeError = error as? NativeDownloadError,
+           case .httpStatus(let status, _) = nativeError {
+            return status == 404 || status == 410
+        }
+        return false
     }
 
     private nonisolated static func sourceMetadata(

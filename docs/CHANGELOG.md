@@ -1,5 +1,6 @@
 # Changelog
 
-## 0.3.10
+## 0.4.0
 
-- Initial beta test build of Hitomi Badayo.
+- Updated the app icon.
+- Continued beta development of Hitomi Badayo.

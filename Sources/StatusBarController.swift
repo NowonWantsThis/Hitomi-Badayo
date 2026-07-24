@@ -81,7 +81,7 @@ final class StatusBarController: NSObject {
         )
         button.title = ""
         let queueState = state.isRunning
-            ? AppLocalization.text("Hitomi Badayo 실행 중", language: state.language)
+            ? AppLocalization.text("Hitomi Badayo Running", language: state.language)
             : "Hitomi Badayo"
         let clipboardState = Self.clipboardMenuTitle(
             enabled: state.clipboardEnabled,
@@ -99,18 +99,18 @@ final class StatusBarController: NSObject {
         menu.addItem(summary)
         menu.addItem(NSMenuItem.separator())
 
-        menu.addItem(item("Hitomi Badayo 보기", action: #selector(showApp)))
+        menu.addItem(item("Show Hitomi Badayo", action: #selector(showApp)))
 
-        let start = item("대기열 시작", action: #selector(startQueue))
+        let start = item("Start Queue", action: #selector(startQueue))
         start.isEnabled = !state.isRunning
         menu.addItem(start)
 
-        let cancel = item("대기열 중지", action: #selector(cancelQueue))
+        let cancel = item("Stop Queue", action: #selector(cancelQueue))
         cancel.isEnabled = state.isRunning
         menu.addItem(cancel)
 
-        menu.addItem(item("완료된 작업 모두 제거", action: #selector(clearFinished)))
-        menu.addItem(item("다운로드 폴더 열기", action: #selector(openDownloadFolder)))
+        menu.addItem(item("Remove All Completed Tasks", action: #selector(clearFinished)))
+        menu.addItem(item("Open Download Folder", action: #selector(openDownloadFolder)))
 
         let clipboard = item(
             Self.clipboardMenuTitle(
@@ -124,7 +124,7 @@ final class StatusBarController: NSObject {
         menu.addItem(clipboard)
 
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(item("종료", action: #selector(quit)))
+        menu.addItem(item("Quit", action: #selector(quit)))
 
         statusItem.menu = menu
     }

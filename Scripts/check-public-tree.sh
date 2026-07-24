@@ -64,6 +64,9 @@ done
 aria_source="${ROOT}/Resources/ThirdParty/aria2-1.37.0.tar.xz"
 aria_license="${ROOT}/Resources/ThirdParty/aria2-COPYING.txt"
 expected_aria_source="60a420ad7085eb616cb6e2bdf0a7206d68ff3d37fb5a956dc44242eb2f79b66b"
+spoofdpi_binary="${ROOT}/Resources/Tools/spoofdpi"
+spoofdpi_license="${ROOT}/LICENSES/spoofdpi-Apache-2.0.txt"
+expected_spoofdpi_binary="abaf22dac1a34c5a5375f6ed17f0f6b9491fbe054706989753e616778ad955c2"
 
 if [[ ! -f "${aria_source}" || ! -f "${aria_license}" ]]; then
     fail "bundled aria2 is missing corresponding source or license text"
@@ -71,9 +74,16 @@ elif [[ "$(shasum -a 256 "${aria_source}" | awk '{print $1}')" != "${expected_ar
     fail "bundled aria2 source checksum changed"
 fi
 
+if [[ ! -x "${spoofdpi_binary}" || ! -f "${spoofdpi_license}" ]]; then
+    fail "bundled SpoofDPI is missing its executable or Apache-2.0 license"
+elif [[ "$(shasum -a 256 "${spoofdpi_binary}" | awk '{print $1}')" != "${expected_spoofdpi_binary}" ]]; then
+    fail "bundled SpoofDPI executable checksum changed"
+fi
+
 for license_file in \
     LICENSES/ratelimit-MIT.txt \
-    LICENSES/saidbysolo-MIT.txt; do
+    LICENSES/saidbysolo-MIT.txt \
+    LICENSES/spoofdpi-Apache-2.0.txt; do
     [[ -f "${ROOT}/${license_file}" ]] || fail "third-party license is missing: ${license_file}"
 done
 
@@ -85,6 +95,8 @@ else
         fail "ratelimit attribution is missing from third-party notices"
     LC_ALL=C grep -Fq 'Copyright (c) 2020 SaidBySolo' "${third_party_notices}" || \
         fail "SaidBySolo attribution is missing from third-party notices"
+    LC_ALL=C grep -Fq 'SpoofDPI 1.5.3' "${third_party_notices}" || \
+        fail "SpoofDPI attribution is missing from third-party notices"
 fi
 
 if [[ "${MODE}" == "--public" ]]; then
