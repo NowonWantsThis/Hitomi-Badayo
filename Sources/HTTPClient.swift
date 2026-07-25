@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 private actor HTTPRequestRateLimiter {
@@ -327,7 +328,12 @@ final class HTTPClient {
         transferStateLock.unlock()
     }
 
-    private func makeSession(for url: URL) -> URLSession {
+    private func makeSession(for url: URL) async throws -> URLSession {
+        try await waitForLocalDPIProxyIfNeeded()
+        return cachedSession(for: url)
+    }
+
+    private func cachedSession(for url: URL) -> URLSession {
         let networkSettings = NetworkSettings.load()
         let cacheKey = sessionCacheKey(for: url, networkSettings: networkSettings)
 
@@ -341,6 +347,48 @@ final class HTTPClient {
         let session = URLSession(configuration: config)
         cachedSessions[cacheKey] = session
         return session
+    }
+
+    private func waitForLocalDPIProxyIfNeeded() async throws {
+        for attempt in 0..<40 {
+            try Task.checkCancellation()
+            guard DPIBypassMode.load(migrateLegacy: false).usesLocalProxy else {
+                return
+            }
+            let settings = NetworkSettings.load()
+            if let proxyURLString = settings.normalizedProxyURLString,
+               let components = URLComponents(string: proxyURLString),
+               let host = components.host?.lowercased(),
+               ["127.0.0.1", "localhost", "::1"].contains(host),
+               let port = components.port,
+               Self.canConnectToLocalProxy(port: port) {
+                return
+            }
+            guard attempt < 39 else { return }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
+    private static func canConnectToLocalProxy(port: Int) -> Bool {
+        guard let port = UInt16(exactly: port), port > 0 else { return false }
+        let descriptor = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard descriptor >= 0 else { return false }
+        defer { Darwin.close(descriptor) }
+
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = port.bigEndian
+        address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
+        return withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(
+                    descriptor,
+                    $0,
+                    socklen_t(MemoryLayout<sockaddr_in>.size)
+                ) == 0
+            }
+        }
     }
 
     private func makeSessionConfiguration(
@@ -444,7 +492,7 @@ final class HTTPClient {
            let cookie = await CookieStore.shared.cookieHeader(for: url) {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
-        let session = makeSession(for: url)
+        let session = try await makeSession(for: url)
         let maxRetryAttempts = max(0, retryLimitOverride ?? retryAttemptLimit(for: url))
         for attempt in 0...maxRetryAttempts {
             do {
@@ -534,7 +582,7 @@ final class HTTPClient {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
 
-        let session = makeSession(for: url)
+        let session = try await makeSession(for: url)
         try await waitUntilTransfersResume()
         let (data, response) = try await session.data(for: request)
         await CookieStore.shared.storeCookies(from: response, url: url)
@@ -577,7 +625,7 @@ final class HTTPClient {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
 
-        let session = makeSession(for: url)
+        let session = try await makeSession(for: url)
         try await waitUntilTransfersResume()
         let (data, response) = try await session.data(for: request)
         await CookieStore.shared.storeCookies(from: response, url: url)
@@ -635,7 +683,7 @@ final class HTTPClient {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
 
-        let session = makeSession(for: url)
+        let session = try await makeSession(for: url)
         let maxRetryAttempts = max(0, retryLimitOverride ?? retryAttemptLimit(for: url))
         var resumeData: Data?
         for attempt in 0...maxRetryAttempts {
@@ -710,7 +758,7 @@ final class HTTPClient {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
 
-        let session = makeSession(for: url)
+        let session = try await makeSession(for: url)
         let maxRetryAttempts = retryAttemptLimit(for: url)
         for attempt in 0...maxRetryAttempts {
             do {

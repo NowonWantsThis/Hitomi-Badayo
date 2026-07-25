@@ -38,12 +38,14 @@ When the user explicitly installs managed tools, the app downloads:
 The app may also load source-site pages in an embedded WebKit login window.
 Logging into a third-party site is governed by that site's privacy policy.
 
-The optional Browser DPI Bypass starts the bundled SpoofDPI helper as a local
-HTTP proxy bound to `127.0.0.1`. It does not listen on the Mac's external
-network interfaces. When the user points macOS Web Proxy and Secure Web Proxy
-settings to that address, compatible browser traffic passes through the local
-helper before reaching the requested site. The app reads the effective system
-proxy state to show whether both settings match; it does not upload that state.
+The optional DPI Bypass starts the bundled SpoofDPI helper as a local HTTP
+proxy bound to `127.0.0.1`. It does not listen on the Mac's external network
+interfaces. App Only mode routes supported Hitomi Badayo downloads through the
+local helper without changing macOS settings. App & Browsers mode also changes
+the active macOS Web Proxy and Secure Web Proxy after administrator approval,
+so compatible browser traffic uses the helper. The app reads the effective
+system proxy state to show and restore that configuration; it does not upload
+the state.
 
 ## Browser cookie import
 

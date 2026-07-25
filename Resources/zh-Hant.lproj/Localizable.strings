@@ -64,6 +64,7 @@
 "Archive addresses used for downloads" = "用於下載的封存位址";
 "Archive by Source" = "按來源存檔";
 "Archive Icon" = "壓縮檔案圖示";
+"Archives and attachments" = "壓縮檔案和附件";
 "Archives and other attachments" = "壓縮檔案和其他附件";
 "aria2 Actions" = "aria2操作";
 "aria2 options" = "aria2選項";
@@ -83,7 +84,7 @@
 "Auto-remove Hook Running" = "正在執行自動移除掛鉤";
 "Auto-remove Hook Saved" = "自動移除掛鉤已儲存";
 "Automatic" = "自動";
-"Automatic (Prefer Hitomi)" = "自動（優先 Hitomi）";
+"Auto (Prefer Hitomi)" = "自動（優先 Hitomi）";
 "Automatic Recording" = "自動錄製";
 "Automatic Recording Added %@ to Queue" = "自動錄製：已將 %@ 個任務加入佇列";
 "Automatic Recording Check: No New URLs" = "自動錄製檢查：沒有新 URL";
@@ -350,6 +351,7 @@
 "Import URL List..." = "匯入URL清單...";
 "In use: %@" = "使用中：%@";
 "Include active stories" = "包含目前限時動態";
+"Include auto-generated subtitles" = "包含自動產生字幕";
 "Include automatically generated subtitles" = "包含自動產生的字幕";
 "Incomplete retry delay" = "未完成下載的重試間隔";
 "Individual Files" = "單一檔案";
@@ -366,6 +368,7 @@
 "Invalid HTTP API Port" = "HTTP API連接埠無效";
 "Japanese" = "日語";
 "JPEG Quality" = "JPEG 品質";
+"JPEG, PNG, GIF" = "JPEG、PNG、GIF";
 "JPEG, PNG, GIF, and more" = "JPEG、PNG、GIF 等";
 "Keep the Mac awake until active tasks finish" = "讓 Mac 保持喚醒狀態，直到活動任務完成";
 "Known Output Folders..." = "已知輸出資料夾...";
@@ -422,6 +425,7 @@
 "Move Tasks Up" = "上移任務";
 "Move to Group" = "移至群組";
 "Move Up" = "向上移動";
+"MP4, MKV" = "MP4、MKV";
 "MP4, MKV, and more" = "MP4、MKV 等";
 "Name" = "名稱";
 "Naming" = "名稱格式";
@@ -514,6 +518,7 @@
 "Preview (P)" = "預覽 (P)";
 "Preview Selected Output" = "預覽選定的輸出";
 "Privacy" = "隱私";
+"Last item first" = "從最後一項開始";
 "Process the playlist from the last item first" = "從播放清單最後一項開始處理";
 "Profile Download" = "個人檔案下載";
 "Progress" = "進度";
@@ -521,6 +526,7 @@
 "Proxy Bypassed" = "代理繞過";
 "Proxy check failed: invalid proxy URL" = "代理檢查失敗：代理無效URL";
 "Proxy, cookies, and HTTP API" = "代理、cookie 和HTTP API";
+"PSD Originals" = "PSD 原圖";
 "Public IP" = "公共IP";
 "Public IP Not Checked" = "公用 IP 未檢查";
 "Purple" = "紫色";
@@ -554,6 +560,7 @@
 "Recording YouTube live" = "正在錄製 YouTube 直播";
 "Red" = "紅色";
 "Redo" = "重做";
+"Reduce GIF color banding" = "減少 GIF 色帶";
 "Reduce color banding when converting to GIF" = "轉換為 GIF 時減少色帶";
 "Reduce thumbnails and visual effects to save resources" = "減少縮圖和視覺效果以節省資源";
 "Regex" = "正規表示式";
@@ -565,12 +572,13 @@
 "Remove" = "刪除";
 "Remove \"%@\" from the list only. Downloaded files will not be deleted.%@" = "僅從清單中移除「%@」。下載的檔案不會被刪除。%@";
 "Remove %@ completed tasks from the list." = "從清單中移除 %@ 個已完成任務。";
+"Remove 1 completed task from the list." = "從清單中移除 1 個已完成任務。";
 "Remove %@ Tag" = "刪除%@標籤";
 "Remove %@ tasks from the list only. Downloaded files will not be deleted.\n%@%@%@" = "僅從清單中刪除%@任務。下載的檔案不會被刪除。%@%@%@";
 "Remove All Completed Tasks" = "刪除所有已完成的任務";
 "Remove archive address" = "刪除封存位址";
 "Remove completed items from the queue automatically" = "自動從佇列中刪除已完成的項目";
-"Remove completed tasks?" = "刪除已完成的任務？";
+"Remove completed tasks?" = "從清單中移除已完成任務？";
 "Remove Downloaded Managed Tools" = "刪除已下載的管理工具";
 "Remove Filter" = "刪除過濾器";
 "Remove from List (R)" = "從清單中刪除 (R)";
@@ -595,13 +603,14 @@
 "Resolving" = "正在解析";
 "Restart" = "重試";
 "Restart %@ incomplete tasks." = "重試 %@ 個未完成任務。";
+"Restart 1 incomplete task." = "重試 1 個未完成任務。";
 "Restart %@ tasks." = "重試 %@ 個任務。";
 "Restart (S)" = "重試 (S)";
 "Restart after 24 hours" = "24 小時後重試";
 "Restart after 7 days" = "7 天後重試";
 "Restart All Incomplete Tasks" = "重新啟動所有未完成的任務";
 "Restart All Tasks in Group (S)" = "重試群組內的所有任務 (S)";
-"Restart incomplete tasks?" = "重新啟動未完成的任務？";
+"Restart incomplete tasks?" = "重試未完成任務？";
 "Restart Selected Tasks" = "重試選取的任務";
 "Restart tasks in this group?" = "是否重新啟動該群組中的任務？";
 "Restore Bundled aria2c" = "還原內建 aria2c";
@@ -643,6 +652,7 @@
 "Save Location" = "儲存位置";
 "Save Pixiv Ugoira Format" = "儲存PixivUgoira 格式";
 "Save post content as HTML" = "將貼文內容儲存為 HTML";
+"Save posts as HTML" = "將貼文儲存為 HTML";
 "Save Proxy Settings" = "儲存代理設定";
 "Save Python Path" = "儲存Python路徑";
 "Save Site Rule" = "儲存站台規則";
@@ -744,6 +754,7 @@
 "Task Completion Sound" = "任務完成聲音";
 "Task Information..." = "任務資訊...";
 "Task Information... (I)" = "任務資訊... (I)";
+"Copy task information" = "複製任務資訊";
 "Task Messages" = "任務訊息";
 "Task Notifications" = "任務通知";
 "Task Tags" = "任務標籤";
@@ -949,9 +960,27 @@
 "aria2 / Network" = "aria2 / 網路";
 
 /* App and browser DPI bypass */
+"DPI Bypass" = "DPI 繞過";
+"DPI Bypass Mode" = "DPI 繞過模式";
+"Apply this manual proxy to all supported downloads" = "受支援的下載使用手動代理";
+"DPI bypass takes priority. The saved proxy resumes when it is off." = "DPI 繞過優先 · 關閉後使用已儲存的代理";
+"Manual proxy for supported downloads" = "受支援的下載使用手動代理";
+"DPI bypass first; saved proxy resumes when off" = "DPI 繞過優先 · 關閉後使用已儲存的代理";
+"Mode" = "模式";
+"App Only" = "僅應用程式";
+"App & Browsers" = "應用程式與瀏覽器";
+"DPI bypass is disabled" = "DPI 繞過已關閉";
+"Route supported Hitomi Badayo downloads through SpoofDPI without changing macOS proxy settings" = "僅受支援的 App 內下載透過 SpoofDPI";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval is required" = "受支援的 App 內下載與瀏覽器透過 SpoofDPI · 需要管理員權限";
+"Supported app downloads through SpoofDPI" = "僅受支援的 App 內下載透過 SpoofDPI";
+"Supported app downloads and browsers through SpoofDPI; admin access required" = "受支援的 App 內下載與瀏覽器透過 SpoofDPI · 需要管理員權限";
+"Restore the macOS proxy settings to finish switching to App Only" = "請還原 macOS 代理伺服器設定以完成切換至「僅應用程式」";
+"DPI bypass off" = "DPI 繞過已關閉";
+"Switching DPI bypass to app only" = "正在將 DPI 繞過切換為僅應用程式";
+"Starting app-only DPI bypass" = "正在啟動僅應用程式 DPI 繞過";
 "App & Browser DPI Bypass" = "應用程式與瀏覽器 DPI 繞過";
 "Use App & Browser DPI Bypass" = "使用應用程式與瀏覽器 DPI 繞過";
-"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI" = "透過 SpoofDPI 路由 Hitomi Badayo 支援的下載與 macOS 網頁瀏覽器";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI" = "受支援的 App 內下載與瀏覽器透過 SpoofDPI";
 "DPI Bypass Off" = "DPI 繞過已關閉";
 "Starting DPI Bypass" = "正在啟動 DPI 繞過";
 "Waiting for macOS Proxy Settings" = "正在等候 macOS 代理設定";
@@ -977,15 +1006,18 @@
 "Could not start SpoofDPI." = "無法啟動 SpoofDPI。";
 "SpoofDPI stopped unexpectedly." = "SpoofDPI 意外停止。";
 "Automatically configure the active macOS network service" = "自動設定目前使用的 macOS 網路服務";
-"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval may be required" = "透過 SpoofDPI 路由 Hitomi Badayo 支援的下載與 macOS 網頁瀏覽器，可能需要管理員授權";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval may be required" = "受支援的 App 內下載與瀏覽器透過 SpoofDPI · 可能需要管理員權限";
 "Detecting Active Network" = "正在偵測目前網路";
 "Configuring macOS Proxy" = "正在設定 macOS 代理";
 "Restoring Network Settings" = "正在還原網路設定";
 "Network Settings Must Be Restored" = "必須還原網路設定";
 "Saved Network Settings" = "已儲存的網路設定";
-"Restore settings saved before App & Browser DPI Bypass" = "還原啟用應用程式與瀏覽器 DPI 繞過之前儲存的網路設定";
+"Restore settings saved before App & Browsers mode" = "還原繞過前的網路設定";
+"Restore settings saved before App & Browser DPI Bypass" = "還原繞過前的網路設定";
+"Restore pre-bypass network settings" = "還原繞過前的網路設定";
 "Restore" = "還原";
-"Manual setup address for Web Proxy and Secure Web Proxy" = "用於手動設定網頁代理與安全網頁代理的位址";
+"Manual setup address for Web Proxy and Secure Web Proxy" = "網頁代理設定位址";
+"Web proxy setup address" = "網頁代理設定位址";
 "Configuring app & browser DPI bypass" = "正在設定應用程式與瀏覽器 DPI 繞過";
 "Restoring network settings" = "正在還原網路設定";
 "Restore network settings before quitting" = "結束前請先還原網路設定";

@@ -21,7 +21,8 @@ The source archive SHA-256 is
 ## SpoofDPI 1.5.3
 
 Hitomi Badayo bundles the official arm64 macOS `spoofdpi` executable as a
-separate local HTTP proxy helper process for the optional browser DPI bypass.
+separate local HTTP proxy helper process for the optional app and browser DPI
+bypass.
 
 - Project: https://github.com/xvzc/SpoofDPI
 - License: Apache License 2.0

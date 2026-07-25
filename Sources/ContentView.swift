@@ -87,6 +87,83 @@ private struct EditablePresetComboBox: NSViewRepresentable {
     }
 }
 
+private struct SourceFolderPopUpButton: NSViewRepresentable {
+    let profiles: [DownloadSourceFolderProfile]
+    let selectedID: String
+    let language: AppInterfaceLanguage
+    let onSelect: (String) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> NSPopUpButton {
+        let button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button.controlSize = .regular
+        button.lineBreakMode = .byTruncatingTail
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.selectionChanged(_:))
+        button.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        synchronize(button, coordinator: context.coordinator)
+        return button
+    }
+
+    func updateNSView(_ button: NSPopUpButton, context: Context) {
+        context.coordinator.parent = self
+        synchronize(button, coordinator: context.coordinator)
+    }
+
+    private func synchronize(_ button: NSPopUpButton, coordinator: Coordinator) {
+        let signature = profiles.map {
+            "\($0.id)|\($0.displayName)|\($0.faviconKey)"
+        }
+        if coordinator.profileSignature != signature {
+            button.removeAllItems()
+            for profile in profiles {
+                button.addItem(withTitle: profile.displayName)
+                guard let item = button.lastItem else { continue }
+                item.representedObject = profile.id
+                if let source = SiteFaviconCatalog.image(resourceKey: profile.faviconKey),
+                   let image = source.copy() as? NSImage {
+                    image.size = NSSize(width: 18, height: 18)
+                    item.image = image
+                }
+            }
+            coordinator.profileSignature = signature
+        }
+
+        if let selectedIndex = button.itemArray.firstIndex(where: {
+            ($0.representedObject as? String) == selectedID
+        }), button.indexOfSelectedItem != selectedIndex {
+            button.selectItem(at: selectedIndex)
+        }
+        button.setAccessibilityLabel(AppLocalization.text(
+            "Download Source",
+            language: language
+        ))
+        button.setAccessibilityValue(
+            profiles.first(where: { $0.id == selectedID })?.displayName ?? ""
+        )
+        button.setAccessibilityIdentifier("settings.source-folder-menu")
+    }
+
+    final class Coordinator: NSObject {
+        var parent: SourceFolderPopUpButton
+        var profileSignature: [String] = []
+
+        init(parent: SourceFolderPopUpButton) {
+            self.parent = parent
+        }
+
+        @objc func selectionChanged(_ sender: NSPopUpButton) {
+            guard let selectedID = sender.selectedItem?.representedObject as? String else {
+                return
+            }
+            parent.onSelect(selectedID)
+        }
+    }
+}
+
 private func queueDragTrace(_ message: String) {
     guard ProcessInfo.processInfo.environment["HITOMI_NATIVE_UI_TEST_DRAG_TRACE"] == "1" else {
         return
@@ -5139,6 +5216,11 @@ struct YouTubeCodecPriorityMenu: View {
 struct SettingsWindowView: View {
     @ObservedObject var manager: DownloadManager
 
+    private enum SettingsRowDetailPlacement: Equatable {
+        case label
+        case fullWidth
+    }
+
     private func localized(_ key: String) -> String {
         AppLocalization.text(key, language: manager.interfaceLanguage)
     }
@@ -5166,16 +5248,6 @@ struct SettingsWindowView: View {
         guard !query.isEmpty else { return manager.sourceFolderProfiles }
         return manager.sourceFolderProfiles.filter {
             $0.displayName.lowercased().contains(query) || $0.id.lowercased().contains(query)
-        }
-    }
-
-    @ViewBuilder
-    private func themeSwatch(_ value: String?) -> some View {
-        if let value, let color = Color(hexRGB: value) {
-            Circle()
-                .fill(color)
-                .frame(width: 14, height: 14)
-                .overlay(Circle().stroke(Color.secondary.opacity(0.35), lineWidth: 1))
         }
     }
 
@@ -5328,7 +5400,7 @@ struct SettingsWindowView: View {
     private var generalSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Language", systemImage: "globe") {
-                settingsRow("Display Language", detail: "Settings, menus, and context menus") {
+                settingsRow("Display Language") {
                     trailingSettingsControl {
                         Picker("", selection: Binding(
                             get: { manager.interfaceLanguage },
@@ -5348,7 +5420,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Save Folder", systemImage: "folder") {
-                settingsRow("Save Location", detail: "Base download folder") {
+                settingsRow("Save Location") {
                     HStack(spacing: 8) {
                         Text(manager.destinationPath)
                             .font(.caption)
@@ -5361,7 +5433,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Folders by Source", detail: "Site-specific subfolders") {
+                settingsRow("Folders by Source") {
                     VStack(alignment: .trailing, spacing: 5) {
                         sourceFolderProfileMenu
 
@@ -5394,6 +5466,7 @@ struct SettingsWindowView: View {
                                     for: manager.selectedSourceFolderID
                                 )
                             }
+                            .accessibilityIdentifier("settings.source-folder-reset")
                         }
                         .frame(width: 220, alignment: .trailing)
 
@@ -5403,10 +5476,12 @@ struct SettingsWindowView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .frame(width: 220, alignment: .trailing)
+                            .accessibilityIdentifier("settings.source-folder-preview")
                     }
+                    .frame(width: 220, alignment: .trailing)
                 }
 
-                settingsRow("Folder Layout", detail: "The original default is folders by source") {
+                settingsRow("Folder Layout") {
                     trailingSettingsControl {
                         Picker("", selection: Binding(
                             get: { manager.outputSubfolderMode },
@@ -5427,7 +5502,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Queue", systemImage: "list.bullet.rectangle") {
-                settingsRow("Concurrent Tasks", detail: "Queue tasks to run together") {
+                settingsRow("Concurrent Tasks") {
                     Stepper(value: $manager.jobConcurrency, in: 1...12) {
                         Text("\(manager.jobConcurrency)")
                             .monospacedDigit()
@@ -5435,7 +5510,7 @@ struct SettingsWindowView: View {
                     .frame(maxWidth: 150, alignment: .trailing)
                 }
 
-                settingsRow("Threads per Task", detail: "Concurrent files per item") {
+                settingsRow("Threads per Task") {
                     Stepper(value: $manager.concurrency, in: 1...24) {
                         Text("\(manager.concurrency)")
                             .monospacedDigit()
@@ -5443,7 +5518,7 @@ struct SettingsWindowView: View {
                     .frame(maxWidth: 150, alignment: .trailing)
                 }
 
-                settingsRow("Retry Incomplete", detail: "Retry failed downloads") {
+                settingsRow("Retry Incomplete") {
                     trailingSettingsControl {
                         HStack(spacing: 10) {
                             incompleteRetryDelayMenu
@@ -5461,10 +5536,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow(
-                    "Skip Duplicate URLs",
-                    detail: "Do not queue an address that has already been added"
-                ) {
+                settingsRow("Skip Duplicate URLs") {
                     settingsSwitch("Skip Duplicate URLs", isOn: Binding(
                         get: { manager.skipDuplicates },
                         set: { manager.setSkipDuplicates($0) }
@@ -5472,10 +5544,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.skip-duplicates")
                 }
 
-                settingsRow(
-                    "Automatically remove completed tasks",
-                    detail: "Remove completed items from the queue automatically"
-                ) {
+                settingsRow("Automatically remove completed tasks") {
                     settingsSwitch("Automatically remove completed tasks", isOn: Binding(
                         get: { manager.autoRemoveFinishedJobs },
                         set: { manager.setAutoRemoveFinishedJobs($0) }
@@ -5483,10 +5552,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.auto-remove-finished")
                 }
 
-                settingsRow(
-                    "Show download date",
-                    detail: "Show the download date on completed items"
-                ) {
+                settingsRow("Show download date") {
                     settingsSwitch("Show download date", isOn: Binding(
                         get: { manager.showDownloadDate },
                         set: { manager.setShowDownloadDate($0) }
@@ -5494,10 +5560,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.show-download-date")
                 }
 
-                settingsRow(
-                    "Number playlist files",
-                    detail: "Prefix filenames with their playlist order"
-                ) {
+                settingsRow("Number playlist files") {
                     settingsSwitch("Number playlist files", isOn: Binding(
                         get: { manager.numberPlaylistFiles },
                         set: { manager.setNumberPlaylistFiles($0) }
@@ -5507,7 +5570,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Naming", systemImage: "textformat") {
-                settingsRow("Work Folder", detail: "Choose an original preset or edit directly") {
+                settingsRow("Work Folder") {
                     editableTemplatePicker(
                         placeholder: DownloadSourceFolderProfile.originalDefaultFolderTemplate,
                         text: Binding(
@@ -5521,14 +5584,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow(
-                    "Individual Files",
-                    detail: AppLocalization.format(
-                        "%@ Presets",
-                        language: manager.interfaceLanguage,
-                        manager.selectedSourceFolderProfile.displayName
-                    )
-                ) {
+                settingsRow("Individual Files") {
                     if DownloadSourceFolderProfile.normalizedSourceID(
                         manager.selectedSourceFolderID
                     ) == "hitomi" && manager.usesOriginalHitomiFilenameMode {
@@ -5573,41 +5629,39 @@ struct SettingsWindowView: View {
 
     private var networkSettings: some View {
         VStack(alignment: .leading, spacing: 14) {
-            settingsSection("App & Browser DPI Bypass", systemImage: "checkmark.shield") {
+            settingsSection("DPI Bypass", systemImage: "checkmark.shield") {
                 settingsRow(
-                    "Use App & Browser DPI Bypass",
-                    detail: "Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval may be required"
+                    "Mode",
+                    detail: manager.dpiBypassMode.detailLocalizationKey,
+                    detailPlacement: .fullWidth
                 ) {
                     HStack(spacing: 10) {
                         Image(systemName: manager.browserDPIBypassSnapshot.phase.systemImage)
                             .foregroundStyle(browserDPIBypassStatusColor(
                                 manager.browserDPIBypassSnapshot.phase
                             ))
-
-                        VStack(alignment: .trailing, spacing: 1) {
-                            Text(localized(
+                            .frame(width: 18, height: 18)
+                            .help(browserDPIBypassStatusHelp)
+                            .accessibilityLabel(localized(
                                 manager.browserDPIBypassSnapshot.phase.localizationKey
                             ))
-                            .font(.caption)
-                            .lineLimit(1)
+                            .accessibilityValue(browserDPIBypassStatusHelp)
+                            .accessibilityIdentifier("settings.browser-dpi-status")
 
-                            if !manager.browserDPIBypassSnapshot.networkService.isEmpty {
-                                Text(manager.browserDPIBypassSnapshot.networkService)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .lineLimit(1)
+                        Picker("", selection: Binding(
+                            get: { manager.dpiBypassMode },
+                            set: { manager.setDPIBypassMode($0) }
+                        )) {
+                            ForEach(DPIBypassMode.allCases) { mode in
+                                Text(localized(mode.localizationKey))
+                                    .tag(mode)
                             }
                         }
-                        .foregroundStyle(.secondary)
-                        .help(localizedStatus(manager.browserDPIBypassSnapshot.diagnostic))
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("settings.browser-dpi-status")
-
-                        settingsSwitch("Use App & Browser DPI Bypass", isOn: Binding(
-                            get: { manager.browserDPIBypassEnabled },
-                            set: { manager.setBrowserDPIBypassEnabled($0) }
-                        ))
-                        .accessibilityIdentifier("settings.browser-dpi-bypass")
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .accessibilityLabel(localized("DPI Bypass Mode"))
+                        .accessibilityIdentifier("settings.browser-dpi-mode")
                         .disabled(manager.browserDPIBypassSnapshot.phase.isBusy)
                     }
                 }
@@ -5625,10 +5679,7 @@ struct SettingsWindowView: View {
                 }
 
                 if manager.browserDPIBypassSnapshot.hasRestorableProxySettings {
-                    settingsRow(
-                        "Saved Network Settings",
-                        detail: "Restore settings saved before App & Browser DPI Bypass"
-                    ) {
+                    settingsRow("Saved Network Settings") {
                         Button {
                             manager.restoreBrowserDPIProxySettings()
                         } label: {
@@ -5662,10 +5713,7 @@ struct SettingsWindowView: View {
                 .accessibilityIdentifier("settings.browser-dpi-advanced")
 
                 if manager.browserDPIAdvancedExpanded {
-                    settingsRow(
-                        "Proxy Address",
-                        detail: "Manual setup address for Web Proxy and Secure Web Proxy"
-                    ) {
+                    settingsRow("Proxy Address") {
                         HStack(spacing: 8) {
                             Text(manager.browserDPIBypassSnapshot.endpoint.displayValue)
                                 .font(.caption.monospaced())
@@ -5694,7 +5742,12 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Proxy", systemImage: "network") {
-                settingsRow("Use Proxy", detail: "Apply the proxy to all supported downloads") {
+                settingsRow(
+                    "Use Proxy",
+                    detail: manager.proxyEnabled && manager.dpiBypassMode.usesLocalProxy
+                        ? "DPI bypass first; saved proxy resumes when off"
+                        : "Manual proxy for supported downloads"
+                ) {
                     settingsSwitch("Use Proxy", isOn: Binding(
                         get: { manager.proxyEnabled },
                         set: { enabled in
@@ -5706,21 +5759,22 @@ struct SettingsWindowView: View {
                     ))
                 }
 
-                if manager.proxyEnabled {
-                    settingsRow("URL") {
-                        HStack(spacing: 8) {
-                            TextField("http://127.0.0.1:8080", text: $manager.proxyURLString)
-                                .textFieldStyle(.roundedBorder)
-                            iconButton("checkmark", help: "Save Proxy Settings") {
-                                manager.saveProxySettings()
-                            }
-                        }
-                    }
-
-                    settingsRow("Bypass Addresses") {
-                        TextField("example.com, *.internal.test", text: $manager.proxyBypassList)
+                settingsRow("URL") {
+                    HStack(spacing: 8) {
+                        TextField("http://127.0.0.1:8080", text: $manager.proxyURLString)
                             .textFieldStyle(.roundedBorder)
+                            .disabled(!manager.proxyEnabled)
+                        iconButton("checkmark", help: "Save Proxy Settings") {
+                            manager.saveProxySettings()
+                        }
+                        .disabled(!manager.proxyEnabled)
                     }
+                }
+
+                settingsRow("Bypass Addresses") {
+                    TextField("example.com, *.internal.test", text: $manager.proxyBypassList)
+                        .textFieldStyle(.roundedBorder)
+                        .disabled(!manager.proxyEnabled)
                 }
 
                 settingsRow("Public IP") {
@@ -5764,7 +5818,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("HTTP API", systemImage: "server.rack") {
-                settingsRow("HTTP API", detail: "Run the local control server") {
+                settingsRow("HTTP API") {
                     settingsSwitch("HTTP API", isOn: Binding(
                         get: { manager.httpAPIEnabled },
                         set: { manager.setHTTPAPIEnabled($0) }
@@ -5772,10 +5826,7 @@ struct SettingsWindowView: View {
                 }
 
                 if manager.httpAPIEnabled {
-                    settingsRow(
-                        "Lazy-load images",
-                        detail: "Load only visible images in the HTTP viewer"
-                    ) {
+                    settingsRow("Lazy-load images") {
                         settingsSwitch("Lazy-load images", isOn: Binding(
                             get: { manager.httpViewerLazyLoading },
                             set: { manager.setHTTPViewerLazyLoading($0) }
@@ -5822,23 +5873,29 @@ struct SettingsWindowView: View {
         }
     }
 
+    private var browserDPIBypassStatusHelp: String {
+        let snapshot = manager.browserDPIBypassSnapshot
+        let diagnostic = snapshot.diagnostic.trimmed
+        return [
+            localized(snapshot.phase.localizationKey),
+            snapshot.networkService.trimmed,
+            diagnostic.isEmpty ? "" : localizedStatus(diagnostic)
+        ]
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n")
+    }
+
     private var liveSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Automatic Recording", systemImage: "record.circle") {
-                settingsRow(
-                    "Enable Automatic Recording",
-                    detail: "Check registered sources at a regular interval"
-                ) {
+                settingsRow("Enable Automatic Recording") {
                     settingsSwitch("Enable Automatic Recording", isOn: Binding(
                         get: { manager.autoRecordEnabled },
                         set: { manager.setAutoRecordEnabled($0) }
                     ))
                 }
 
-                settingsRow(
-                    "Automatic Recording Paused",
-                    detail: "Stop detecting new recordings while keeping the settings"
-                ) {
+                settingsRow("Automatic Recording Paused") {
                     settingsSwitch("Automatic Recording Paused", isOn: Binding(
                         get: { manager.autoRecordPaused },
                         set: { manager.setAutoRecordPaused($0) }
@@ -5880,17 +5937,11 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("HLS", systemImage: "film.stack") {
-                settingsRow(
-                    "Remux to MP4",
-                    detail: "Save HLS output in an MP4 container"
-                ) {
+                settingsRow("Remux to MP4") {
                     settingsSwitch("Remux to MP4", isOn: $manager.remuxM3U8ToMP4)
                 }
 
-                settingsRow(
-                    "Skip failed items",
-                    detail: "Continue downloading when some segments fail"
-                ) {
+                settingsRow("Skip failed items") {
                     settingsSwitch("Skip failed items", isOn: $manager.hlsContinueOnSegmentFailure)
                 }
 
@@ -5905,10 +5956,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow(
-                    "Prevent sleep while downloading",
-                    detail: "Keep the Mac awake until active tasks finish"
-                ) {
+                settingsRow("Prevent sleep while downloading") {
                     settingsSwitch("Prevent sleep while downloading", isOn: Binding(
                         get: { manager.preventSleepWhileDownloading },
                         set: { manager.setPreventSleepWhileDownloading($0) }
@@ -5920,44 +5968,32 @@ struct SettingsWindowView: View {
 
     private var themeSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection("Display", systemImage: "paintbrush") {
-                settingsRow("Theme", detail: "Built-in or script") {
+            settingsGroup {
+                settingsRow("Theme") {
                     trailingSettingsControl {
-                        VStack(alignment: .trailing, spacing: 6) {
-                            HStack(spacing: 8) {
-                                Picker("", selection: Binding(
-                                    get: { manager.selectedPythonThemeKey },
-                                    set: { manager.setSelectedPythonThemeKey($0) }
-                                )) {
-                                    Text(localized("Default")).tag("")
-                                    ForEach(manager.availablePythonThemes) { theme in
-                                        Text(theme.displayName).tag(theme.key)
-                                    }
-                                }
-                                .labelsHidden()
-                                .frame(maxWidth: 260)
-
-                                if let theme = manager.activePythonTheme {
-                                    HStack(spacing: 4) {
-                                        themeSwatch(theme.accentColor)
-                                        themeSwatch(theme.backgroundColor)
-                                        themeSwatch(theme.surfaceColor)
-                                        themeSwatch(theme.foregroundColor)
-                                    }
-                                    .fixedSize()
-                                }
-
-                                iconButton("puzzlepiece.extension", help: "Open Theme Plugin") {
-                                    manager.openSettingsWindow(category: .plugins)
+                        HStack(spacing: 8) {
+                            Picker("", selection: Binding(
+                                get: { manager.selectedPythonThemeKey },
+                                set: { manager.setSelectedPythonThemeKey($0) }
+                            )) {
+                                Text(localized("Default")).tag("")
+                                ForEach(manager.availablePythonThemes) { theme in
+                                    Text(theme.displayName).tag(theme.key)
                                 }
                             }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(width: 174, alignment: .trailing)
+                            .accessibilityLabel(localized("Theme"))
+                            .accessibilityIdentifier("settings.theme-picker")
 
-                            Text(localizedStatus(manager.pythonThemeStatus))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .multilineTextAlignment(.trailing)
+                            iconButton("puzzlepiece.extension", help: "Open Theme Plugin") {
+                                manager.openSettingsWindow(category: .plugins)
+                            }
+                            .frame(width: 38)
+                            .accessibilityIdentifier("settings.theme-plugin")
                         }
+                        .frame(width: 220, alignment: .trailing)
                     }
                 }
 
@@ -5973,18 +6009,21 @@ struct SettingsWindowView: View {
                         }
                         .labelsHidden()
                         .pickerStyle(.segmented)
-                        .frame(maxWidth: 280, alignment: .trailing)
+                        .frame(width: 220, alignment: .trailing)
                         .disabled(manager.activePythonTheme?.appearance != nil && manager.activePythonTheme?.appearance != .system)
+                        .accessibilityLabel(localized("Appearance"))
+                        .accessibilityIdentifier("settings.appearance")
                     }
                 }
 
                 settingsRow("UI Scale") {
                     trailingSettingsControl {
                         uiScaleSelector
+                            .frame(width: 110, alignment: .trailing)
                     }
                 }
 
-                settingsRow("Font", detail: "Typeface and size") {
+                settingsRow("Font") {
                     trailingSettingsControl {
                         HStack(spacing: 10) {
                             Text(manager.interfaceFontSummary)
@@ -5999,13 +6038,11 @@ struct SettingsWindowView: View {
                             }
                             .accessibilityIdentifier("settings.font-edit")
                         }
+                        .frame(width: 220, alignment: .trailing)
                     }
                 }
 
-                settingsRow(
-                    "Low Power Mode",
-                    detail: "Reduce thumbnails and visual effects to save resources"
-                ) {
+                settingsRow("Low Power Mode") {
                     trailingSettingsControl {
                         settingsSwitch("Low Power Mode", isOn: Binding(
                             get: { manager.lowPowerMode },
@@ -6014,7 +6051,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Launch at Login", detail: "Open the app automatically when you log in to the Mac") {
+                settingsRow("Launch at Login") {
                     trailingSettingsControl {
                         settingsSwitch("Launch at Login", isOn: Binding(
                             get: { manager.launchAtLoginEnabled },
@@ -6040,13 +6077,11 @@ struct SettingsWindowView: View {
                             }
                             .accessibilityIdentifier("settings.status-colors-edit")
                         }
+                        .frame(width: 220, alignment: .trailing)
                     }
                 }
 
-                settingsRow(
-                    "Duplicate Preview",
-                    detail: "Show image thumbnails in the duplicate review dialog"
-                ) {
+                settingsRow("Duplicate Preview") {
                     trailingSettingsControl {
                         settingsSwitch("Show Thumbnails in Duplicate Image Preview", isOn: Binding(
                             get: { manager.showDuplicateImageThumbnails },
@@ -6122,41 +6157,14 @@ struct SettingsWindowView: View {
     }
 
     private var sourceFolderProfileMenu: some View {
-        Menu {
-            ForEach(manager.sourceFolderProfiles) { profile in
-                Button {
-                    manager.selectSourceFolder(profile.id)
-                } label: {
-                    HStack {
-                        if manager.selectedSourceFolderID == profile.id {
-                            Image(systemName: "checkmark")
-                        }
-                        if let image = settingsFavicon(resourceKey: profile.faviconKey) {
-                            Image(nsImage: image)
-                        }
-                        Text(profile.displayName)
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 6) {
-                if let image = settingsFavicon(
-                    resourceKey: manager.selectedSourceFolderProfile.faviconKey
-                ) {
-                    Image(nsImage: image)
-                        .frame(width: 18, height: 18)
-                }
-                Text(manager.selectedSourceFolderProfile.displayName)
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+        SourceFolderPopUpButton(
+            profiles: manager.sourceFolderProfiles,
+            selectedID: manager.selectedSourceFolderID,
+            language: manager.interfaceLanguage
+        ) {
+            manager.selectSourceFolder($0)
         }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .accessibilityLabel(AppLocalization.text("Download Source", language: manager.interfaceLanguage))
-        .accessibilityIdentifier("settings.source-folder-menu")
+        .frame(width: 220, height: 24)
     }
 
     private func editableTemplatePicker(
@@ -6306,10 +6314,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Archive Icon", systemImage: "archivebox.fill") {
-                settingsRow(
-                    "Hide Missing Archive Icons",
-                    detail: "Hide the icon when an archive is moved or deleted"
-                ) {
+                settingsRow("Hide Missing Archive Icons") {
                     settingsSwitch(
                         "Hide Missing Archive Icons",
                         isOn: Binding(
@@ -6364,17 +6369,9 @@ struct SettingsWindowView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(profile.displayName)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                if profile.supportsFolderArchive {
-                    Text(localized("Delete the original folder after archiving"))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
+            Text(profile.displayName)
+                .font(.subheadline)
+                .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if profile.supportsFolderArchive {
@@ -6562,10 +6559,7 @@ struct SettingsWindowView: View {
                     .frame(maxWidth: 130, alignment: .trailing)
                 }
 
-                settingsRow(
-                    "Delete Original After Archiving",
-                    detail: "Delete the original folder after creating the archive"
-                ) {
+                settingsRow("Delete Original After Archiving") {
                     settingsSwitch(
                         "Delete Original After Archiving",
                         isOn: $manager.newSiteRuleDeleteOriginalAfterArchiving
@@ -6597,7 +6591,7 @@ struct SettingsWindowView: View {
     private var advancedSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Notifications", systemImage: "bell") {
-                settingsRow("Task Notifications", detail: "Show a notification when each download finishes") {
+                settingsRow("Task Notifications") {
                     settingsSwitch("Task Notifications", isOn: Binding(
                         get: { manager.notifyWhenJobCompletes },
                         set: { manager.setNotifyWhenJobCompletes($0) }
@@ -6605,7 +6599,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.notify-job")
                 }
 
-                settingsRow("Queue Completion Notification", detail: "Show a notification when every queued task finishes") {
+                settingsRow("Queue Completion Notification") {
                     settingsSwitch("Queue Completion Notification", isOn: Binding(
                         get: { manager.notifyWhenQueueCompletes },
                         set: { manager.setNotifyWhenQueueCompletes($0) }
@@ -6613,7 +6607,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.notify-queue")
                 }
 
-                settingsRow("Task Completion Sound", detail: "Play a sound when each download finishes") {
+                settingsRow("Task Completion Sound") {
                     settingsSwitch("Task Completion Sound", isOn: Binding(
                         get: { manager.playSoundWhenJobCompletes },
                         set: { manager.setPlaySoundWhenJobCompletes($0) }
@@ -6621,7 +6615,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.sound-job")
                 }
 
-                settingsRow("Clipboard Add Sound", detail: "Play a sound when the clipboard adds a task") {
+                settingsRow("Clipboard Add Sound") {
                     settingsSwitch("Clipboard Add Sound", isOn: Binding(
                         get: { manager.playSoundOnClipboardAdd },
                         set: { manager.setPlaySoundOnClipboardAdd($0) }
@@ -6644,7 +6638,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Automation", systemImage: "bolt") {
-                settingsRow("Monitor Clipboard", detail: "Detect supported URLs that you copy") {
+                settingsRow("Monitor Clipboard") {
                     settingsSwitch("Monitor Clipboard", isOn: Binding(
                         get: { manager.clipboardMonitorEnabled },
                         set: { manager.setClipboardMonitorEnabled($0) }
@@ -6652,10 +6646,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.clipboard-monitor")
                 }
 
-                settingsRow(
-                    "Start Immediately When Pasted",
-                    detail: "Add URLs pasted into the app and start the queue"
-                ) {
+                settingsRow("Start Immediately When Pasted") {
                     settingsSwitch("Start Immediately When Pasted", isOn: Binding(
                         get: { manager.startDownloadsOnPaste },
                         set: { manager.setStartDownloadsOnPaste($0) }
@@ -6684,7 +6675,7 @@ struct SettingsWindowView: View {
                         .lineLimit(1)
                 }
 
-                settingsRow("Shortcuts", detail: "Menu Command") {
+                settingsRow("Shortcuts") {
                     HStack(spacing: 10) {
                         Button {
                             manager.openShortcutSettings()
@@ -6698,7 +6689,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Floating Monitor", detail: "Always on top") {
+                settingsRow("Floating Monitor") {
                     HStack(spacing: 10) {
                         settingsSwitch("Show Floating Monitor", isOn: Binding(
                             get: { manager.showingFloatingMonitor },
@@ -6722,7 +6713,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("External Tools", systemImage: "terminal") {
-                settingsRow("Status", detail: "Verified Managed Tools") {
+                settingsRow("Status") {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
                             if manager.isInstallingExternalTools {
@@ -6809,7 +6800,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("ffmpeg", systemImage: "wand.and.stars") {
-                settingsRow("Enable Transcoding", detail: "Re-encode downloaded output with ffmpeg") {
+                settingsRow("Enable Transcoding") {
                     settingsSwitch("Enable Transcoding", isOn: $manager.ffmpegTranscodeEnabled)
                 }
 
@@ -6852,17 +6843,14 @@ struct SettingsWindowView: View {
     private var hitomiSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Hitomi", systemImage: "photo.on.rectangle") {
-                settingsRow("Prefer WebP", detail: "Use WebP images when available") {
+                settingsRow("Prefer WebP") {
                     settingsSwitch("Prefer WebP", isOn: Binding(
                         get: { manager.preferWebP },
                         set: { manager.setPreferWebP($0) }
                     ))
                 }
 
-                settingsRow(
-                    "Save Info TXT",
-                    detail: "Save gallery metadata in a text file"
-                ) {
+                settingsRow("Save Info TXT") {
                     settingsSwitch("Save Info TXT", isOn: Binding(
                         get: { manager.saveHitomiGalleryInfoText },
                         set: { manager.setSaveHitomiGalleryInfoText($0) }
@@ -6886,10 +6874,7 @@ struct SettingsWindowView: View {
                     .accessibilityIdentifier("settings.ehentai-source-mode")
                 }
 
-                settingsRow(
-                    "Prefer Original Size",
-                    detail: "Use original-size E-Hentai and ExHentai files when available"
-                ) {
+                settingsRow("Prefer Original Size") {
                     settingsSwitch("Prefer Original Size", isOn: Binding(
                         get: { manager.preferOriginalEHentaiImages },
                         set: { manager.setPreferOriginalEHentaiImages($0) }
@@ -6900,10 +6885,7 @@ struct SettingsWindowView: View {
                     ))
                 }
 
-                settingsRow(
-                    "Use Japanese title when available",
-                    detail: "Prefer the Japanese title for saved names when available"
-                ) {
+                settingsRow("Use Japanese title when available") {
                     settingsSwitch("Use Japanese title when available", isOn: Binding(
                         get: { manager.preferJapaneseEHentaiTitle },
                         set: { manager.setPreferJapaneseEHentaiTitle($0) }
@@ -6976,7 +6958,7 @@ struct SettingsWindowView: View {
                         }
                     }
                 }
-                settingsRow("GIF palette dithering", detail: "Reduce color banding when converting to GIF") {
+                settingsRow("GIF palette dithering", detail: "Reduce GIF color banding") {
                     settingsSwitch("GIF palette dithering", isOn: $manager.pixivUgoiraDither)
                         .disabled(manager.pixivUgoiraFileFormat != .gif)
                 }
@@ -7008,22 +6990,14 @@ struct SettingsWindowView: View {
         VStack(alignment: .leading, spacing: 18) {
             settingsSection("Kemono friends", systemImage: "network") {
                 VStack(alignment: .leading, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(localized("Archive Addresses"))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Text(localized("Archive addresses used for downloads"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(localized("Archive Addresses"))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
 
                     pawchiveSiteAddressList
                 }
 
-                settingsRow(
-                    "Download PSD Originals",
-                    detail: "Also save large PSD source files"
-                ) {
+                settingsRow("PSD Originals") {
                     trailingSettingsControl {
                         settingsSwitch("Download PSD Originals", isOn: Binding(
                             get: { manager.pawchiveDownloadLargeOriginalFiles },
@@ -7035,7 +7009,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("File Types to Download", systemImage: "line.3.horizontal.decrease.circle") {
-                settingsRow("Image Files", detail: "JPEG, PNG, GIF, and more") {
+                settingsRow("Image Files", detail: "JPEG, PNG, GIF") {
                     trailingSettingsControl {
                         settingsSwitch("Image Files", isOn: Binding(
                             get: { manager.pawchiveDownloadImages },
@@ -7045,7 +7019,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Video Files", detail: "MP4, MKV, and more") {
+                settingsRow("Video Files", detail: "MP4, MKV") {
                     trailingSettingsControl {
                         settingsSwitch("Video Files", isOn: Binding(
                             get: { manager.pawchiveDownloadVideos },
@@ -7055,7 +7029,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("HTML Files", detail: "Save post content as HTML") {
+                settingsRow("HTML Files", detail: "Save posts as HTML") {
                     trailingSettingsControl {
                         settingsSwitch("HTML Files", isOn: Binding(
                             get: { manager.pawchiveDownloadHTML },
@@ -7065,7 +7039,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Other Files", detail: "Archives and other attachments") {
+                settingsRow("Other Files", detail: "Archives and attachments") {
                     trailingSettingsControl {
                         settingsSwitch("Other Files", isOn: Binding(
                             get: { manager.pawchiveDownloadOtherFiles },
@@ -7248,7 +7222,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Download Thumbnail", detail: "Save the video thumbnail with the downloaded output") {
+                settingsRow("Download Thumbnail") {
                     trailingSettingsControl {
                         settingsSwitch("Download Thumbnail", isOn: Binding(
                             get: { manager.youtubeDownloadThumbnail },
@@ -7257,7 +7231,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Reverse Playlist", detail: "Process the playlist from the last item first") {
+                settingsRow("Reverse Playlist", detail: "Last item first") {
                     trailingSettingsControl {
                         settingsSwitch("Reverse Playlist", isOn: Binding(
                             get: { manager.youtubeReversePlaylist },
@@ -7266,10 +7240,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow(
-                    "Use Upload Date as File Modification Date",
-                    detail: "Original application default"
-                ) {
+                settingsRow("Use Upload Date as File Modification Date") {
                     trailingSettingsControl {
                         settingsSwitch("Use Upload Date as File Modification Date", isOn: Binding(
                             get: { manager.youtubeUseUploadDateForFileModificationTime },
@@ -7283,7 +7254,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Embed Chapters", detail: "Save chapters in the video metadata") {
+                settingsRow("Embed Chapters") {
                     trailingSettingsControl {
                         settingsSwitch("Embed Chapters", isOn: Binding(
                             get: { manager.youtubeEmbedChapters },
@@ -7292,10 +7263,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow(
-                    "Enhanced Bitrate",
-                    detail: "Prefer higher-bitrate formats when available"
-                ) {
+                settingsRow("Enhanced Bitrate") {
                     trailingSettingsControl {
                         settingsSwitch("Enhanced Bitrate", isOn: Binding(
                             get: { manager.youtubePreferEnhancedBitrate },
@@ -7324,7 +7292,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Subtitles", detail: "Include automatically generated subtitles") {
+                settingsRow("Subtitles", detail: "Include auto-generated subtitles") {
                     trailingSettingsControl {
                         HStack(spacing: 8) {
                             settingsSwitch("Include automatically generated subtitles", isOn: Binding(
@@ -7371,10 +7339,7 @@ struct SettingsWindowView: View {
             }
 
             settingsSection("Instagram", systemImage: "camera") {
-                settingsRow(
-                    "Include active stories",
-                    detail: "Add current stories to profile downloads"
-                ) {
+                settingsRow("Include active stories") {
                     settingsSwitch("Include active stories", isOn: Binding(
                         get: { manager.instagramIncludeStories },
                         set: { manager.setInstagramIncludeStories($0) }
@@ -7441,7 +7406,7 @@ struct SettingsWindowView: View {
                     }
                 }
 
-                settingsRow("Anonymous Mode", detail: "Minimize peer-identifying information") {
+                settingsRow("Anonymous Mode") {
                     settingsSwitch("Anonymous Mode", isOn: $manager.aria2AnonymousMode)
                 }
 
@@ -7503,29 +7468,109 @@ struct SettingsWindowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func settingsGroup<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func settingsRow<Content: View>(
         _ title: String,
         detail: String? = nil,
+        detailPlacement: SettingsRowDetailPlacement = .label,
         @ViewBuilder control: () -> Content
     ) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(AppLocalization.text(title, language: manager.interfaceLanguage))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                if let detail {
-                    Text(AppLocalization.text(detail, language: manager.interfaceLanguage))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+        let localizedTitle = AppLocalization.text(title, language: manager.interfaceLanguage)
+        let localizedDetail = detail.map {
+            AppLocalization.text($0, language: manager.interfaceLanguage)
+        }
+        let hasInlineDetail = detailPlacement == .label && localizedDetail != nil
+
+        return VStack(
+            alignment: .leading,
+            spacing: detailPlacement == .fullWidth && localizedDetail != nil ? 5 : 0
+        ) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localizedTitle)
+                            .font(.system(
+                                size: NSFont.systemFontSize + 1,
+                                weight: .semibold
+                            ))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if detailPlacement == .label, let localizedDetail {
+                            Text(localizedDetail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .help(localizedDetail)
+                        }
+                    }
+                    .frame(
+                        minHeight: hasInlineDetail ? nil : 28,
+                        alignment: .leading
+                    )
+                    .frame(
+                        minWidth: 132,
+                        idealWidth: 132,
+                        maxWidth: 220,
+                        alignment: .leading
+                    )
+
+                    control()
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .layoutPriority(1)
+                }
+                .frame(minWidth: 340, maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localizedTitle)
+                            .font(.system(
+                                size: NSFont.systemFontSize + 1,
+                                weight: .semibold
+                            ))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if detailPlacement == .label, let localizedDetail {
+                            Text(localizedDetail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .help(localizedDetail)
+                        }
+                    }
+                    .frame(
+                        minHeight: hasInlineDetail ? nil : 28,
+                        alignment: .leading
+                    )
+
+                    control()
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .frame(minWidth: 140, idealWidth: 200, maxWidth: 220, alignment: .leading)
 
-            control()
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .layoutPriority(1)
+            if detailPlacement == .fullWidth, let localizedDetail {
+                Text(localizedDetail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .help(localizedDetail)
+            }
         }
         .padding(.vertical, 2)
         .frame(minHeight: 34, alignment: .top)
@@ -13434,6 +13479,7 @@ struct FontSettingsView: View {
             HStack(spacing: 10) {
                 Label(localized("Font"), systemImage: "textformat.size")
                     .font(.headline)
+                    .accessibilityIdentifier("font-settings.view")
 
                 Spacer()
 
@@ -13534,7 +13580,6 @@ struct FontSettingsView: View {
             .padding(18)
         }
         .frame(width: 560, height: 390)
-        .accessibilityIdentifier("font-settings.view")
     }
 
     private func localized(_ key: String) -> String {
@@ -13905,7 +13950,7 @@ struct JobInfoView: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .buttonStyle(.borderless)
-                .help("Copy task information")
+                .help(AppLocalization.text("Copy task information"))
 
                 Button {
                     dismiss()
@@ -13913,7 +13958,7 @@ struct JobInfoView: View {
                     Image(systemName: "xmark.circle.fill")
                 }
                 .buttonStyle(.borderless)
-                .help("Close")
+                .help(AppLocalization.text("Close"))
             }
             .padding(14)
 

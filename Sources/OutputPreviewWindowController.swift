@@ -24,7 +24,7 @@ private final class OutputPreviewWindow: NSWindow {
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if modifiers == .command,
+        if modifiers.intersection([.command, .option, .control, .shift]) == [.command],
            event.charactersIgnoringModifiers?.lowercased() == "w" {
             requestClose?()
             return true

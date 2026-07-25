@@ -45,6 +45,13 @@ final class HitomiBadayoApplication: NSApplication {
             terminate(nil)
             return
         }
+        if Self.isCommandW(event),
+           let window = keyWindow,
+           window.sheetParent == nil,
+           window.styleMask.contains(.closable) {
+            window.performClose(nil)
+            return
+        }
         if shortcutController?.handle(event) == true {
             return
         }
@@ -95,6 +102,14 @@ final class HitomiBadayoApplication: NSApplication {
 
     private static func isCommandQ(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown, !event.isARepeat, event.keyCode == 12 else {
+            return false
+        }
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        return flags.intersection([.command, .option, .control, .shift]) == [.command]
+    }
+
+    private static func isCommandW(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown, !event.isARepeat, event.keyCode == 13 else {
             return false
         }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)

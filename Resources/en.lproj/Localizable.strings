@@ -63,6 +63,7 @@
 "Archive addresses used for downloads" = "Archive addresses used for downloads";
 "Archive by Source" = "Archive by Source";
 "Archive Icon" = "Archive Icon";
+"Archives and attachments" = "Archives and attachments";
 "Archives and other attachments" = "Archives and other attachments";
 "aria2 Actions" = "aria2 Actions";
 "aria2 options" = "aria2 options";
@@ -82,7 +83,7 @@
 "Auto-remove Hook Running" = "Auto-remove Hook Running";
 "Auto-remove Hook Saved" = "Auto-remove Hook Saved";
 "Automatic" = "Automatic";
-"Automatic (Prefer Hitomi)" = "Automatic (Prefer Hitomi)";
+"Auto (Prefer Hitomi)" = "Auto (Prefer Hitomi)";
 "Automatic Recording" = "Automatic Recording";
 "Automatic Recording Added %@ to Queue" = "Automatic Recording Added %@ to Queue";
 "Automatic Recording Check: No New URLs" = "Automatic Recording Check: No New URLs";
@@ -349,6 +350,7 @@
 "Import URL List..." = "Import URL List...";
 "In use: %@" = "In use: %@";
 "Include active stories" = "Include active stories";
+"Include auto-generated subtitles" = "Include auto-generated subtitles";
 "Include automatically generated subtitles" = "Include automatically generated subtitles";
 "Incomplete retry delay" = "Incomplete retry delay";
 "Individual Files" = "Individual Files";
@@ -365,6 +367,7 @@
 "Invalid HTTP API Port" = "Invalid HTTP API Port";
 "Japanese" = "Japanese";
 "JPEG Quality" = "JPEG Quality";
+"JPEG, PNG, GIF" = "JPEG, PNG, GIF";
 "JPEG, PNG, GIF, and more" = "JPEG, PNG, GIF, and more";
 "Keep the Mac awake until active tasks finish" = "Keep the Mac awake until active tasks finish";
 "Known Output Folders..." = "Known Output Folders...";
@@ -421,6 +424,7 @@
 "Move Tasks Up" = "Move Tasks Up";
 "Move to Group" = "Move to Group";
 "Move Up" = "Move Up";
+"MP4, MKV" = "MP4, MKV";
 "MP4, MKV, and more" = "MP4, MKV, and more";
 "Name" = "Name";
 "Naming" = "Naming";
@@ -513,6 +517,7 @@
 "Preview (P)" = "Preview (P)";
 "Preview Selected Output" = "Preview Selected Output";
 "Privacy" = "Privacy";
+"Last item first" = "Last item first";
 "Process the playlist from the last item first" = "Process the playlist from the last item first";
 "Profile Download" = "Profile Download";
 "Progress" = "Progress";
@@ -520,6 +525,7 @@
 "Proxy Bypassed" = "Proxy Bypassed";
 "Proxy check failed: invalid proxy URL" = "Proxy check failed: invalid proxy URL";
 "Proxy, cookies, and HTTP API" = "Proxy, cookies, and HTTP API";
+"PSD Originals" = "PSD Originals";
 "Public IP" = "Public IP";
 "Public IP Not Checked" = "Public IP Not Checked";
 "Purple" = "Purple";
@@ -553,6 +559,7 @@
 "Recording YouTube live" = "Recording YouTube live";
 "Red" = "Red";
 "Redo" = "Redo";
+"Reduce GIF color banding" = "Reduce GIF color banding";
 "Reduce color banding when converting to GIF" = "Reduce color banding when converting to GIF";
 "Reduce thumbnails and visual effects to save resources" = "Reduce thumbnails and visual effects to save resources";
 "Regex" = "Regex";
@@ -564,6 +571,7 @@
 "Remove" = "Remove";
 "Remove \"%@\" from the list only. Downloaded files will not be deleted.%@" = "Remove \"%@\" from the list only. Downloaded files will not be deleted.%@";
 "Remove %@ completed tasks from the list." = "Remove %@ completed tasks from the list.";
+"Remove 1 completed task from the list." = "Remove 1 completed task from the list.";
 "Remove %@ Tag" = "Remove %@ Tag";
 "Remove %@ tasks from the list only. Downloaded files will not be deleted.\n%@%@%@" = "Remove %@ tasks from the list only. Downloaded files will not be deleted.\n%@%@%@";
 "Remove All Completed Tasks" = "Remove All Completed Tasks";
@@ -594,6 +602,7 @@
 "Resolving" = "Resolving";
 "Restart" = "Restart";
 "Restart %@ incomplete tasks." = "Restart %@ incomplete tasks.";
+"Restart 1 incomplete task." = "Restart 1 incomplete task.";
 "Restart %@ tasks." = "Restart %@ tasks.";
 "Restart (S)" = "Restart (S)";
 "Restart after 24 hours" = "Restart after 24 hours";
@@ -641,6 +650,7 @@
 "Save Location" = "Save Location";
 "Save Pixiv Ugoira Format" = "Save Pixiv Ugoira Format";
 "Save post content as HTML" = "Save post content as HTML";
+"Save posts as HTML" = "Save posts as HTML";
 "Save Proxy Settings" = "Save Proxy Settings";
 "Save Python Path" = "Save Python Path";
 "Save Site Rule" = "Save Site Rule";
@@ -742,6 +752,7 @@
 "Task Completion Sound" = "Task Completion Sound";
 "Task Information..." = "Task Information...";
 "Task Information... (I)" = "Task Information... (I)";
+"Copy task information" = "Copy task information";
 "Task Messages" = "Task Messages";
 "Task Notifications" = "Task Notifications";
 "Task Tags" = "Task Tags";
@@ -949,6 +960,24 @@
 "aria2 / Network" = "aria2 / Network";
 
 /* App and browser DPI bypass */
+"DPI Bypass" = "DPI Bypass";
+"DPI Bypass Mode" = "DPI Bypass Mode";
+"Apply this manual proxy to all supported downloads" = "Apply this manual proxy to all supported downloads";
+"DPI bypass takes priority. The saved proxy resumes when it is off." = "DPI bypass takes priority. The saved proxy resumes when it is off.";
+"Manual proxy for supported downloads" = "Manual proxy for supported downloads";
+"DPI bypass first; saved proxy resumes when off" = "DPI bypass first; saved proxy resumes when off";
+"Mode" = "Mode";
+"App Only" = "App Only";
+"App & Browsers" = "App & Browsers";
+"DPI bypass is disabled" = "DPI bypass is disabled";
+"Route supported Hitomi Badayo downloads through SpoofDPI without changing macOS proxy settings" = "Route supported Hitomi Badayo downloads through SpoofDPI without changing macOS proxy settings";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval is required" = "Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval is required";
+"Supported app downloads through SpoofDPI" = "Supported app downloads through SpoofDPI";
+"Supported app downloads and browsers through SpoofDPI; admin access required" = "Supported app downloads and browsers through SpoofDPI; admin access required";
+"Restore the macOS proxy settings to finish switching to App Only" = "Restore the macOS proxy settings to finish switching to App Only";
+"DPI bypass off" = "DPI bypass off";
+"Switching DPI bypass to app only" = "Switching DPI bypass to app only";
+"Starting app-only DPI bypass" = "Starting app-only DPI bypass";
 "App & Browser DPI Bypass" = "App & Browser DPI Bypass";
 "Use App & Browser DPI Bypass" = "Use App & Browser DPI Bypass";
 "Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI" = "Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI";
@@ -983,9 +1012,12 @@
 "Restoring Network Settings" = "Restoring Network Settings";
 "Network Settings Must Be Restored" = "Network Settings Must Be Restored";
 "Saved Network Settings" = "Saved Network Settings";
+"Restore settings saved before App & Browsers mode" = "Restore settings saved before App & Browsers mode";
 "Restore settings saved before App & Browser DPI Bypass" = "Restore settings saved before App & Browser DPI Bypass";
+"Restore pre-bypass network settings" = "Restore pre-bypass network settings";
 "Restore" = "Restore";
 "Manual setup address for Web Proxy and Secure Web Proxy" = "Manual setup address for Web Proxy and Secure Web Proxy";
+"Web proxy setup address" = "Web proxy setup address";
 "Configuring app & browser DPI bypass" = "Configuring app & browser DPI bypass";
 "Restoring network settings" = "Restoring network settings";
 "Restore network settings before quitting" = "Restore network settings before quitting";

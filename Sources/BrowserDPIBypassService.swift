@@ -199,6 +199,7 @@ final class BrowserDPIBypassService {
     private let fileManager: FileManager
     private let proxyAutomation: SystemBrowserProxyAutomation
     private let automaticProxyConfigurationEnabled: Bool
+    private var requestedMode: DPIBypassMode = .off
     private var process: Process?
     private var logHandle: FileHandle?
     private var readinessTask: Task<Void, Never>?
@@ -206,6 +207,7 @@ final class BrowserDPIBypassService {
     private var monitorTimer: Timer?
     private var intentionalStop = false
     private var stopAfterProxyRemoval = false
+    private var restoreSystemProxyForAppOnlyTransition = false
     private var terminalPhaseAfterStop: (BrowserDPIBypassPhase, String)?
     private var proxyBackup: BrowserDPIProxyBackup?
     private(set) var snapshot: BrowserDPIBypassSnapshot
@@ -248,7 +250,9 @@ final class BrowserDPIBypassService {
 
     var requiresProxyRestorationBeforeTermination: Bool {
         snapshot.hasRestorableProxySettings ||
-            SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint)
+            appOnlyTransitionProxyIsActive ||
+            (requestedMode == .appAndBrowsers &&
+                SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint))
     }
 
     var logURL: URL {
@@ -257,21 +261,32 @@ final class BrowserDPIBypassService {
             .appendingPathComponent("spoofdpi.log")
     }
 
-    func start(openSystemSettings: Bool) {
+    func setMode(_ mode: DPIBypassMode, openSystemSettings: Bool) {
+        if mode == .off {
+            requestStop(openSystemSettings: openSystemSettings)
+        } else {
+            start(mode: mode, openSystemSettings: openSystemSettings)
+        }
+    }
+
+    func start(mode: DPIBypassMode, openSystemSettings: Bool) {
+        guard mode.usesLocalProxy else {
+            requestStop(openSystemSettings: openSystemSettings)
+            return
+        }
+        let previousMode = requestedMode
+        requestedMode = mode
+        if previousMode == .appAndBrowsers,
+           mode == .appOnly,
+           SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint) {
+            restoreSystemProxyForAppOnlyTransition = true
+        } else if mode == .appAndBrowsers {
+            restoreSystemProxyForAppOnlyTransition = false
+        }
+
         guard process?.isRunning != true else {
             stopAfterProxyRemoval = false
-            if automaticProxyConfigurationEnabled,
-               snapshot.phase != .active,
-               !snapshot.phase.isBusy {
-                beginAutomaticProxyConfiguration(
-                    openSystemSettingsOnFailure: openSystemSettings
-                )
-            } else {
-                refreshSystemProxyState()
-                if openSystemSettings, snapshot.phase != .active {
-                    _ = openSystemProxySettings()
-                }
-            }
+            activateRequestedMode(openSystemSettings: openSystemSettings)
             return
         }
 
@@ -297,7 +312,7 @@ final class BrowserDPIBypassService {
                 diagnostic: "",
                 networkService: proxyBackup.networkService
             )
-            startMonitor()
+            activateRequestedMode(openSystemSettings: openSystemSettings)
             return
         }
         guard let port = selectAvailablePort() else {
@@ -347,17 +362,7 @@ final class BrowserDPIBypassService {
             guard !Task.isCancelled else { return }
             readinessTask = nil
             if ready, process?.isRunning == true {
-                if automaticProxyConfigurationEnabled {
-                    beginAutomaticProxyConfiguration(
-                        openSystemSettingsOnFailure: openSystemSettings
-                    )
-                } else {
-                    startMonitor()
-                    refreshSystemProxyState()
-                    if openSystemSettings, snapshot.phase != .active {
-                        _ = openSystemProxySettings()
-                    }
-                }
+                activateRequestedMode(openSystemSettings: openSystemSettings)
             } else if process?.isRunning == true {
                 terminateImmediately(
                     finalPhase: .failed,
@@ -368,6 +373,8 @@ final class BrowserDPIBypassService {
     }
 
     func requestStop(openSystemSettings: Bool) {
+        let previousMode = requestedMode
+        requestedMode = .off
         readinessTask?.cancel()
         readinessTask = nil
         proxyAutomationTask?.cancel()
@@ -375,7 +382,9 @@ final class BrowserDPIBypassService {
         stopMonitor()
 
         let needsRestoration = snapshot.hasRestorableProxySettings ||
-            SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint)
+            appOnlyTransitionProxyIsActive ||
+            (previousMode == .appAndBrowsers &&
+                SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint))
         if automaticProxyConfigurationEnabled, needsRestoration {
             beginAutomaticProxyRestoration(
                 openSystemSettingsOnFailure: openSystemSettings,
@@ -403,12 +412,29 @@ final class BrowserDPIBypassService {
     }
 
     func refreshSystemProxyState() {
-        guard !snapshot.phase.isBusy, snapshot.phase != .restoreRequired else {
+        guard !snapshot.phase.isBusy else {
             return
         }
         guard process?.isRunning == true else {
             if snapshot.phase != .failed, !snapshot.hasRestorableProxySettings {
                 publish(phase: .off, diagnostic: "")
+            }
+            return
+        }
+
+        if requestedMode == .appOnly {
+            if restoreSystemProxyForAppOnlyTransition,
+               !SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint) {
+                restoreSystemProxyForAppOnlyTransition = false
+            }
+            if snapshot.hasRestorableProxySettings ||
+                appOnlyTransitionProxyIsActive {
+                publish(
+                    phase: .restoreRequired,
+                    diagnostic: "Restore the macOS proxy settings to finish switching to App Only"
+                )
+            } else {
+                publish(phase: .active, diagnostic: "", networkService: "")
             }
             return
         }
@@ -436,6 +462,7 @@ final class BrowserDPIBypassService {
     }
 
     func restoreSystemProxySettings() {
+        requestedMode = .off
         proxyAutomationTask?.cancel()
         proxyAutomationTask = nil
         beginAutomaticProxyRestoration(
@@ -445,6 +472,7 @@ final class BrowserDPIBypassService {
     }
 
     func restoreBeforeTermination() async -> Bool {
+        requestedMode = .off
         readinessTask?.cancel()
         readinessTask = nil
         proxyAutomationTask?.cancel()
@@ -483,7 +511,10 @@ final class BrowserDPIBypassService {
     private func configureSystemProxyAutomatically(
         openSystemSettingsOnFailure: Bool
     ) async {
-        guard process?.isRunning == true else { return }
+        guard process?.isRunning == true,
+              requestedMode == .appAndBrowsers else {
+            return
+        }
 
         let currentState = SystemBrowserProxyDetector.currentState(for: snapshot.endpoint)
         if currentState == .active {
@@ -606,8 +637,12 @@ final class BrowserDPIBypassService {
             }
 
             clearProxyBackup()
+            restoreSystemProxyForAppOnlyTransition = false
             if stopAfterRestoring {
                 terminateImmediately()
+            } else if process?.isRunning == true, requestedMode == .appOnly {
+                startMonitor()
+                publish(phase: .active, diagnostic: "", networkService: "")
             } else {
                 publish(phase: .off, diagnostic: "")
             }
@@ -682,6 +717,53 @@ final class BrowserDPIBypassService {
             return
         }
         terminateImmediately()
+    }
+
+    private func activateRequestedMode(openSystemSettings: Bool) {
+        switch requestedMode {
+        case .off:
+            requestStop(openSystemSettings: openSystemSettings)
+        case .appOnly:
+            let needsRestoration = snapshot.hasRestorableProxySettings ||
+                appOnlyTransitionProxyIsActive
+            if needsRestoration {
+                if automaticProxyConfigurationEnabled {
+                    beginAutomaticProxyRestoration(
+                        openSystemSettingsOnFailure: openSystemSettings,
+                        stopAfterRestoring: false
+                    )
+                } else {
+                    publish(
+                        phase: .restoreRequired,
+                        diagnostic: "Restore the macOS proxy settings to finish switching to App Only"
+                    )
+                    startMonitor()
+                    if openSystemSettings {
+                        _ = openSystemProxySettings()
+                    }
+                }
+            } else {
+                startMonitor()
+                publish(phase: .active, diagnostic: "", networkService: "")
+            }
+        case .appAndBrowsers:
+            if automaticProxyConfigurationEnabled {
+                beginAutomaticProxyConfiguration(
+                    openSystemSettingsOnFailure: openSystemSettings
+                )
+            } else {
+                startMonitor()
+                refreshSystemProxyState()
+                if openSystemSettings, snapshot.phase != .active {
+                    _ = openSystemProxySettings()
+                }
+            }
+        }
+    }
+
+    private var appOnlyTransitionProxyIsActive: Bool {
+        restoreSystemProxyForAppOnlyTransition &&
+            SystemBrowserProxyDetector.currentSettingsUse(snapshot.endpoint)
     }
 
     nonisolated static func arguments(for endpoint: BrowserDPIProxyEndpoint) -> [String] {

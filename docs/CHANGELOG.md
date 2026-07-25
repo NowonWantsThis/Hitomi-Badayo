@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0
+## 0.4.1
 
-- Updated the app icon.
+- Added separate app-only and app-and-browser DPI bypass modes.
 - Continued beta development of Hitomi Badayo.

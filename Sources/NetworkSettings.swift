@@ -1,5 +1,76 @@
 import Foundation
 
+enum DPIBypassMode: String, CaseIterable, Codable, Hashable, Identifiable, Sendable {
+    case off
+    case appOnly
+    case appAndBrowsers
+
+    static let defaultsKey = "dpiBypassMode"
+    static let legacyEnabledKey = "browserDPIBypassEnabled"
+
+    var id: String { rawValue }
+
+    var usesLocalProxy: Bool {
+        self != .off
+    }
+
+    var configuresSystemProxy: Bool {
+        self == .appAndBrowsers
+    }
+
+    var localizationKey: String {
+        switch self {
+        case .off: return "Off"
+        case .appOnly: return "App Only"
+        case .appAndBrowsers: return "App & Browsers"
+        }
+    }
+
+    var detailLocalizationKey: String {
+        switch self {
+        case .off:
+            return "DPI bypass is disabled"
+        case .appOnly:
+            return "Supported app downloads through SpoofDPI"
+        case .appAndBrowsers:
+            return "Supported app downloads and browsers through SpoofDPI; admin access required"
+        }
+    }
+
+    static func load(
+        defaults: UserDefaults = .standard,
+        migrateLegacy: Bool = true,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> DPIBypassMode {
+        if let override = environment["HITOMI_NATIVE_DPI_BYPASS_MODE"]?.trimmed,
+           let mode = DPIBypassMode(rawValue: override) {
+            return mode
+        }
+
+        if let rawValue = defaults.string(forKey: defaultsKey),
+           let mode = DPIBypassMode(rawValue: rawValue) {
+            return mode
+        }
+
+        let mode: DPIBypassMode
+        if defaults.object(forKey: legacyEnabledKey) as? Bool == true {
+            mode = .appAndBrowsers
+        } else {
+            mode = .off
+        }
+
+        if migrateLegacy {
+            defaults.set(mode.rawValue, forKey: defaultsKey)
+        }
+        return mode
+    }
+
+    func save(defaults: UserDefaults = .standard) {
+        defaults.set(rawValue, forKey: Self.defaultsKey)
+        defaults.set(configuresSystemProxy, forKey: Self.legacyEnabledKey)
+    }
+}
+
 struct NetworkSettings: Equatable {
     var proxyEnabled: Bool
     var proxyURLString: String
@@ -8,27 +79,29 @@ struct NetworkSettings: Equatable {
     private static let proxyEnabledKey = "proxyEnabled"
     private static let proxyURLStringKey = "proxyURLString"
     private static let proxyBypassListKey = "proxyBypassList"
-    private static let browserDPIBypassEnabledKey = "browserDPIBypassEnabled"
     private static let browserDPIBypassPortKey = "browserDPIBypassPort"
     private static let defaultBrowserDPIBypassPort = 8_080
 
+    static func loadManual(defaults: UserDefaults = .standard) -> NetworkSettings {
+        NetworkSettings(
+            proxyEnabled: defaults.object(forKey: proxyEnabledKey) as? Bool ?? false,
+            proxyURLString: defaults.string(forKey: proxyURLStringKey) ?? "",
+            proxyBypassList: defaults.string(forKey: proxyBypassListKey) ?? ""
+        )
+    }
+
     static func load(defaults: UserDefaults = .standard) -> NetworkSettings {
-        let bypassList = defaults.string(forKey: proxyBypassListKey) ?? ""
-        if defaults.bool(forKey: browserDPIBypassEnabledKey) {
+        if DPIBypassMode.load(defaults: defaults, migrateLegacy: false).usesLocalProxy {
             let savedPort = defaults.integer(forKey: browserDPIBypassPortKey)
             let port = normalizedProxyPort(savedPort) ?? defaultBrowserDPIBypassPort
             return NetworkSettings(
                 proxyEnabled: true,
                 proxyURLString: "http://127.0.0.1:\(port)",
-                proxyBypassList: bypassList
+                proxyBypassList: ""
             )
         }
 
-        return NetworkSettings(
-            proxyEnabled: defaults.object(forKey: proxyEnabledKey) as? Bool ?? false,
-            proxyURLString: defaults.string(forKey: proxyURLStringKey) ?? "",
-            proxyBypassList: bypassList
-        )
+        return loadManual(defaults: defaults)
     }
 
     func save(defaults: UserDefaults = .standard) {

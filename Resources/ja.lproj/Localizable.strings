@@ -63,6 +63,7 @@
 "Archive addresses used for downloads" = "ダウンロードに使用するアーカイブアドレス";
 "Archive by Source" = "ソース別アーカイブ";
 "Archive Icon" = "アーカイブアイコン";
+"Archives and attachments" = "圧縮ファイルと添付ファイル";
 "Archives and other attachments" = "圧縮ファイルやその他の添付ファイル";
 "aria2 Actions" = "aria2アクション";
 "aria2 options" = "aria2オプション";
@@ -82,7 +83,7 @@
 "Auto-remove Hook Running" = "自動削除フックを実行中";
 "Auto-remove Hook Saved" = "自動削除フックが保存されました";
 "Automatic" = "自動";
-"Automatic (Prefer Hitomi)" = "自動 (Hitomi優先)";
+"Auto (Prefer Hitomi)" = "自動 (Hitomi優先)";
 "Automatic Recording" = "自動録画";
 "Automatic Recording Added %@ to Queue" = "自動録画: %@件をキューに追加";
 "Automatic Recording Check: No New URLs" = "自動録画チェック: 新しいURLはありません";
@@ -349,6 +350,7 @@
 "Import URL List..." = "URLリストをインポート...";
 "In use: %@" = "使用中:%@";
 "Include active stories" = "現在のストーリーズを含める";
+"Include auto-generated subtitles" = "自動生成字幕を含める";
 "Include automatically generated subtitles" = "自動生成された字幕を含める";
 "Incomplete retry delay" = "未完了項目の再試行間隔";
 "Individual Files" = "個別ファイル";
@@ -365,6 +367,7 @@
 "Invalid HTTP API Port" = "HTTP APIポートが無効です";
 "Japanese" = "日本語";
 "JPEG Quality" = "JPEG品質";
+"JPEG, PNG, GIF" = "JPEG、PNG、GIF";
 "JPEG, PNG, GIF, and more" = "JPEG、PNG、GIF など";
 "Keep the Mac awake until active tasks finish" = "アクティブなタスクが終了するまで Mac を起動したままにします";
 "Known Output Folders..." = "既知の出力フォルダー...";
@@ -421,6 +424,7 @@
 "Move Tasks Up" = "タスクを上に移動";
 "Move to Group" = "グループに移動";
 "Move Up" = "上に移動";
+"MP4, MKV" = "MP4、MKV";
 "MP4, MKV, and more" = "MP4、MKV など";
 "Name" = "名前";
 "Naming" = "名前形式";
@@ -513,6 +517,7 @@
 "Preview (P)" = "プレビュー (P)";
 "Preview Selected Output" = "選択した出力をプレビュー";
 "Privacy" = "プライバシー";
+"Last item first" = "最後の項目から";
 "Process the playlist from the last item first" = "プレイリストを最後のアイテムから最初に処理します";
 "Profile Download" = "プロフィールのダウンロード";
 "Progress" = "進捗状況";
@@ -520,6 +525,7 @@
 "Proxy Bypassed" = "プロキシがバイパスされました";
 "Proxy check failed: invalid proxy URL" = "プロキシ チェックに失敗しました: 無効なプロキシURL";
 "Proxy, cookies, and HTTP API" = "プロキシ、Cookie、およびHTTP API";
+"PSD Originals" = "PSD原本";
 "Public IP" = "パブリックIP";
 "Public IP Not Checked" = "パブリック IP がチェックされていません";
 "Purple" = "パープル";
@@ -553,6 +559,7 @@
 "Recording YouTube live" = "YouTubeライブを録画中";
 "Red" = "レッド";
 "Redo" = "やり直す";
+"Reduce GIF color banding" = "GIFの色むらを軽減";
 "Reduce color banding when converting to GIF" = "GIF への変換時にカラー バンディングを軽減します";
 "Reduce thumbnails and visual effects to save resources" = "サムネイルと視覚効果を減らしてリソースを節約します";
 "Regex" = "正規表現";
@@ -564,12 +571,13 @@
 "Remove" = "削除";
 "Remove \"%@\" from the list only. Downloaded files will not be deleted.%@" = "「%@」のみをリストから削除します。ダウンロードしたファイルは削除されません。%@";
 "Remove %@ completed tasks from the list." = "完了したタスク%@件をリストから削除します。";
+"Remove 1 completed task from the list." = "完了したタスク1件をリストから削除します。";
 "Remove %@ Tag" = "%@タグを削除します";
 "Remove %@ tasks from the list only. Downloaded files will not be deleted.\n%@%@%@" = "%@件のタスクをリストからのみ削除します。ダウンロードしたファイルは削除されません。\n%@%@%@";
 "Remove All Completed Tasks" = "完了したタスクをすべて削除";
 "Remove archive address" = "アーカイブアドレスを削除";
 "Remove completed items from the queue automatically" = "完了したアイテムをキューから自動的に削除します";
-"Remove completed tasks?" = "完了したタスクを削除しますか?";
+"Remove completed tasks?" = "完了したタスクをリストから削除しますか?";
 "Remove Downloaded Managed Tools" = "ダウンロードした管理ツールを削除します";
 "Remove Filter" = "フィルターを削除";
 "Remove from List (R)" = "リストから削除(R)";
@@ -594,13 +602,14 @@
 "Resolving" = "解決中";
 "Restart" = "再試行";
 "Restart %@ incomplete tasks." = "未完了のタスク%@件を再試行します。";
+"Restart 1 incomplete task." = "未完了のタスク1件を再試行します。";
 "Restart %@ tasks." = "%@件のタスクを再試行します。";
 "Restart (S)" = "再試行 (S)";
 "Restart after 24 hours" = "24時間後に再試行";
 "Restart after 7 days" = "7日後に再試行";
 "Restart All Incomplete Tasks" = "未完了のタスクをすべて再開する";
 "Restart All Tasks in Group (S)" = "グループ内のすべてのタスクを再試行 (S)";
-"Restart incomplete tasks?" = "未完了のタスクを再開しますか?";
+"Restart incomplete tasks?" = "未完了のタスクを再試行しますか?";
 "Restart Selected Tasks" = "選択したタスクを再試行";
 "Restart tasks in this group?" = "このグループのタスクを再開しますか?";
 "Restore Bundled aria2c" = "バンドルされたaria2cを復元";
@@ -642,6 +651,7 @@
 "Save Location" = "保存先";
 "Save Pixiv Ugoira Format" = "Pixivウゴイラ形式を保存";
 "Save post content as HTML" = "投稿内容を HTML として保存";
+"Save posts as HTML" = "投稿をHTMLで保存";
 "Save Proxy Settings" = "プロキシ設定を保存";
 "Save Python Path" = "Pythonパスを保存";
 "Save Site Rule" = "サイト ルールの保存";
@@ -743,6 +753,7 @@
 "Task Completion Sound" = "タスク完了音";
 "Task Information..." = "タスク情報...";
 "Task Information... (I)" = "タスク情報... (I)";
+"Copy task information" = "タスク情報をコピー";
 "Task Messages" = "タスクメッセージ";
 "Task Notifications" = "タスク通知";
 "Task Tags" = "タスクタグ";
@@ -949,9 +960,27 @@
 "aria2 / Network" = "aria2 / ネットワーク";
 
 /* App and browser DPI bypass */
+"DPI Bypass" = "DPI バイパス";
+"DPI Bypass Mode" = "DPI バイパスモード";
+"Apply this manual proxy to all supported downloads" = "対応ダウンロードに手動プロキシを適用";
+"DPI bypass takes priority. The saved proxy resumes when it is off." = "DPIバイパス優先・オフ時は保存済みプロキシを使用";
+"Manual proxy for supported downloads" = "対応するダウンロードに手動プロキシを適用";
+"DPI bypass first; saved proxy resumes when off" = "DPIバイパス優先・オフ時は保存済みプロキシを使用";
+"Mode" = "モード";
+"App Only" = "アプリのみ";
+"App & Browsers" = "アプリとブラウザ";
+"DPI bypass is disabled" = "DPI バイパスは無効です";
+"Route supported Hitomi Badayo downloads through SpoofDPI without changing macOS proxy settings" = "対応ダウンロードのみSpoofDPI経由";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval is required" = "対応ダウンロードとブラウザをSpoofDPI経由・管理者権限が必要";
+"Supported app downloads through SpoofDPI" = "対応するダウンロードのみSpoofDPI経由";
+"Supported app downloads and browsers through SpoofDPI; admin access required" = "対応するダウンロードとブラウザをSpoofDPI経由・管理者権限が必要";
+"Restore the macOS proxy settings to finish switching to App Only" = "「アプリのみ」への切り替えを完了するには macOS のプロキシ設定を復元してください";
+"DPI bypass off" = "DPI バイパスはオフです";
+"Switching DPI bypass to app only" = "DPI バイパスをアプリのみに切り替えています";
+"Starting app-only DPI bypass" = "アプリ専用 DPI バイパスを開始しています";
 "App & Browser DPI Bypass" = "アプリとブラウザの DPI バイパス";
 "Use App & Browser DPI Bypass" = "アプリとブラウザの DPI バイパスを使用";
-"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI" = "Hitomi Badayo の対応ダウンロードと macOS の Web ブラウザを SpoofDPI 経由で接続します";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI" = "対応ダウンロードとブラウザをSpoofDPI経由";
 "DPI Bypass Off" = "DPI バイパス：オフ";
 "Starting DPI Bypass" = "DPI バイパスを起動中";
 "Waiting for macOS Proxy Settings" = "macOS のプロキシ設定を待機中";
@@ -977,15 +1006,18 @@
 "Could not start SpoofDPI." = "SpoofDPI を起動できませんでした。";
 "SpoofDPI stopped unexpectedly." = "SpoofDPI が予期せず停止しました。";
 "Automatically configure the active macOS network service" = "使用中の macOS ネットワークサービスを自動設定します";
-"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval may be required" = "Hitomi Badayo の対応ダウンロードと macOS の Web ブラウザを SpoofDPI 経由で接続します。管理者の承認が必要な場合があります";
+"Route supported Hitomi Badayo downloads and macOS web browsers through SpoofDPI; administrator approval may be required" = "対応ダウンロードとブラウザをSpoofDPI経由・管理者権限が必要な場合あり";
 "Detecting Active Network" = "使用中のネットワークを検出中";
 "Configuring macOS Proxy" = "macOS プロキシを設定中";
 "Restoring Network Settings" = "ネットワーク設定を復元中";
 "Network Settings Must Be Restored" = "ネットワーク設定の復元が必要です";
 "Saved Network Settings" = "保存されたネットワーク設定";
-"Restore settings saved before App & Browser DPI Bypass" = "アプリとブラウザの DPI バイパスを有効にする前のネットワーク設定を復元します";
+"Restore settings saved before App & Browsers mode" = "バイパス前のネットワーク設定を復元";
+"Restore settings saved before App & Browser DPI Bypass" = "バイパス前のネットワーク設定を復元";
+"Restore pre-bypass network settings" = "バイパス前のネットワーク設定を復元";
 "Restore" = "復元";
-"Manual setup address for Web Proxy and Secure Web Proxy" = "Web プロキシとセキュア Web プロキシの手動設定用アドレス";
+"Manual setup address for Web Proxy and Secure Web Proxy" = "Webプロキシ設定アドレス";
+"Web proxy setup address" = "Webプロキシ設定アドレス";
 "Configuring app & browser DPI bypass" = "アプリとブラウザの DPI バイパスを設定中";
 "Restoring network settings" = "ネットワーク設定を復元中";
 "Restore network settings before quitting" = "終了する前にネットワーク設定を復元してください";

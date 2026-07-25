@@ -1376,7 +1376,7 @@ final class DownloadManager: ObservableObject {
     @Published var proxyEnabled = false
     @Published var proxyURLString = ""
     @Published var proxyBypassList = ""
-    @Published var browserDPIBypassEnabled = false
+    @Published var dpiBypassMode: DPIBypassMode = .off
     @Published var browserDPIAdvancedExpanded = false
     @Published private(set) var browserDPIBypassSnapshot = BrowserDPIBypassSnapshot(
         phase: .off,
@@ -2407,12 +2407,11 @@ final class DownloadManager: ObservableObject {
         historyEnabled = defaults.object(forKey: "historyEnabled") as? Bool ?? true
         let savedHistoryLimit = defaults.integer(forKey: "historyLimit")
         historyLimitString = String(savedHistoryLimit > 0 ? savedHistoryLimit : 1_000)
-        let networkSettings = NetworkSettings.load(defaults: defaults)
-        proxyEnabled = networkSettings.proxyEnabled
-        proxyURLString = networkSettings.proxyURLString
-        proxyBypassList = networkSettings.proxyBypassList
-        browserDPIBypassEnabled =
-            defaults.object(forKey: "browserDPIBypassEnabled") as? Bool ?? false
+        let manualNetworkSettings = NetworkSettings.loadManual(defaults: defaults)
+        proxyEnabled = manualNetworkSettings.proxyEnabled
+        proxyURLString = manualNetworkSettings.proxyURLString
+        proxyBypassList = manualNetworkSettings.proxyBypassList
+        dpiBypassMode = DPIBypassMode.load(defaults: defaults)
         browserDPIBypassSnapshot = browserDPIBypassService.snapshot
         autoRecordEnabled = Self.environmentBool("HITOMI_NATIVE_AUTO_RECORD_ENABLED")
             ?? (defaults.object(forKey: "autoRecordEnabled") as? Bool ?? false)
@@ -2507,6 +2506,23 @@ final class DownloadManager: ObservableObject {
         if migratedQueueOrder || migratedQueueGroups {
             persistUserData()
         }
+        browserDPIBypassService.onUpdate = { [weak self] snapshot in
+            guard let self else { return }
+            self.browserDPIBypassSnapshot = snapshot
+            if snapshot.phase == .failed || snapshot.phase == .conflictingSystemProxy {
+                self.dpiBypassMode = .off
+                DPIBypassMode.off.save()
+                self.addSummary = snapshot.diagnostic.isEmpty
+                    ? "DPI Bypass Failed"
+                    : snapshot.diagnostic
+            }
+        }
+        if dpiBypassMode.usesLocalProxy {
+            browserDPIBypassService.start(
+                mode: dpiBypassMode,
+                openSystemSettings: false
+            )
+        }
         if clipboardMonitorEnabled {
             startClipboardMonitor()
         }
@@ -2533,20 +2549,6 @@ final class DownloadManager: ObservableObject {
             await self?.backfillCompletedOutputMetadata()
         }
         restoreScheduledRetries()
-        browserDPIBypassService.onUpdate = { [weak self] snapshot in
-            guard let self else { return }
-            self.browserDPIBypassSnapshot = snapshot
-            if snapshot.phase == .failed || snapshot.phase == .conflictingSystemProxy {
-                self.browserDPIBypassEnabled = false
-                UserDefaults.standard.set(false, forKey: "browserDPIBypassEnabled")
-                self.addSummary = snapshot.diagnostic.isEmpty
-                    ? "DPI Bypass Failed"
-                    : snapshot.diagnostic
-            }
-        }
-        if browserDPIBypassEnabled {
-            browserDPIBypassService.start(openSystemSettings: false)
-        }
     }
 
     private nonisolated static func normalizedQueueGroups(
@@ -11334,7 +11336,13 @@ final class DownloadManager: ObservableObject {
     }
 
     var retryIncompleteJobsConfirmationMessage: String {
-        AppLocalization.format(
+        if pendingIncompleteRetryJobCount == 1 {
+            return AppLocalization.text(
+                "Restart 1 incomplete task.",
+                language: interfaceLanguage
+            )
+        }
+        return AppLocalization.format(
             "Restart %@ incomplete tasks.",
             language: interfaceLanguage,
             String(pendingIncompleteRetryJobCount)
@@ -11342,7 +11350,13 @@ final class DownloadManager: ObservableObject {
     }
 
     var completedJobsRemovalConfirmationMessage: String {
-        AppLocalization.format(
+        if pendingCompletedRemovalJobCount == 1 {
+            return AppLocalization.text(
+                "Remove 1 completed task from the list.",
+                language: interfaceLanguage
+            )
+        }
+        return AppLocalization.format(
             "Remove %@ completed tasks from the list.",
             language: interfaceLanguage,
             String(pendingCompletedRemovalJobCount)
@@ -12687,26 +12701,32 @@ final class DownloadManager: ObservableObject {
     }
 
     func saveProxySettings() {
-        guard persistProxySettingsForUse() else { return }
+        guard persistManualProxySettings() else { return }
         addSummary = proxyEnabled ? "Proxy saved" : "Proxy off"
     }
 
-    func setBrowserDPIBypassEnabled(_ enabled: Bool) {
+    func setDPIBypassMode(_ mode: DPIBypassMode) {
         guard !browserDPIBypassSnapshot.phase.isBusy else { return }
-        browserDPIBypassEnabled = enabled
-        UserDefaults.standard.set(enabled, forKey: "browserDPIBypassEnabled")
-        if enabled {
-            browserDPIBypassService.start(openSystemSettings: false)
+        dpiBypassMode = mode
+        mode.save()
+        browserDPIBypassService.setMode(mode, openSystemSettings: false)
+        switch mode {
+        case .off:
+            addSummary = browserDPIBypassSnapshot.hasRestorableProxySettings
+                ? "Restoring network settings"
+                : "DPI bypass off"
+        case .appOnly:
+            addSummary = browserDPIBypassSnapshot.hasRestorableProxySettings
+                ? "Switching DPI bypass to app only"
+                : "Starting app-only DPI bypass"
+        case .appAndBrowsers:
             addSummary = "Configuring app & browser DPI bypass"
-        } else {
-            browserDPIBypassService.requestStop(openSystemSettings: false)
-            addSummary = "Restoring network settings"
         }
     }
 
     func restoreBrowserDPIProxySettings() {
-        browserDPIBypassEnabled = false
-        UserDefaults.standard.set(false, forKey: "browserDPIBypassEnabled")
+        dpiBypassMode = .off
+        DPIBypassMode.off.save()
         browserDPIBypassService.restoreSystemProxySettings()
         addSummary = "Restoring network settings"
     }
@@ -36171,6 +36191,13 @@ final class DownloadManager: ObservableObject {
     }
 
     private func persistProxySettingsForUse() -> Bool {
+        guard !dpiBypassMode.usesLocalProxy else {
+            return true
+        }
+        return persistManualProxySettings()
+    }
+
+    private func persistManualProxySettings() -> Bool {
         if proxyEnabled {
             guard let normalized = NetworkSettings.normalizedProxyURLString(proxyURLString) else {
                 addSummary = "Enter a valid proxy URL"

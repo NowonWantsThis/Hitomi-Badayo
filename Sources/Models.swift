@@ -471,7 +471,7 @@ enum EHentaiSourceMode: String, CaseIterable, Codable, Identifiable {
 
     var label: String {
         switch self {
-        case .automatic: return AppLocalization.text("Automatic (Prefer Hitomi)")
+        case .automatic: return AppLocalization.text("Auto (Prefer Hitomi)")
         case .hitomi: return AppLocalization.text("Hitomi Only")
         case .original: return AppLocalization.text("Original Site")
         }
