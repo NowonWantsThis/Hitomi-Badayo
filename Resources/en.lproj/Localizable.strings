@@ -202,6 +202,7 @@
 "Delete the original folder after archiving" = "Delete the original folder after archiving";
 "Delete the original folder after creating the archive" = "Delete the original folder after creating the archive";
 "Delete the task and downloaded files?" = "Delete the task and downloaded files?";
+"Deno Path" = "Deno Path";
 "Deleting cookies and login sessions..." = "Deleting cookies and login sessions...";
 "Descending" = "Descending";
 "Detect supported URLs that you copy" = "Detect supported URLs that you copy";
@@ -359,7 +360,9 @@
 "Info & Statistics..." = "Info & Statistics...";
 "Insert Translated Tags" = "Insert Translated Tags";
 "Install All" = "Install All";
+"Install or Update Deno" = "Install or Update Deno";
 "Install or Update FFmpeg and ffprobe" = "Install or Update FFmpeg and ffprobe";
+"Install, update, or choose yt-dlp, Deno, FFmpeg, and aria2c" = "Install, update, or choose yt-dlp, Deno, FFmpeg, and aria2c";
 "Install or Update yt-dlp" = "Install or Update yt-dlp";
 "Install Python Plugin" = "Install Python Plugin";
 "Installation Failed" = "Installation Failed";

@@ -202,6 +202,7 @@
 "Delete the original folder after archiving" = "アーカイブ後に元のフォルダーを削除します";
 "Delete the original folder after creating the archive" = "アーカイブを作成した後、元のフォルダーを削除します";
 "Delete the task and downloaded files?" = "タスクとダウンロードしたファイルを削除しますか?";
+"Deno Path" = "Deno パス";
 "Deleting cookies and login sessions..." = "Cookie とログイン セッションを削除しています...";
 "Descending" = "降順";
 "Detect supported URLs that you copy" = "コピーされた対応URLを自動検出";
@@ -359,7 +360,9 @@
 "Info & Statistics..." = "情報と統計...";
 "Insert Translated Tags" = "翻訳されたタグを挿入";
 "Install All" = "すべてインストール";
+"Install or Update Deno" = "Denoをインストールまたは更新";
 "Install or Update FFmpeg and ffprobe" = "FFmpegおよびffprobeのインストールまたは更新";
+"Install, update, or choose yt-dlp, Deno, FFmpeg, and aria2c" = "yt-dlp、Deno、FFmpeg、aria2cをインストール、更新、または選択";
 "Install or Update yt-dlp" = "yt-dlpのインストールまたは更新";
 "Install Python Plugin" = "Pythonプラグインをインストールする";
 "Installation Failed" = "インストールに失敗しました";

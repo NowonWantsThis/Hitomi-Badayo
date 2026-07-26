@@ -38,14 +38,15 @@ account data, or downloaded files.
 
 ## Optional Helper Tools
 
-Core native downloads work without extra tools. Some video fallbacks, live
-recording finalization, conversion, and torrent workflows need yt-dlp, FFmpeg,
-or aria2c.
+Core native downloads work without extra tools. Some video fallbacks, full
+YouTube extraction, live recording finalization, conversion, and torrent
+workflows need yt-dlp, Deno, FFmpeg, or aria2c.
 
 Open **Options > Settings > Advanced > External Tools** and use the managed-tool
-install action. aria2c is copied from the app bundle. yt-dlp, FFmpeg, and ffprobe
-are downloaded over HTTPS and verified against their published SHA-256 values
-before installation.
+install action. aria2c is copied from the app bundle. yt-dlp, Deno, FFmpeg, and
+ffprobe are downloaded over HTTPS and verified against their published SHA-256
+values before installation. Hitomi Badayo supplies Deno's absolute path to
+yt-dlp, so Finder-launched apps do not depend on the shell `PATH`.
 
 Python-based compatibility plugins require a separate Python 3 installation;
 the native download handlers do not require Python.

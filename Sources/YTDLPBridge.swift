@@ -203,6 +203,9 @@ final class YTDLPBridge {
             "-o",
             outputTemplate
         ]
+        if let deno = denoExecutableURL() {
+            arguments.append(contentsOf: ["--js-runtimes", "deno:\(deno.path)"])
+        }
         if let ffmpeg = ffmpegExecutableURL() {
             arguments.append(contentsOf: ["--ffmpeg-location", ffmpeg.deletingLastPathComponent().path])
         }
@@ -394,6 +397,19 @@ final class YTDLPBridge {
                 "/opt/homebrew/bin/ffmpeg",
                 "/usr/local/bin/ffmpeg",
                 "/usr/bin/ffmpeg"
+            ]
+        )
+    }
+
+    private func denoExecutableURL() -> URL? {
+        ExternalToolSettings.executableURL(
+            kind: .deno,
+            environmentKey: "HITOMI_NATIVE_DENO",
+            executableName: "deno",
+            knownPaths: [
+                "/opt/homebrew/bin/deno",
+                "/usr/local/bin/deno",
+                "/usr/bin/deno"
             ]
         )
     }

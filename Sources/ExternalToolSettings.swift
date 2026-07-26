@@ -2,12 +2,14 @@ import Foundation
 
 enum ExternalToolKind: String, CaseIterable, Sendable {
     case ytdlp
+    case deno
     case ffmpeg
     case aria2c
 
     var displayName: String {
         switch self {
         case .ytdlp: return "yt-dlp"
+        case .deno: return "Deno"
         case .ffmpeg: return "FFmpeg"
         case .aria2c: return "aria2c"
         }
@@ -16,6 +18,7 @@ enum ExternalToolKind: String, CaseIterable, Sendable {
     var executableName: String {
         switch self {
         case .ytdlp: return "yt-dlp"
+        case .deno: return "deno"
         case .ffmpeg: return "ffmpeg"
         case .aria2c: return "aria2c"
         }
@@ -24,6 +27,7 @@ enum ExternalToolKind: String, CaseIterable, Sendable {
     var defaultsKey: String {
         switch self {
         case .ytdlp: return "externalToolYTDLPPath"
+        case .deno: return "externalToolDenoPath"
         case .ffmpeg: return "externalToolFFmpegPath"
         case .aria2c: return "externalToolAria2Path"
         }

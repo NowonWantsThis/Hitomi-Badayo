@@ -65,10 +65,20 @@ request installation of the official `yt-dlp_macos` release binary.
 
 The app retrieves the upstream SHA-256 list before installing the binary.
 
+## Deno
+
+Deno is not bundled in the Beta 1 source tree or app archive. The user may
+request installation of the official Apple-silicon Deno release archive. The
+managed installer retrieves the upstream SHA-256 file before installation.
+
+- Project: https://github.com/denoland/deno
+- License: MIT
+- Release used for this trial: v2.9.4
+
 ## FFmpeg and ffprobe
 
 FFmpeg and ffprobe are optional and are not bundled in the source tree or app
-archive. The managed installer obtains current Apple-silicon macOS builds from
+archive. The managed installer obtains pinned Apple-silicon macOS builds from
 `ffmpeg.martin-riedl.de`. FFmpeg is primarily LGPL-2.1-or-later, but enabling
 GPL components changes the applicable license for a particular build. The
 provider's license and build information should be reviewed whenever the

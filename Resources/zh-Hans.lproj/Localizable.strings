@@ -203,6 +203,7 @@
 "Delete the original folder after archiving" = "归档后删除原文件夹";
 "Delete the original folder after creating the archive" = "创建存档后删除原始文件夹";
 "Delete the task and downloaded files?" = "删除任务和下载的文件？";
+"Deno Path" = "Deno 路径";
 "Deleting cookies and login sessions..." = "正在删除 cookie 和登录会话...";
 "Descending" = "降序";
 "Detect supported URLs that you copy" = "自动检测复制的受支持 URL";
@@ -360,7 +361,9 @@
 "Info & Statistics..." = "信息与统计...";
 "Insert Translated Tags" = "插入翻译标签";
 "Install All" = "安装全部";
+"Install or Update Deno" = "安装或更新 Deno";
 "Install or Update FFmpeg and ffprobe" = "安装或更新FFmpeg和ffprobe";
+"Install, update, or choose yt-dlp, Deno, FFmpeg, and aria2c" = "安装、更新或选择 yt-dlp、Deno、FFmpeg 和 aria2c";
 "Install or Update yt-dlp" = "安装或更新yt-dlp";
 "Install Python Plugin" = "安装Python插件";
 "Installation Failed" = "安装失败";

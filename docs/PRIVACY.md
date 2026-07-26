@@ -33,6 +33,7 @@ source host, not a Hitomi Badayo-operated server.
 When the user explicitly installs managed tools, the app downloads:
 
 - yt-dlp release files and checksums from the yt-dlp GitHub project
+- Deno release files and checksums from the Deno GitHub project
 - FFmpeg and ffprobe archives from the configured third-party build provider
 
 The app may also load source-site pages in an embedded WebKit login window.

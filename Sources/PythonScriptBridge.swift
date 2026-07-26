@@ -1254,6 +1254,18 @@ final class PythonScriptBridge {
         ) {
             runnerEnvironment["HITOMI_NATIVE_YTDLP"] = ytdlp.path
         }
+        if let deno = ExternalToolSettings.executableURL(
+            kind: .deno,
+            environmentKey: "HITOMI_NATIVE_DENO",
+            executableName: "deno",
+            knownPaths: [
+                "/opt/homebrew/bin/deno",
+                "/usr/local/bin/deno",
+                "/usr/bin/deno"
+            ]
+        ) {
+            runnerEnvironment["HITOMI_NATIVE_DENO"] = deno.path
+        }
         if let ffmpeg = ExternalToolSettings.executableURL(
             kind: .ffmpeg,
             environmentKey: "HITOMI_NATIVE_FFMPEG",

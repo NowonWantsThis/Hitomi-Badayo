@@ -6744,6 +6744,18 @@ struct SettingsWindowView: View {
                     }
                 }
 
+                settingsRow("Deno") {
+                    HStack(spacing: 8) {
+                        TextField(localized("Deno Path"), text: $manager.denoPath)
+                            .textFieldStyle(.roundedBorder)
+                        toolAvailabilityIcon(.deno)
+                        iconButton("square.and.arrow.down", help: "Install or Update Deno") {
+                            manager.installManagedExternalTool(.deno)
+                        }
+                        .disabled(manager.isInstallingExternalTools)
+                    }
+                }
+
                 settingsRow("ffmpeg") {
                     HStack(spacing: 8) {
                         TextField(localized("ffmpeg Path"), text: $manager.ffmpegPath)

@@ -141,8 +141,8 @@ enum SettingsSearchIndex {
         Entry(
             section: .externalTools,
             title: "External Tools",
-            detail: "Install, update, or choose yt-dlp, FFmpeg, and aria2c",
-            keywords: ["외부 도구", "설치", "업데이트", "경로", "path", "install", "update", "yt-dlp", "ffmpeg", "aria2", "aria2c"]
+            detail: "Install, update, or choose yt-dlp, Deno, FFmpeg, and aria2c",
+            keywords: ["외부 도구", "설치", "업데이트", "경로", "path", "install", "update", "yt-dlp", "deno", "javascript", "ejs", "ffmpeg", "aria2", "aria2c"]
         ),
         Entry(
             section: .ffmpeg,

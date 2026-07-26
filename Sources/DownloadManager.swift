@@ -1420,6 +1420,7 @@ final class DownloadManager: ObservableObject {
     @Published var hlsContinueOnSegmentFailure = false
     @Published var m3u8SegmentDelayMillisecondsString = ""
     @Published var ytdlpPath = ""
+    @Published var denoPath = ""
     @Published var ffmpegPath = ""
     @Published var pythonPath = ""
     @Published var pythonScriptPlugins: [PythonScriptPlugin] = []
@@ -2467,6 +2468,7 @@ final class DownloadManager: ObservableObject {
         let savedM3U8Delay = defaults.object(forKey: "m3u8SegmentDelayMilliseconds") as? Int ?? 0
         m3u8SegmentDelayMillisecondsString = savedM3U8Delay > 0 ? String(Self.normalizedM3U8SegmentDelayMilliseconds(from: String(savedM3U8Delay))) : ""
         ytdlpPath = ExternalToolSettings.path(for: .ytdlp, defaults: defaults)
+        denoPath = ExternalToolSettings.path(for: .deno, defaults: defaults)
         ffmpegPath = ExternalToolSettings.path(for: .ffmpeg, defaults: defaults)
         pythonPath = defaults.string(forKey: "pythonScriptPythonPath") ?? ""
         ffmpegTranscodeEnabled = defaults.object(forKey: "ffmpegTranscodeEnabled") as? Bool ?? false
@@ -3609,7 +3611,7 @@ final class DownloadManager: ObservableObject {
             appStartedAt: appStartedAt,
             appUptimeSeconds: max(0, generatedAt.timeIntervalSince(appStartedAt)),
             appName: appInfo.name,
-            appVersion: appInfo.version,
+            appVersion: appInfo.displayVersion,
             appBuild: appInfo.build,
             bundleIdentifier: appInfo.bundleIdentifier,
             minimumSystemVersion: appInfo.minimumSystemVersion,
@@ -4340,8 +4342,13 @@ final class DownloadManager: ObservableObject {
         var name: String
         var version: String
         var build: String
+        var releaseChannel: String
         var bundleIdentifier: String
         var minimumSystemVersion: String
+
+        var displayVersion: String {
+            releaseChannel.isEmpty ? version : "\(version) \(releaseChannel)"
+        }
     }
 
     private nonisolated static func appBundleInfo() -> AppBundleInfo {
@@ -4349,6 +4356,7 @@ final class DownloadManager: ObservableObject {
             name: bundleInfoString("CFBundleName", fallback: "Hitomi Badayo"),
             version: bundleInfoString("CFBundleShortVersionString", fallback: "0.1.0"),
             build: bundleInfoString("CFBundleVersion", fallback: "1"),
+            releaseChannel: bundleInfoString("HitomiBadayoReleaseChannel", fallback: ""),
             bundleIdentifier: Bundle.main.bundleIdentifier
                 ?? bundleInfoString("CFBundleIdentifier", fallback: "io.github.nowonwantsthis.HitomiBadayo"),
             minimumSystemVersion: bundleInfoString("LSMinimumSystemVersion", fallback: "14.0")
@@ -4370,7 +4378,7 @@ final class DownloadManager: ObservableObject {
         return AppAboutInfo(
             name: info.name,
             displayName: info.name,
-            version: info.version,
+            version: info.displayVersion,
             build: info.build,
             bundleIdentifier: info.bundleIdentifier,
             architecture: appArchitectureName,
@@ -4455,6 +4463,17 @@ final class DownloadManager: ObservableObject {
                     "/opt/homebrew/bin/yt-dlp",
                     "/usr/local/bin/yt-dlp",
                     "/usr/bin/yt-dlp"
+                ]
+            ),
+            Self.externalToolStatus(
+                kind: .deno,
+                configuredPath: denoPath,
+                environmentKey: "HITOMI_NATIVE_DENO",
+                executableName: "deno",
+                knownPaths: [
+                    "/opt/homebrew/bin/deno",
+                    "/usr/local/bin/deno",
+                    "/usr/bin/deno"
                 ]
             ),
             Self.externalToolStatus(
@@ -13102,7 +13121,7 @@ final class DownloadManager: ObservableObject {
         externalToolInstallTask = Task { [weak self] in
             guard let self else { return }
             do {
-                for kind in [ExternalToolKind.aria2c, .ytdlp, .ffmpeg] {
+                for kind in [ExternalToolKind.aria2c, .ytdlp, .deno, .ffmpeg] {
                     try Task.checkCancellation()
                     externalToolInstallStatus = "Installing \(kind.displayName)…"
                     let result = try await ManagedExternalToolInstaller.shared.install(kind)
@@ -13156,6 +13175,8 @@ final class DownloadManager: ObservableObject {
         switch result.kind {
         case .ytdlp:
             ytdlpPath = result.executableURL.path
+        case .deno:
+            denoPath = result.executableURL.path
         case .ffmpeg:
             ffmpegPath = result.executableURL.path
         case .aria2c:
@@ -13168,6 +13189,9 @@ final class DownloadManager: ObservableObject {
         let managedDirectory = ExternalToolSettings.managedBinDirectory.standardizedFileURL.path + "/"
         if ExternalToolSettings.normalizedExecutablePath(ytdlpPath).hasPrefix(managedDirectory) {
             ytdlpPath = ""
+        }
+        if ExternalToolSettings.normalizedExecutablePath(denoPath).hasPrefix(managedDirectory) {
+            denoPath = ""
         }
         if ExternalToolSettings.normalizedExecutablePath(ffmpegPath).hasPrefix(managedDirectory) {
             ffmpegPath = ""
@@ -13919,9 +13943,11 @@ final class DownloadManager: ObservableObject {
 
     private func persistExternalToolPaths() {
         ytdlpPath = ExternalToolSettings.normalizedExecutablePath(ytdlpPath)
+        denoPath = ExternalToolSettings.normalizedExecutablePath(denoPath)
         ffmpegPath = ExternalToolSettings.normalizedExecutablePath(ffmpegPath)
         aria2Path = ExternalToolSettings.normalizedExecutablePath(aria2Path)
         ExternalToolSettings.save(path: ytdlpPath, for: .ytdlp)
+        ExternalToolSettings.save(path: denoPath, for: .deno)
         ExternalToolSettings.save(path: ffmpegPath, for: .ffmpeg)
         ExternalToolSettings.save(path: aria2Path, for: .aria2c)
     }

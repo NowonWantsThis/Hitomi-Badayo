@@ -2992,6 +2992,9 @@ class CompatYoutubeDL:
         ffmpeg = os.environ.get("HITOMI_NATIVE_FFMPEG", "").strip()
         if ffmpeg and os.path.isfile(ffmpeg) and os.access(ffmpeg, os.X_OK):
             args.extend(["--ffmpeg-location", os.path.dirname(os.path.abspath(ffmpeg))])
+        deno = os.environ.get("HITOMI_NATIVE_DENO", "").strip()
+        if deno and os.path.isfile(deno) and os.access(deno, os.X_OK):
+            args.extend(["--js-runtimes", "deno:{}".format(os.path.abspath(deno))])
 
         boolean_flags = (
             ("nocheckcertificate", "--no-check-certificates"),

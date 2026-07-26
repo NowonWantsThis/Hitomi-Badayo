@@ -63,9 +63,11 @@ The build uses the system macOS SDK and does not require an Xcode project.
 ## External tools
 
 Apple-silicon builds of aria2 1.37.0 and SpoofDPI 1.5.3 are bundled as separate
-helper processes with their license information. yt-dlp, FFmpeg, and ffprobe
-are optional and are downloaded only after the user requests managed-tool
-installation. See [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).
+helper processes with their license information. yt-dlp, Deno, FFmpeg, and
+ffprobe are optional and are downloaded only after the user requests
+managed-tool installation. Deno is passed directly to yt-dlp for YouTube's
+JavaScript challenges. See
+[THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).
 
 ## DPI bypass
 

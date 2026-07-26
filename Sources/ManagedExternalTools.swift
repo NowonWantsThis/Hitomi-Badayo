@@ -4,15 +4,19 @@ import Foundation
 struct ManagedExternalToolSources: Sendable {
     var ytdlpBinaryURL: URL
     var ytdlpChecksumsURL: URL
+    var denoArchiveURL: URL
+    var denoChecksumsURL: URL
     var ffmpegArchiveURL: URL
     var ffprobeArchiveURL: URL
     var allowsInsecureLocalhost: Bool = false
 
     static let production = ManagedExternalToolSources(
-        ytdlpBinaryURL: URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos")!,
-        ytdlpChecksumsURL: URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS")!,
-        ffmpegArchiveURL: URL(string: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip")!,
-        ffprobeArchiveURL: URL(string: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip")!
+        ytdlpBinaryURL: URL(string: "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp_macos")!,
+        ytdlpChecksumsURL: URL(string: "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/SHA2-256SUMS")!,
+        denoArchiveURL: URL(string: "https://github.com/denoland/deno/releases/download/v2.9.4/deno-aarch64-apple-darwin.zip")!,
+        denoChecksumsURL: URL(string: "https://github.com/denoland/deno/releases/download/v2.9.4/deno-aarch64-apple-darwin.zip.sha256sum")!,
+        ffmpegArchiveURL: URL(string: "https://ffmpeg.martin-riedl.de/download/macos/arm64/1783011502_8.1.2/ffmpeg.zip")!,
+        ffprobeArchiveURL: URL(string: "https://ffmpeg.martin-riedl.de/download/macos/arm64/1783011502_8.1.2/ffprobe.zip")!
     )
 }
 
@@ -55,6 +59,8 @@ actor ManagedExternalToolInstaller {
         switch kind {
         case .ytdlp:
             return try await installYTDLP(sources: sources)
+        case .deno:
+            return try await installDeno(sources: sources)
         case .ffmpeg:
             return try await installFFmpeg(sources: sources)
         case .aria2c:
@@ -95,6 +101,54 @@ actor ManagedExternalToolInstaller {
         let installed = try installExecutable(artifact.fileURL, kind: .ytdlp)
         return ManagedExternalToolInstallResult(
             kind: .ytdlp,
+            executableURL: installed,
+            auxiliaryURLs: [],
+            version: version
+        )
+    }
+
+    private func installDeno(
+        sources: ManagedExternalToolSources
+    ) async throws -> ManagedExternalToolInstallResult {
+        let workspace = try temporaryWorkspace()
+        defer { try? FileManager.default.removeItem(at: workspace) }
+
+        let archiveName = "deno-aarch64-apple-darwin.zip"
+        let checksums = try await downloadText(
+            sources.denoChecksumsURL,
+            sources: sources,
+            maximumBytes: 64 * 1_024
+        )
+        guard let expected = expectedChecksum(for: archiveName, in: checksums) else {
+            throw ManagedExternalToolError.missingChecksum(archiveName)
+        }
+
+        let artifact = try await downloadFile(
+            sources.denoArchiveURL,
+            into: workspace,
+            filename: archiveName,
+            sources: sources,
+            maximumBytes: 150 * 1_024 * 1_024
+        )
+        try verifyChecksum(expected, fileURL: artifact.fileURL)
+
+        let extraction = workspace.appendingPathComponent("deno-extracted", isDirectory: true)
+        try FileManager.default.createDirectory(at: extraction, withIntermediateDirectories: true)
+        let logURL = workspace.appendingPathComponent("deno-extract.log")
+        try await ExternalProcessRunner.run(
+            executable: URL(fileURLWithPath: "/usr/bin/ditto"),
+            arguments: ["-x", "-k", artifact.fileURL.path, extraction.path],
+            logURL: logURL,
+            failureDescription: "Extracting Deno"
+        )
+
+        guard let executable = findExecutable(named: "deno", in: extraction) else {
+            throw ManagedExternalToolError.invalidExecutable("deno")
+        }
+        let version = try await validateExecutable(executable, arguments: ["--version"])
+        let installed = try installExecutable(executable, kind: .deno)
+        return ManagedExternalToolInstallResult(
+            kind: .deno,
             executableURL: installed,
             auxiliaryURLs: [],
             version: version

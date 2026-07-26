@@ -75,9 +75,11 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.4.1</string>
+	<string>0.4.2</string>
 	<key>CFBundleVersion</key>
-	<string>0.401</string>
+	<string>0.40201</string>
+    <key>HitomiBadayoReleaseChannel</key>
+    <string>Beta 1 · Managed Tools</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHumanReadableCopyright</key>
