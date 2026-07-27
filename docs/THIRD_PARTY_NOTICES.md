@@ -67,9 +67,9 @@ The app retrieves the upstream SHA-256 list before installing the binary.
 
 ## Deno
 
-Deno is not bundled in the Beta 1 source tree or app archive. The user may
-request installation of the official Apple-silicon Deno release archive. The
-managed installer retrieves the upstream SHA-256 file before installation.
+Deno is not bundled in the source tree or app archive. The user may request
+installation of the official Apple-silicon Deno release archive. The managed
+installer retrieves the upstream SHA-256 file before installation.
 
 - Project: https://github.com/denoland/deno
 - License: MIT

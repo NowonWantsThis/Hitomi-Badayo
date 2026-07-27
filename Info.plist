@@ -77,9 +77,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>0.4.2</string>
 	<key>CFBundleVersion</key>
-	<string>0.40201</string>
-    <key>HitomiBadayoReleaseChannel</key>
-    <string>Beta 1 · Managed Tools</string>
+	<string>0.402</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHumanReadableCopyright</key>

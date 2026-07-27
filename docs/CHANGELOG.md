@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.4.2 Beta 1
+## 0.4.2
 
 - Added a verified managed Deno runtime for full yt-dlp YouTube challenge support.
-- Pinned the managed media tools so Beta 1 and Beta 2 use matching versions.
+- Pinned managed media-tool versions for reproducible installation and testing.
+- Improved settings responsiveness and reduced memory use when large completed queues are present.
 - Continued beta development of Hitomi Badayo.
 
 ## 0.4.1
