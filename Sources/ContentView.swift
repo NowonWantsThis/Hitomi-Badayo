@@ -5215,6 +5215,12 @@ struct YouTubeCodecPriorityMenu: View {
 
 struct SettingsWindowView: View {
     @ObservedObject var manager: DownloadManager
+    @ObservedObject private var presentation: SettingsWindowPresentationState
+
+    init(manager: DownloadManager) {
+        self.manager = manager
+        presentation = manager.settingsWindowPresentation
+    }
 
     private enum SettingsRowDetailPlacement: Equatable {
         case label
@@ -5230,7 +5236,7 @@ struct SettingsWindowView: View {
     }
 
     private var visibleCategories: [SettingsWindowCategory] {
-        let query = manager.settingsWindowFilter.trimmed.lowercased()
+        let query = presentation.filter.trimmed.lowercased()
         guard !query.isEmpty else { return SettingsWindowCategory.allCases }
         return SettingsWindowCategory.allCases.filter {
             $0.searchText.lowercased().contains(query)
@@ -5244,7 +5250,7 @@ struct SettingsWindowView: View {
     }
 
     private var filteredArchiveSourceProfiles: [DownloadSourceFolderProfile] {
-        let query = manager.archiveSourceFilter.trimmed.lowercased()
+        let query = presentation.archiveFilter.trimmed.lowercased()
         guard !query.isEmpty else { return manager.sourceFolderProfiles }
         return manager.sourceFolderProfiles.filter {
             $0.displayName.lowercased().contains(query) || $0.id.lowercased().contains(query)
@@ -5303,11 +5309,11 @@ struct SettingsWindowView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .frame(width: 16)
-                TextField(localized("Search"), text: $manager.settingsWindowFilter)
+                TextField(localized("Search"), text: $presentation.filter)
                     .textFieldStyle(.roundedBorder)
-                if !manager.settingsWindowFilter.trimmed.isEmpty {
+                if !presentation.filter.trimmed.isEmpty {
                     Button {
-                        manager.settingsWindowFilter = ""
+                        presentation.filter = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                     }
@@ -5321,9 +5327,9 @@ struct SettingsWindowView: View {
                     ForEach(visibleCategories) { category in
                         SettingsCategorySidebarButton(
                             category: category,
-                            isSelected: manager.settingsWindowCategory == category
+                            isSelected: presentation.category == category
                         ) {
-                            manager.settingsWindowCategory = category
+                            presentation.category = category
                         }
                     }
                 }
@@ -5336,15 +5342,15 @@ struct SettingsWindowView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            SettingsCategoryIcon(category: manager.settingsWindowCategory, size: 18)
+            SettingsCategoryIcon(category: presentation.category, size: 18)
                 .foregroundStyle(.secondary)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(manager.settingsWindowCategory.label)
+                Text(presentation.category.label)
                     .font(.title3)
                     .fontWeight(.semibold)
-                Text(manager.settingsWindowCategory.detail)
+                Text(presentation.category.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -5367,7 +5373,7 @@ struct SettingsWindowView: View {
 
     @ViewBuilder
     private var selectedCategoryContent: some View {
-        switch manager.settingsWindowCategory {
+        switch presentation.category {
         case .general:
             generalSettings
         case .network:
@@ -6330,12 +6336,12 @@ struct SettingsWindowView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
-                    TextField(localized("Search Sources"), text: $manager.archiveSourceFilter)
+                    TextField(localized("Search Sources"), text: $presentation.archiveFilter)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("settings.archive-source-filter")
-                    if !manager.archiveSourceFilter.trimmed.isEmpty {
+                    if !presentation.archiveFilter.trimmed.isEmpty {
                         Button {
-                            manager.archiveSourceFilter = ""
+                            presentation.archiveFilter = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                         }

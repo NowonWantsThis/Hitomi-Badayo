@@ -129,11 +129,11 @@ enum QueueThumbnailProvider {
 
     private final class RelocationIndexEntry: NSObject {
         let createdAt: Date
-        let urlsByName: [String: [URL]]
+        let pathsByName: [String: [String]]
 
-        init(createdAt: Date, urlsByName: [String: [URL]]) {
+        init(createdAt: Date, pathsByName: [String: [String]]) {
             self.createdAt = createdAt
-            self.urlsByName = urlsByName
+            self.pathsByName = pathsByName
         }
     }
 
@@ -165,6 +165,7 @@ enum QueueThumbnailProvider {
         cache.countLimit = 8
         return cache
     }()
+    private static let relocationIndexLock = NSLock()
     private static let relocationMissCache: NSCache<NSString, RelocationMissEntry> = {
         let cache = NSCache<NSString, RelocationMissEntry>()
         cache.countLimit = 512
@@ -233,8 +234,13 @@ enum QueueThumbnailProvider {
         }
 
         let outputPath = job.outputPath
+        let resolvedFilenames = job.resolvedFilenames
         let local = await detachedUtilityValue {
-            localCandidate(forOutputPath: outputPath, destinationPath: destinationPath)
+            localCandidate(
+                forOutputPath: outputPath,
+                destinationPath: destinationPath,
+                preferredFilenames: resolvedFilenames
+            )
         }
 
         if !Task.isCancelled, let local, let image = await image(from: local) {
@@ -322,6 +328,7 @@ enum QueueThumbnailProvider {
     static func existingOutputURL(
         forOutputPath outputPath: String,
         destinationPath: String,
+        searchRelocatedOutputs: Bool = true,
         fileManager: FileManager = .default
     ) -> URL? {
         guard !Task.isCancelled else { return nil }
@@ -332,12 +339,28 @@ enum QueueThumbnailProvider {
         var candidates = [original]
         let destination = destinationPath.trimmed
         if !destination.isEmpty, !original.lastPathComponent.isEmpty {
-            let relocated = URL(
+            let destinationURL = URL(
                 fileURLWithPath: (destination as NSString).expandingTildeInPath,
                 isDirectory: true
-            ).appendingPathComponent(original.lastPathComponent)
-            if relocated.standardizedFileURL != original.standardizedFileURL {
-                candidates.append(relocated)
+            )
+
+            func appendCandidate(_ candidate: URL) {
+                let standardized = candidate.standardizedFileURL
+                guard !candidates.contains(where: { $0.standardizedFileURL == standardized }) else {
+                    return
+                }
+                candidates.append(candidate)
+            }
+
+            appendCandidate(destinationURL.appendingPathComponent(original.lastPathComponent))
+
+            let originalParentName = original.deletingLastPathComponent().lastPathComponent
+            if !originalParentName.isEmpty, originalParentName != "/" {
+                appendCandidate(
+                    destinationURL
+                        .appendingPathComponent(originalParentName, isDirectory: true)
+                        .appendingPathComponent(original.lastPathComponent)
+                )
             }
         }
 
@@ -348,7 +371,7 @@ enum QueueThumbnailProvider {
             }
         }
 
-        guard !destination.isEmpty else { return nil }
+        guard searchRelocatedOutputs, !destination.isEmpty else { return nil }
         let destinationURL = URL(
             fileURLWithPath: (destination as NSString).expandingTildeInPath,
             isDirectory: true
@@ -456,7 +479,8 @@ enum QueueThumbnailProvider {
     ) -> URL? {
         var matches: [(priority: Int, url: URL)] = []
         for (name, priority) in priorities {
-            for url in index.urlsByName[name] ?? [] where fileManager.fileExists(atPath: url.path) {
+            for path in index.pathsByName[name] ?? [] where fileManager.fileExists(atPath: path) {
+                let url = URL(fileURLWithPath: path)
                 matches.append((priority, url))
             }
         }
@@ -473,61 +497,50 @@ enum QueueThumbnailProvider {
         fileManager: FileManager,
         forceRefresh: Bool = false
     ) -> RelocationIndexEntry {
+        relocationIndexLock.lock()
+        defer { relocationIndexLock.unlock() }
+
         let cacheKey = resolvedDestination.path as NSString
         let now = Date()
-        if !forceRefresh,
-           let cached = relocationIndexCache.object(forKey: cacheKey),
-           now.timeIntervalSince(cached.createdAt) < 10 {
-            return cached
+        if let cached = relocationIndexCache.object(forKey: cacheKey) {
+            let age = now.timeIntervalSince(cached.createdAt)
+            if (!forceRefresh && age < 10) || (forceRefresh && age < 2) {
+                return cached
+            }
         }
 
-        let rootPrefix = resolvedDestination.path.hasSuffix("/")
-            ? resolvedDestination.path
-            : resolvedDestination.path + "/"
-        var directories = [resolvedDestination]
-        var urlsByName: [String: [URL]] = [:]
+        let rootPath = resolvedDestination.path
+        guard let enumerator = fileManager.enumerator(atPath: rootPath) else {
+            return RelocationIndexEntry(createdAt: now, pathsByName: [:])
+        }
+        var pathsByName: [String: [String]] = [:]
 
-        for _ in 0..<5 where !directories.isEmpty {
+        while let relativePath = enumerator.nextObject() as? String {
             guard !Task.isCancelled else {
-                return RelocationIndexEntry(createdAt: now, urlsByName: [:])
+                return RelocationIndexEntry(createdAt: now, pathsByName: [:])
             }
-            var nextDirectories: [URL] = []
-
-            for directory in directories {
-                guard !Task.isCancelled else {
-                    return RelocationIndexEntry(createdAt: now, urlsByName: [:])
-                }
-                guard let children = try? fileManager.contentsOfDirectory(
-                    at: directory,
-                    includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
-                    options: [.skipsHiddenFiles]
-                ) else {
-                    continue
-                }
-
-                for child in children {
-                    guard !Task.isCancelled else {
-                        return RelocationIndexEntry(createdAt: now, urlsByName: [:])
-                    }
-                    let resolved = child
-                        .resolvingSymlinksInPath()
-                        .standardizedFileURL
-                    guard resolved.path.hasPrefix(rootPrefix) else { continue }
-
-                    urlsByName[normalizedOutputName(child.lastPathComponent), default: []].append(child)
-
-                    let values = try? child.resourceValues(
-                        forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
-                    )
-                    if values?.isDirectory == true, values?.isSymbolicLink != true {
-                        nextDirectories.append(child)
-                    }
-                }
+            let name = (relativePath as NSString).lastPathComponent
+            guard !name.isEmpty, !name.hasPrefix(".") else {
+                enumerator.skipDescendants()
+                continue
             }
-            directories = nextDirectories
+
+            let depth = relativePath.reduce(into: 1) { count, character in
+                if character == "/" { count += 1 }
+            }
+            guard depth <= 5 else {
+                enumerator.skipDescendants()
+                continue
+            }
+            if depth == 5 {
+                enumerator.skipDescendants()
+            }
+
+            let path = (rootPath as NSString).appendingPathComponent(relativePath)
+            pathsByName[normalizedOutputName(name), default: []].append(path)
         }
 
-        let entry = RelocationIndexEntry(createdAt: now, urlsByName: urlsByName)
+        let entry = RelocationIndexEntry(createdAt: Date(), pathsByName: pathsByName)
         relocationIndexCache.setObject(entry, forKey: cacheKey)
         return entry
     }
@@ -539,12 +552,14 @@ enum QueueThumbnailProvider {
     private static func localCandidate(
         forOutputPath outputPath: String,
         destinationPath: String,
+        preferredFilenames: [String] = [],
         fileManager: FileManager = .default
     ) -> LocalCandidate? {
         guard !Task.isCancelled else { return nil }
         guard let output = existingOutputURL(
             forOutputPath: outputPath,
             destinationPath: destinationPath,
+            searchRelocatedOutputs: false,
             fileManager: fileManager
         ) else {
             return nil
@@ -558,33 +573,50 @@ enum QueueThumbnailProvider {
             return localFileCandidate(output)
         }
 
-        guard let enumerator = fileManager.enumerator(
-            at: output,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
-        ) else {
+        let standardizedOutput = output.resolvingSymlinksInPath().standardizedFileURL
+        let outputPrefix = standardizedOutput.path.hasSuffix("/")
+            ? standardizedOutput.path
+            : standardizedOutput.path + "/"
+        for filename in preferredFilenames {
+            guard !Task.isCancelled else { return nil }
+            let relativePath = filename.trimmed
+            guard !relativePath.isEmpty else { continue }
+            let candidate = standardizedOutput
+                .appendingPathComponent(relativePath)
+                .resolvingSymlinksInPath()
+                .standardizedFileURL
+            guard candidate.path.hasPrefix(outputPrefix),
+                  let local = localFileCandidate(candidate) else {
+                continue
+            }
+            return local
+        }
+
+        guard let enumerator = fileManager.enumerator(atPath: output.path) else {
             return nil
         }
 
-        var images: [URL] = []
-        var videos: [URL] = []
-        for case let file as URL in enumerator {
+        while let relativePath = enumerator.nextObject() as? String {
             guard !Task.isCancelled else { return nil }
-            let ext = file.pathExtension.lowercased()
-            if imageExtensions.contains(ext) {
-                images.append(file)
-            } else if MediaFileMetadataReader.supportedThumbnailExtensions.contains(ext) {
-                videos.append(file)
+            let name = (relativePath as NSString).lastPathComponent
+            guard !name.isEmpty, !name.hasPrefix(".") else {
+                enumerator.skipDescendants()
+                continue
             }
-        }
-
-        guard !Task.isCancelled else { return nil }
-        if let image = images.sorted(by: localizedPathOrder).first,
-           let data = try? Data(contentsOf: image, options: [.mappedIfSafe]) {
-            return .imageData(data)
-        }
-        if let video = videos.sorted(by: localizedPathOrder).first {
-            return .video(video)
+            let fileType = enumerator.fileAttributes?[.type] as? FileAttributeType
+            if fileType == .typeSymbolicLink {
+                enumerator.skipDescendants()
+                continue
+            }
+            guard fileType == .typeRegular else {
+                continue
+            }
+            let candidate = URL(
+                fileURLWithPath: (output.path as NSString).appendingPathComponent(relativePath)
+            )
+            if let local = localFileCandidate(candidate) {
+                return local
+            }
         }
         return nil
     }
@@ -690,7 +722,4 @@ enum QueueThumbnailProvider {
         keys.compactMap { metadata[$0]?.trimmed }.first { !$0.isEmpty }
     }
 
-    private static func localizedPathOrder(_ lhs: URL, _ rhs: URL) -> Bool {
-        lhs.path.localizedStandardCompare(rhs.path) == .orderedAscending
-    }
 }

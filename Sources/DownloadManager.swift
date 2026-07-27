@@ -1320,6 +1320,17 @@ private enum ScheduledRetryKind: String {
 }
 
 @MainActor
+final class SettingsWindowPresentationState: ObservableObject {
+    @Published var category: SettingsWindowCategory = .general
+    @Published var filter = ""
+    @Published var archiveFilter = ""
+
+    func prepare(category: SettingsWindowCategory) {
+        self.category = category
+    }
+}
+
+@MainActor
 final class DownloadManager: ObservableObject {
     @Published var interfaceLanguage: AppInterfaceLanguage = .english
     @Published var inputText = ""
@@ -1343,7 +1354,6 @@ final class DownloadManager: ObservableObject {
     @Published var hideArchiveIndicatorWhenFileMissing = true
     @Published private(set) var sourceArchiveModes: [String: SourceArchiveMode] = [:]
     @Published private(set) var sourceArchiveDeleteOriginal: [String: Bool] = [:]
-    @Published var archiveSourceFilter = ""
     @Published var autoRemoveFinishedJobs = false
     @Published var autoRemoveHookCommand = ""
     @Published var autoRemoveHookStatus = "Auto-remove Hook Off"
@@ -1466,8 +1476,7 @@ final class DownloadManager: ObservableObject {
     @Published private(set) var outputPreviewIsLoading = false
     @Published var outputPreviewSelectedFileIndex = 0
     @Published var outputPreviewMode: OutputPreviewMode = .paged
-    @Published var settingsWindowFilter = ""
-    @Published var settingsWindowCategory: SettingsWindowCategory = .general
+    let settingsWindowPresentation = SettingsWindowPresentationState()
     @Published var showingSettingsWindow = false
     @Published var showingQuickAccessCustomization = false
     @Published var showingShortcutSettings = false
@@ -6412,7 +6421,6 @@ final class DownloadManager: ObservableObject {
     }
 
     func openOutputPreview(for job: DownloadJob) {
-        _ = repairedOutputPath(for: job)
         outputPreviewJobID = job.id
         outputPreviewMode = .paged
         showingOutputPreview = true
@@ -6455,7 +6463,6 @@ final class DownloadManager: ObservableObject {
 
         let previousSelection = outputPreviewSelectedFileIndex
         let jobID = job.id
-        let outputPath = job.outputPath
         outputPreviewLoadTask?.cancel()
         outputPreviewIsLoading = true
         if !keepingSelection {
@@ -6464,6 +6471,13 @@ final class DownloadManager: ObservableObject {
         }
 
         outputPreviewLoadTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let outputPath = await self.repairedOutputPath(for: job)
+            guard !Task.isCancelled,
+                  self.showingOutputPreview,
+                  self.outputPreviewJobID == jobID else {
+                return
+            }
             let scanTask = Task.detached(priority: .userInitiated) {
                 OutputPreviewFileScanner.files(at: outputPath)
             }
@@ -6474,7 +6488,6 @@ final class DownloadManager: ObservableObject {
             }
 
             guard !Task.isCancelled,
-                  let self,
                   self.showingOutputPreview,
                   self.outputPreviewJobID == jobID else {
                 return
@@ -6584,7 +6597,8 @@ final class DownloadManager: ObservableObject {
     func canOpenOutputPreview(for job: DownloadJob) -> Bool {
         guard let output = QueueThumbnailProvider.existingOutputURL(
             forOutputPath: job.outputPath,
-            destinationPath: destinationPath
+            destinationPath: destinationPath,
+            searchRelocatedOutputs: false
         ) else {
             return false
         }
@@ -10684,7 +10698,7 @@ final class DownloadManager: ObservableObject {
     }
 
     func openSettingsWindow(category: SettingsWindowCategory = .general) {
-        settingsWindowCategory = category
+        settingsWindowPresentation.prepare(category: category)
         showingSettingsWindow = true
     }
 
@@ -14910,7 +14924,7 @@ final class DownloadManager: ObservableObject {
 
         switch reaction {
         case .cookies:
-            settingsWindowFilter = ""
+            settingsWindowPresentation.filter = ""
             openSettingsWindow(category: .network)
             addSummary = "Update cookies in Network settings"
         case .login:
@@ -15706,55 +15720,77 @@ final class DownloadManager: ObservableObject {
     }
 
     func revealOutput(for job: DownloadJob) {
-        let outputPath = repairedOutputPath(for: job)
-        guard let url = Self.revealURL(forOutputPath: outputPath) else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let outputPath = await self.repairedOutputPath(for: job)
+            guard !Task.isCancelled,
+                  let output = QueueThumbnailProvider.existingOutputURL(
+                    forOutputPath: outputPath,
+                    destinationPath: self.destinationPath,
+                    searchRelocatedOutputs: false
+                  ),
+                  let url = Self.revealURL(forOutputPath: output.path) else {
+                return
+            }
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
     }
 
-    func outputRevealURLs(startingAt job: DownloadJob) -> [URL] {
+    private func outputRevealURLs(startingAt job: DownloadJob) async -> [URL] {
         var seenPaths = Set<String>()
-        return contextualJobs(startingAt: job).compactMap { selected -> URL? in
-            let outputPath = repairedOutputPath(for: selected)
+        var urls: [URL] = []
+        for selected in contextualJobs(startingAt: job) {
+            guard !Task.isCancelled else { break }
+            let outputPath = await repairedOutputPath(for: selected)
             guard let existing = QueueThumbnailProvider.existingOutputURL(
                 forOutputPath: outputPath,
-                destinationPath: destinationPath
+                destinationPath: destinationPath,
+                searchRelocatedOutputs: false
             ), let url = Self.revealURL(forOutputPath: existing.path) else {
-                return nil
+                continue
             }
             let key = url.resolvingSymlinksInPath().standardizedFileURL.path
-            guard seenPaths.insert(key).inserted else { return nil }
-            return url
+            guard seenPaths.insert(key).inserted else { continue }
+            urls.append(url)
         }
+        return urls
     }
 
     func revealOutputs(startingAt job: DownloadJob) {
-        let urls = outputRevealURLs(startingAt: job)
-        guard !urls.isEmpty else {
-            addSummary = "No output folder found"
-            return
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let urls = await self.outputRevealURLs(startingAt: job)
+            guard !Task.isCancelled else { return }
+            guard !urls.isEmpty else {
+                self.addSummary = "No output folder found"
+                return
+            }
+            NSWorkspace.shared.activateFileViewerSelecting(urls)
+            self.addSummary = urls.count == 1 ? "Output revealed" : "Outputs revealed for \(urls.count) jobs"
         }
-        NSWorkspace.shared.activateFileViewerSelecting(urls)
-        addSummary = urls.count == 1 ? "Output revealed" : "Outputs revealed for \(urls.count) jobs"
     }
 
     func canRevealOutputs(startingAt job: DownloadJob) -> Bool {
         contextualJobs(startingAt: job).contains { selected in
             let output = QueueThumbnailProvider.existingOutputURL(
                 forOutputPath: selected.outputPath,
-                destinationPath: destinationPath
+                destinationPath: destinationPath,
+                searchRelocatedOutputs: false
             )
             return output.flatMap { Self.revealURL(forOutputPath: $0.path) } != nil
         }
     }
 
     func openFirstOutputFile(for job: DownloadJob) {
-        let outputPath = repairedOutputPath(for: job)
-        let request = Self.firstOutputOpenRequest(for: job, outputPath: outputPath)
         Task { @MainActor [weak self] in
+            guard let self else { return }
+            let outputPath = await self.repairedOutputPath(for: job)
+            guard !Task.isCancelled else { return }
+            let request = Self.firstOutputOpenRequest(for: job, outputPath: outputPath)
             let url = await Task.detached(priority: .userInitiated) {
                 Self.preferredFirstOutputOpenURL(for: request)
             }.value
-            guard let self else { return }
+            guard !Task.isCancelled else { return }
             guard let url else {
                 self.addSummary = "No output file found"
                 return
@@ -15905,19 +15941,23 @@ final class DownloadManager: ObservableObject {
     }
 
     func openFirstOutputFiles(startingAt job: DownloadJob) {
-        let requests = contextualJobs(startingAt: job).map { selected in
-            let outputPath = repairedOutputPath(for: selected)
-            return Self.firstOutputOpenRequest(for: selected, outputPath: outputPath)
-        }
-        guard !requests.isEmpty else {
+        let selectedJobs = contextualJobs(startingAt: job)
+        guard !selectedJobs.isEmpty else {
             addSummary = "No output file found"
             return
         }
         Task { @MainActor [weak self] in
+            guard let self else { return }
+            var requests: [FirstOutputOpenRequest] = []
+            for selected in selectedJobs {
+                guard !Task.isCancelled else { return }
+                let outputPath = await self.repairedOutputPath(for: selected)
+                requests.append(Self.firstOutputOpenRequest(for: selected, outputPath: outputPath))
+            }
             let urls = await Task.detached(priority: .userInitiated) {
                 requests.compactMap { Self.preferredFirstOutputOpenURL(for: $0) }
             }.value
-            guard let self else { return }
+            guard !Task.isCancelled else { return }
             guard !urls.isEmpty else {
                 self.addSummary = "No output file found"
                 return
@@ -15947,11 +15987,12 @@ final class DownloadManager: ObservableObject {
     func canOpenFirstOutputFile(for job: DownloadJob) -> Bool {
         guard let output = QueueThumbnailProvider.existingOutputURL(
             forOutputPath: job.outputPath,
-            destinationPath: destinationPath
+            destinationPath: destinationPath,
+            searchRelocatedOutputs: false
         ) else {
             return false
         }
-        return Self.firstOutputOpenURL(forOutputPath: output.path) != nil
+        return OutputPreviewFileScanner.outputPathExists(output.path)
     }
 
     func canOpenFirstOutputFiles(startingAt job: DownloadJob) -> Bool {
@@ -15970,11 +16011,21 @@ final class DownloadManager: ObservableObject {
         }
     }
 
-    private func repairedOutputPath(for job: DownloadJob) -> String {
-        guard let output = QueueThumbnailProvider.existingOutputURL(
-            forOutputPath: job.outputPath,
-            destinationPath: destinationPath
-        ) else {
+    private func repairedOutputPath(for job: DownloadJob) async -> String {
+        let originalOutputPath = job.outputPath
+        let currentDestinationPath = destinationPath
+        let searchTask = Task.detached(priority: .userInitiated) {
+            QueueThumbnailProvider.existingOutputURL(
+                forOutputPath: originalOutputPath,
+                destinationPath: currentDestinationPath
+            )
+        }
+        let output = await withTaskCancellationHandler {
+            await searchTask.value
+        } onCancel: {
+            searchTask.cancel()
+        }
+        guard !Task.isCancelled, let output else {
             return job.outputPath
         }
         guard output.path != job.outputPath,
@@ -16001,7 +16052,23 @@ final class DownloadManager: ObservableObject {
     }
 
     func canCreatePDF(for job: DownloadJob) -> Bool {
-        Self.pdfImageSources(fromOutputPath: job.outputPath).isEmpty == false
+        guard let output = QueueThumbnailProvider.existingOutputURL(
+            forOutputPath: job.outputPath,
+            destinationPath: destinationPath,
+            searchRelocatedOutputs: false
+        ) else {
+            return false
+        }
+        var isDirectory = ObjCBool(false)
+        guard FileManager.default.fileExists(atPath: output.path, isDirectory: &isDirectory) else {
+            return false
+        }
+        if !isDirectory.boolValue {
+            return Self.isPDFImageFile(output) || Self.isArchiveOutputFile(output)
+        }
+        return job.resolvedFilenames.isEmpty || job.resolvedFilenames.contains {
+            Self.imageExtensions.contains(($0 as NSString).pathExtension.lowercased())
+        }
     }
 
     func openOutputBrowserView(for job: DownloadJob) {
@@ -16049,7 +16116,14 @@ final class DownloadManager: ObservableObject {
     }
 
     func canOpenOutputBrowserView(for job: DownloadJob) -> Bool {
-        !apiOutputFiles(for: job).isEmpty
+        guard let output = QueueThumbnailProvider.existingOutputURL(
+            forOutputPath: job.outputPath,
+            destinationPath: destinationPath,
+            searchRelocatedOutputs: false
+        ) else {
+            return false
+        }
+        return OutputPreviewFileScanner.outputPathExists(output.path)
     }
 
     func canOpenOutputBrowserView(for selectedJobs: [DownloadJob]) -> Bool {
@@ -16060,21 +16134,36 @@ final class DownloadManager: ObservableObject {
         canOpenOutputBrowserView(for: contextualJobs(startingAt: job))
     }
 
-    private func resolvedOutputPath(for job: DownloadJob) -> String {
+    private func resolvedOutputPath(
+        for job: DownloadJob,
+        searchRelocatedOutputs: Bool = true
+    ) -> String {
         QueueThumbnailProvider.existingOutputURL(
             forOutputPath: job.outputPath,
-            destinationPath: destinationPath
+            destinationPath: destinationPath,
+            searchRelocatedOutputs: searchRelocatedOutputs
         )?.path ?? job.outputPath
     }
 
-    private func resolvedOutputDeletionCandidates(for job: DownloadJob) -> [OutputDeletionCandidate] {
+    private func resolvedOutputDeletionCandidates(
+        for job: DownloadJob,
+        searchRelocatedOutputs: Bool = true
+    ) -> [OutputDeletionCandidate] {
         var resolvedJob = job
-        resolvedJob.outputPath = resolvedOutputPath(for: job)
+        resolvedJob.outputPath = resolvedOutputPath(
+            for: job,
+            searchRelocatedOutputs: searchRelocatedOutputs
+        )
         return Self.outputDeletionCandidates(for: resolvedJob)
     }
 
     func canDeleteOutput(for job: DownloadJob) -> Bool {
-        !isActive(job.status) && !job.isLocked && !resolvedOutputDeletionCandidates(for: job).isEmpty
+        !isActive(job.status) &&
+            !job.isLocked &&
+            !resolvedOutputDeletionCandidates(
+                for: job,
+                searchRelocatedOutputs: false
+            ).isEmpty
     }
 
     func canDeleteOutputsAndJobs(startingAt job: DownloadJob) -> Bool {
@@ -16088,7 +16177,10 @@ final class DownloadManager: ObservableObject {
         !isActive(job.status) &&
             !job.isLocked &&
             !imageConversionJobIDs.contains(job.id) &&
-            !resolvedOutputDeletionCandidates(for: job).isEmpty
+            !resolvedOutputDeletionCandidates(
+                for: job,
+                searchRelocatedOutputs: false
+            ).isEmpty
     }
 
     func canMoveOutputs(for selectedJobs: [DownloadJob]) -> Bool {
@@ -16811,39 +16903,43 @@ final class DownloadManager: ObservableObject {
         fileManager: FileManager,
         matchingExtensions: Set<String>? = nil
     ) -> URL? {
-        guard let enumerator = fileManager.enumerator(
-            at: folder,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) else {
+        let folderPath = folder.resolvingSymlinksInPath().standardizedFileURL.path
+        guard let enumerator = fileManager.enumerator(atPath: folderPath) else {
             return nil
         }
 
-        let folderResolved = folder.resolvingSymlinksInPath()
-        let folderPrefix = folderResolved.path.hasSuffix("/") ? folderResolved.path : folderResolved.path + "/"
-        var files: [(url: URL, relativePath: String)] = []
-
-        for case let file as URL in enumerator {
-            let resolved = file.resolvingSymlinksInPath()
-            var isDirectory: ObjCBool = false
-            guard fileManager.fileExists(atPath: resolved.path, isDirectory: &isDirectory),
-                  !isDirectory.boolValue,
-                  fileManager.isReadableFile(atPath: resolved.path),
-                  resolved.path.hasPrefix(folderPrefix) else {
+        var firstRelativePath: String?
+        while let relativePath = enumerator.nextObject() as? String {
+            let name = (relativePath as NSString).lastPathComponent
+            guard !name.isEmpty, !name.hasPrefix(".") else {
+                enumerator.skipDescendants()
                 continue
             }
+            let fileType = enumerator.fileAttributes?[.type] as? FileAttributeType
+            if fileType == .typeSymbolicLink {
+                enumerator.skipDescendants()
+                continue
+            }
+            guard fileType == .typeRegular else { continue }
             if let matchingExtensions,
-               !matchingExtensions.contains(resolved.pathExtension.lowercased()) {
+               !matchingExtensions.contains((relativePath as NSString).pathExtension.lowercased()) {
                 continue
             }
-            let relativePath = String(resolved.path.dropFirst(folderPrefix.count))
-            files.append((resolved, relativePath))
+            let path = (folderPath as NSString).appendingPathComponent(relativePath)
+            guard fileManager.isReadableFile(atPath: path) else { continue }
+            if let current = firstRelativePath {
+                if relativePath.localizedStandardCompare(current) == .orderedAscending {
+                    firstRelativePath = relativePath
+                }
+            } else {
+                firstRelativePath = relativePath
+            }
         }
 
-        return files
-            .sorted { $0.relativePath.localizedStandardCompare($1.relativePath) == .orderedAscending }
-            .first?
-            .url
+        guard let firstRelativePath else { return nil }
+        return URL(
+            fileURLWithPath: (folderPath as NSString).appendingPathComponent(firstRelativePath)
+        )
     }
 
     nonisolated static func outputDeletionCandidates(
@@ -26311,7 +26407,8 @@ final class DownloadManager: ObservableObject {
                         let candidate = candidates[candidateIndex]
                         guard let output = QueueThumbnailProvider.existingOutputURL(
                             forOutputPath: candidate.originalOutputPath,
-                            destinationPath: destinationPath
+                            destinationPath: destinationPath,
+                            searchRelocatedOutputs: false
                         ) else {
                             continue
                         }
