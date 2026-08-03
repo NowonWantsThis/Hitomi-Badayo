@@ -182,7 +182,8 @@ private final class QuickAccessDragState: ObservableObject {
 }
 
 struct QuickAccessCustomizationView: View {
-    @ObservedObject var manager: DownloadManager
+    let manager: DownloadManager
+    @EnvironmentObject private var settingsStore: SettingsStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var dragState = QuickAccessDragState()
 
@@ -193,7 +194,7 @@ struct QuickAccessCustomizationView: View {
                     .foregroundStyle(Color.accentColor)
                 Text(AppLocalization.text(
                     "Customize Quick Access Toolbar",
-                    language: manager.interfaceLanguage
+                    language: settingsStore.interfaceLanguage
                 ))
                     .font(.headline)
                 Spacer()
@@ -204,7 +205,7 @@ struct QuickAccessCustomizationView: View {
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .help(AppLocalization.text("Close", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Close", language: settingsStore.interfaceLanguage))
                 .accessibilityIdentifier("quick-access.close")
             }
             .padding(.horizontal, 16)
@@ -215,14 +216,14 @@ struct QuickAccessCustomizationView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(AppLocalization.text(
                     "Drag and drop to reorder:",
-                    language: manager.interfaceLanguage
+                    language: settingsStore.interfaceLanguage
                 ))
                     .font(.title3)
                     .fontWeight(.medium)
 
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(manager.quickAccessItems) { item in
+                        ForEach(settingsStore.quickAccessItems) { item in
                             quickAccessRow(item)
                         }
                     }
@@ -242,7 +243,7 @@ struct QuickAccessCustomizationView: View {
                 Button {
                     manager.toggleAllQuickAccessCommands()
                 } label: {
-                    Image(systemName: manager.areAllQuickAccessCommandsEnabled
+                    Image(systemName: settingsStore.areAllQuickAccessCommandsEnabled
                         ? "checkmark.square.fill"
                         : "checkmark.square")
                         .font(.system(size: 20))
@@ -250,15 +251,17 @@ struct QuickAccessCustomizationView: View {
                 }
                 .buttonStyle(.plain)
                 .help(AppLocalization.text(
-                    manager.areAllQuickAccessCommandsEnabled ? "Clear Selection" : "Select All",
-                    language: manager.interfaceLanguage
+                    settingsStore.areAllQuickAccessCommandsEnabled
+                        ? "Clear Selection"
+                        : "Select All",
+                    language: settingsStore.interfaceLanguage
                 ))
                 .accessibilityIdentifier("quick-access.toggle-all")
 
                 Button {
                     dismiss()
                 } label: {
-                    Text(AppLocalization.text("OK", language: manager.interfaceLanguage))
+                    Text(AppLocalization.text("OK", language: settingsStore.interfaceLanguage))
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
@@ -274,7 +277,7 @@ struct QuickAccessCustomizationView: View {
     }
 
     private func quickAccessRow(_ item: QuickAccessItem) -> some View {
-        let commandLabel = item.command.localizedLabel(language: manager.interfaceLanguage)
+        let commandLabel = item.command.localizedLabel(language: settingsStore.interfaceLanguage)
         return HStack(spacing: 12) {
             Button {
                 manager.setQuickAccessCommand(item.command, enabled: !item.isEnabled)
@@ -286,7 +289,7 @@ struct QuickAccessCustomizationView: View {
             .accessibilityLabel(commandLabel)
             .accessibilityValue(AppLocalization.text(
                 item.isEnabled ? "On" : "Off",
-                language: manager.interfaceLanguage
+                language: settingsStore.interfaceLanguage
             ))
             .accessibilityIdentifier("quick-access.toggle.\(item.command.rawValue)")
 

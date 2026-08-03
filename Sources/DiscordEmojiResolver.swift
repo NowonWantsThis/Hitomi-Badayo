@@ -12,6 +12,12 @@ struct DiscordEmojiRequest: Equatable {
     var guildID: String
 }
 
+protocol DiscordEmojiResolving: AnyObject {
+    func resolve(
+        _ raw: String
+    ) async throws -> ResolvedDownload
+}
+
 final class DiscordEmojiResolver {
     func canResolve(_ raw: String) -> Bool {
         Self.request(from: raw) != nil
@@ -277,6 +283,10 @@ final class DiscordEmojiResolver {
         value.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil
     }
 }
+
+extension DiscordEmojiResolver:
+    DiscordEmojiResolving
+{}
 
 private struct DiscordHTTPResponse {
     var statusCode: Int

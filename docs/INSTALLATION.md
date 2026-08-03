@@ -6,7 +6,7 @@
 - macOS 14 Sonoma or later
 - An internet connection for online sources and optional helper-tool setup
 
-The beta release does not support Intel Macs.
+The 0.5.0 release does not support Intel Macs.
 
 ## Install
 

@@ -8,7 +8,11 @@ struct Aria2FileEntry: Equatable {
     var selected: Bool?
 }
 
-struct Aria2PeerEntry: Equatable, Identifiable {
+struct Aria2PeerEntry:
+    Equatable,
+    Identifiable,
+    Sendable
+{
     var peerID: String
     var ip: String
     var port: String
@@ -294,7 +298,7 @@ struct Aria2Options: Equatable {
     }
 }
 
-struct Aria2RPCSession: Equatable {
+struct Aria2RPCSession: Equatable, Sendable {
     let port: UInt16
     let secret: String
 

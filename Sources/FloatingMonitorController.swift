@@ -20,14 +20,33 @@ struct FloatingMonitorPlacement {
 @MainActor
 final class FloatingMonitorController: NSObject, NSWindowDelegate {
     private let manager: DownloadManager
+    private let presentation: AppPresentationStore
+    private let settingsStore: SettingsStore
+    private let queueStore: QueueStore
+    private let navigationCommands: AppNavigationCommands
+    private let queueControlCommands: QueueControlCommands
     private var panel: NSPanel?
     private var cancellables: Set<AnyCancellable> = []
 
-    init(manager: DownloadManager) {
+    init(
+        manager: DownloadManager,
+        presentation: AppPresentationStore,
+        settingsStore: SettingsStore,
+        queueStore: QueueStore,
+        appCommandService: AppCommandService,
+        queueControlCommands: QueueControlCommands
+    ) {
         self.manager = manager
+        self.presentation = presentation
+        self.settingsStore = settingsStore
+        self.queueStore = queueStore
+        navigationCommands = AppNavigationCommands(
+            service: appCommandService
+        )
+        self.queueControlCommands = queueControlCommands
         super.init()
 
-        manager.$showingFloatingMonitor
+        presentation.$showingFloatingMonitor
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] isVisible in
@@ -35,15 +54,17 @@ final class FloatingMonitorController: NSObject, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
-        manager.$floatingMonitorOpacity
+        settingsStore.$floatingMonitorOpacity
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] opacity in
-                self?.panel?.alphaValue = CGFloat(DownloadManager.normalizedFloatingMonitorOpacity(opacity))
+                self?.panel?.alphaValue = CGFloat(
+                    SettingsStore.normalizedFloatingMonitorOpacity(opacity)
+                )
             }
             .store(in: &cancellables)
 
-        manager.$interfaceLanguage
+        settingsStore.$interfaceLanguage
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] language in
@@ -54,7 +75,7 @@ final class FloatingMonitorController: NSObject, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
-        if manager.showingFloatingMonitor {
+        if presentation.showingFloatingMonitor {
             setVisible(true)
         }
     }
@@ -70,7 +91,7 @@ final class FloatingMonitorController: NSObject, NSWindowDelegate {
     private func show() {
         let panel = panel ?? makePanel()
         self.panel = panel
-        panel.alphaValue = CGFloat(manager.floatingMonitorOpacity)
+        panel.alphaValue = CGFloat(settingsStore.floatingMonitorOpacity)
         panel.orderFrontRegardless()
     }
 
@@ -84,7 +105,7 @@ final class FloatingMonitorController: NSObject, NSWindowDelegate {
         )
         panel.title = AppLocalization.text(
             "Hitomi Badayo Floating Monitor",
-            language: manager.interfaceLanguage
+            language: settingsStore.interfaceLanguage
         )
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
@@ -96,15 +117,31 @@ final class FloatingMonitorController: NSObject, NSWindowDelegate {
         panel.delegate = self
         panel.setFrameAutosaveName("HitomiBadayoFloatingMonitor")
         panel.contentView = NSHostingView(
-            rootView: FloatingMonitorView(manager: manager)
-                .environment(\.locale, manager.interfaceLanguage.locale)
+            rootView: FloatingMonitorView(
+                manager: manager,
+                settingsStore: settingsStore,
+                queueStore: queueStore
+            )
+                .environment(
+                    \.appNavigationCommands,
+                    navigationCommands
+                )
+                .environment(
+                    \.queueControlCommands,
+                    queueControlCommands
+                )
+                .environment(\.locale, settingsStore.interfaceLanguage.locale)
         )
         return panel
     }
 }
 
 struct FloatingMonitorView: View {
-    @ObservedObject var manager: DownloadManager
+    let manager: DownloadManager
+    @Environment(\.appNavigationCommands) private var navigation
+    @Environment(\.queueControlCommands) private var queueCommands
+    @ObservedObject var settingsStore: SettingsStore
+    @ObservedObject var queueStore: QueueStore
 
     private var snapshot: FloatingMonitorSnapshot {
         manager.floatingMonitorSnapshot()
@@ -127,7 +164,7 @@ struct FloatingMonitorView: View {
                 Label(
                     AppLocalization.format(
                         "%@ active",
-                        language: manager.interfaceLanguage,
+                        language: settingsStore.interfaceLanguage,
                         String(snapshot.activeJobs)
                     ),
                     systemImage: "bolt"
@@ -135,7 +172,7 @@ struct FloatingMonitorView: View {
                 Label(
                     AppLocalization.format(
                         "%@ failed",
-                        language: manager.interfaceLanguage,
+                        language: settingsStore.interfaceLanguage,
                         String(snapshot.failedJobs)
                     ),
                     systemImage: "exclamationmark.triangle"
@@ -160,8 +197,8 @@ struct FloatingMonitorView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: manager.isRunning ? "arrow.down.circle.fill" : "arrow.down.circle")
-                .foregroundStyle(manager.isRunning ? Color.accentColor : Color.secondary)
+            Image(systemName: queueStore.isRunning ? "arrow.down.circle.fill" : "arrow.down.circle")
+                .foregroundStyle(queueStore.isRunning ? Color.accentColor : Color.secondary)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Hitomi Badayo")
@@ -179,46 +216,46 @@ struct FloatingMonitorView: View {
                 .foregroundStyle(.secondary)
 
             Button {
-                manager.closeFloatingMonitor()
+                navigation.setFloatingMonitorVisible(false)
             } label: {
                 Image(systemName: "xmark.circle.fill")
             }
             .buttonStyle(.borderless)
-            .help(AppLocalization.text("Hide floating monitor", language: manager.interfaceLanguage))
+            .help(AppLocalization.text("Hide floating monitor", language: settingsStore.interfaceLanguage))
         }
     }
 
     private var controls: some View {
         HStack(spacing: 8) {
             Button {
-                manager.startQueue()
+                queueCommands.start()
             } label: {
                 Image(systemName: "play.fill")
             }
-            .disabled(manager.isRunning)
-            .help(AppLocalization.text("Start queue", language: manager.interfaceLanguage))
+            .disabled(queueStore.isRunning)
+            .help(AppLocalization.text("Start queue", language: settingsStore.interfaceLanguage))
 
             Button {
-                manager.cancelQueue()
+                queueCommands.cancel()
             } label: {
                 Image(systemName: "stop.fill")
             }
-            .disabled(!manager.isRunning)
-            .help(AppLocalization.text("Cancel queue", language: manager.interfaceLanguage))
+            .disabled(!queueStore.isRunning)
+            .help(AppLocalization.text("Cancel queue", language: settingsStore.interfaceLanguage))
 
             Button {
-                manager.openProgressWindow()
+                navigation.openProgress()
             } label: {
                 Image(systemName: "gauge")
             }
-            .help(AppLocalization.text("Open progress window", language: manager.interfaceLanguage))
+            .help(AppLocalization.text("Open progress window", language: settingsStore.interfaceLanguage))
 
             Spacer(minLength: 0)
 
             Text(FloatingMonitorFormatter.speedText(snapshot.uploadSpeedBytesPerSecond))
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .help(AppLocalization.text("Upload speed", language: manager.interfaceLanguage))
+                .help(AppLocalization.text("Upload speed", language: settingsStore.interfaceLanguage))
         }
     }
 }

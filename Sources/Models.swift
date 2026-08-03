@@ -591,30 +591,6 @@ struct AppAboutInfo: Codable, Equatable {
     }
 }
 
-enum OutputPreviewMode: String, CaseIterable, Codable, Identifiable {
-    case paged
-    case scroll
-    case files
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .paged: return AppLocalization.text("Paged")
-        case .scroll: return AppLocalization.text("Scroll")
-        case .files: return AppLocalization.text("Files")
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .paged: return "rectangle.portrait"
-        case .scroll: return "rectangle.stack"
-        case .files: return "list.bullet.rectangle"
-        }
-    }
-}
-
 enum OutputPreviewMediaType: String, Codable, Sendable {
     case image
     case video

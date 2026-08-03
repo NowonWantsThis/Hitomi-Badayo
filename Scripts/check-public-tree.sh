@@ -18,7 +18,7 @@ fi
 generated_entries="$(find "${ROOT}" -path "${ROOT}/.git" -prune -o \
     \( -name .DS_Store -o -name '._*' -o -name __pycache__ -o -name '*.pyc' \
        -o -name '*.app' -o -name '*.dmg' -o -name '*.zip' \
-       -o -name '.build' -o -name 'Build' -o -name 'Build-*' \) \
+       -o -name '.build*' -o -name 'Build' -o -name 'Build-*' \) \
     -print 2>/dev/null)"
 if [[ -n "${generated_entries}" ]]; then
     fail "generated or packaged files are present:\n${generated_entries}"
