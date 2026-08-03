@@ -125,19 +125,18 @@ final class FFmpegBridge {
             throw NativeDownloadError.unsupported("FFmpeg is not installed. Open Settings > External Tools to install it or choose an executable.")
         }
 
-        let logURL = output.deletingLastPathComponent()
-            .appendingPathComponent(".\(output.deletingPathExtension().lastPathComponent)-ffmpeg.log")
-        let arguments = [
-            "-y",
-            "-i", video.path,
-            "-i", audio.path
-        ] + options.ffmpegArguments + [
-            "-movflags", "+faststart",
-            output.path
-        ]
-
-        try await run(executable: executable, arguments: arguments, logURL: logURL)
-        try? FileManager.default.removeItem(at: logURL)
+        let command = FFmpegCommandBuilder.mux(
+            video: video,
+            audio: audio,
+            output: output,
+            options: options
+        )
+        try await run(
+            executable: executable,
+            arguments: command.arguments,
+            logURL: command.logURL
+        )
+        try? FileManager.default.removeItem(at: command.logURL)
     }
 
     func remux(input: URL, output: URL, options: FFmpegTranscodeOptions = .defaults) async throws {
@@ -145,18 +144,17 @@ final class FFmpegBridge {
             throw NativeDownloadError.unsupported("FFmpeg is not installed. Open Settings > External Tools to install it or choose an executable.")
         }
 
-        let logURL = output.deletingLastPathComponent()
-            .appendingPathComponent(".\(output.deletingPathExtension().lastPathComponent)-ffmpeg-remux.log")
-        let arguments = [
-            "-y",
-            "-i", input.path
-        ] + options.ffmpegArguments + [
-            "-movflags", "+faststart",
-            output.path
-        ]
-
-        try await run(executable: executable, arguments: arguments, logURL: logURL)
-        try? FileManager.default.removeItem(at: logURL)
+        let command = FFmpegCommandBuilder.remux(
+            input: input,
+            output: output,
+            options: options
+        )
+        try await run(
+            executable: executable,
+            arguments: command.arguments,
+            logURL: command.logURL
+        )
+        try? FileManager.default.removeItem(at: command.logURL)
     }
 
     func convertPixivUgoira(
@@ -258,38 +256,24 @@ final class FFmpegBridge {
             throw NativeDownloadError.unsupported("FFmpeg is not installed. Open Settings > External Tools to install it or choose an executable.")
         }
 
-        let logURL = output.deletingLastPathComponent()
-            .appendingPathComponent(".\(output.deletingPathExtension().lastPathComponent)-ffmpeg-live.log")
         if FileManager.default.fileExists(atPath: output.path) {
             try FileManager.default.removeItem(at: output)
         }
 
-        var arguments = [
-            "-hide_banner",
-            "-nostdin",
-            "-loglevel", "warning",
-            "-y"
-        ]
-        arguments += Self.liveInputArguments(headers: headers, inputURL: videoPlaylist) + ["-i", videoPlaylist.absoluteString]
-        if let audioPlaylist {
-            arguments += Self.liveInputArguments(headers: headers, inputURL: audioPlaylist) + ["-i", audioPlaylist.absoluteString]
-            arguments += ["-map", "0:v:0", "-map", "1:a:0"]
-        } else {
-            arguments += ["-map", "0:v:0", "-map", "0:a:0?"]
-        }
-        arguments += options.ffmpegArguments + [
-            "-avoid_negative_ts", "make_zero",
-            "-movflags", "+faststart",
-            output.path
-        ]
-
+        let command = FFmpegCommandBuilder.liveRecording(
+            videoPlaylist: videoPlaylist,
+            audioPlaylist: audioPlaylist,
+            output: output,
+            headers: headers,
+            options: options
+        )
         try await run(
             executable: executable,
-            arguments: arguments,
-            logURL: logURL,
+            arguments: command.arguments,
+            logURL: command.logURL,
             processControl: processControl
         )
-        try? FileManager.default.removeItem(at: logURL)
+        try? FileManager.default.removeItem(at: command.logURL)
     }
 
     private func executableURL() -> URL? {
@@ -325,37 +309,6 @@ final class FFmpegBridge {
             await Self.executionGate.signal()
             throw error
         }
-    }
-
-    private static func liveInputArguments(headers: [String: String], inputURL: URL) -> [String] {
-        var arguments = ["-thread_queue_size", "4096"]
-        let scheme = inputURL.scheme?.lowercased()
-        guard scheme == "http" || scheme == "https" else { return arguments }
-        arguments += [
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "5"
-        ]
-        let headerBlock = headers
-            .compactMap { name, value -> (String, String)? in
-                let cleanName = name.trimmed
-                let cleanValue = value.trimmed
-                guard !cleanName.isEmpty,
-                      cleanName.range(of: #"^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"#, options: .regularExpression) != nil,
-                      !cleanValue.isEmpty,
-                      !cleanValue.contains("\r"),
-                      !cleanValue.contains("\n") else {
-                    return nil
-                }
-                return (cleanName, cleanValue)
-            }
-            .sorted { $0.0.localizedCaseInsensitiveCompare($1.0) == .orderedAscending }
-            .map { "\($0.0): \($0.1)\r\n" }
-            .joined()
-        if !headerBlock.isEmpty {
-            arguments += ["-headers", headerBlock]
-        }
-        return arguments
     }
 
     private static func tail(_ text: String) -> String {

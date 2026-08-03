@@ -33,16 +33,16 @@ struct DockTileSnapshot: Equatable {
 
 @MainActor
 final class DockTileController {
-    private let manager: DownloadManager
+    private let queueStore: QueueStore
     private var cancellables: Set<AnyCancellable> = []
     private let baseIcon: NSImage
 
-    init(manager: DownloadManager) {
-        self.manager = manager
+    init(queueStore: QueueStore) {
+        self.queueStore = queueStore
         self.baseIcon = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
 
-        manager.$jobs
-            .combineLatest(manager.$isRunning)
+        queueStore.$jobs
+            .combineLatest(queueStore.$isRunning)
             .receive(on: RunLoop.main)
             .sink { [weak self] _, _ in
                 self?.refresh()
@@ -53,7 +53,10 @@ final class DockTileController {
     }
 
     func refresh() {
-        let snapshot = Self.snapshot(jobs: manager.jobs, isRunning: manager.isRunning)
+        let snapshot = Self.snapshot(
+            jobs: queueStore.jobs,
+            isRunning: queueStore.isRunning
+        )
         let dockTile = NSApp.dockTile
         dockTile.badgeLabel = snapshot.badgeLabel
 
@@ -69,27 +72,20 @@ final class DockTileController {
     }
 
     nonisolated static func snapshot(jobs: [DownloadJob], isRunning: Bool) -> DockTileSnapshot {
-        let activeCount = jobs.filter { $0.status == .resolving || $0.status == .downloading }.count
         let queuedCount = jobs.filter { $0.status == .queued }.count
         let finishedCount = jobs.filter { $0.status == .finished }.count
         let failedCount = jobs.filter { $0.status == .failed }.count
-        let units = jobs.reduce((completed: 0, total: 0)) { partial, job in
-            let units = DownloadManager.progressWindowUnits(for: job)
-            return (partial.completed + units.completed, partial.total + units.total)
-        }
-        let fraction = units.total > 0
-            ? min(1, max(0, Double(units.completed) / Double(units.total)))
-            : 0
+        let progress = QueueProgressPresentationService.snapshot(jobs: jobs)
         return DockTileSnapshot(
             isRunning: isRunning,
-            activeCount: activeCount,
+            activeCount: progress.activeJobs.count,
             queuedCount: queuedCount,
             finishedCount: finishedCount,
             failedCount: failedCount,
             totalJobs: jobs.count,
-            completedUnits: units.completed,
-            totalUnits: units.total,
-            fraction: fraction
+            completedUnits: progress.completedUnits,
+            totalUnits: progress.totalUnits,
+            fraction: progress.fraction
         )
     }
 }

@@ -421,9 +421,8 @@ final class LoginBrowserWindowController: NSObject, NSWindowDelegate, WKNavigati
     }
 
     nonisolated static func isLikelySignedInPixivSessionValue(_ value: String) -> Bool {
-        let components = value.trimmed.split(separator: "_", maxSplits: 1, omittingEmptySubsequences: true)
-        guard components.count == 2, !components[1].isEmpty else { return false }
-        return components[0].allSatisfy(\.isNumber)
+        SourceAuthenticationVerificationService
+            .isLikelySignedInPixivSessionValue(value)
     }
 
     nonisolated static func isSignedInChzzkSessionCookie(_ cookie: HTTPCookie) -> Bool {

@@ -101,8 +101,28 @@ final class StableApplicationMainMenu: NSMenu {
     }
 }
 
-private final class LocalizedEditMenuActionForwarder: NSObject, NSMenuItemValidation {
+@MainActor
+private final class LocalizedEditMenuActionForwarder: NSObject, NSMenuItemValidation, NSMenuDelegate {
     static let shared = LocalizedEditMenuActionForwarder()
+
+    weak var manager: DownloadManager?
+
+    var usesQueueCommands: Bool {
+        let window = NSApplication.shared.keyWindow
+        return MainWindowIdentity.acceptsGlobalPaste(window) &&
+            !MainWindowIdentity.hasEditableTextFirstResponder(window)
+    }
+
+    func configure(manager: DownloadManager) {
+        self.manager = manager
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        AppMainMenuPruner.updateEditMenuPresentation(
+            menu,
+            language: manager?.settingsStore.interfaceLanguage ?? .english
+        )
+    }
 
     @objc func performUndo(_ sender: Any?) {
         NSApplication.shared.sendAction(Selector(("undo:")), to: nil, from: sender)
@@ -112,25 +132,126 @@ private final class LocalizedEditMenuActionForwarder: NSObject, NSMenuItemValida
         NSApplication.shared.sendAction(Selector(("redo:")), to: nil, from: sender)
     }
 
+    @objc func performCut(_ sender: Any?) {
+        performStandardAction("cut:", sender: sender)
+    }
+
+    @objc func performCopy(_ sender: Any?) {
+        if usesQueueCommands {
+            _ = manager?.copyEditMenuSelection()
+        } else {
+            performStandardAction("copy:", sender: sender)
+        }
+    }
+
+    @objc func performPaste(_ sender: Any?) {
+        if usesQueueCommands {
+            _ = manager?.pasteEditMenuURLs()
+        } else {
+            performStandardAction("paste:", sender: sender)
+        }
+    }
+
+    @objc func performDelete(_ sender: Any?) {
+        if usesQueueCommands {
+            _ = manager?.beginRemovingEditMenuSelection()
+        } else {
+            performStandardAction("delete:", sender: sender)
+        }
+    }
+
+    @objc func performSelectAll(_ sender: Any?) {
+        if usesQueueCommands {
+            _ = manager?.selectAllVisibleJobsFromEditMenu()
+        } else {
+            performStandardAction("selectAll:", sender: sender)
+        }
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if usesQueueCommands {
+            switch menuItem.action {
+            case #selector(performCopy(_:)):
+                return manager?.canCopyEditMenuSelection == true
+            case #selector(performPaste(_:)):
+                return manager?.canPasteEditMenuURLs == true
+            case #selector(performDelete(_:)):
+                return manager?.canRemoveEditMenuSelection == true
+            case #selector(performSelectAll(_:)):
+                return manager?.canSelectAllVisibleJobsFromEditMenu == true
+            default:
+                return false
+            }
+        }
+
         let undoManager = NSApplication.shared.keyWindow?.firstResponder?.undoManager
         switch menuItem.action {
         case #selector(performUndo(_:)): return undoManager?.canUndo == true
         case #selector(performRedo(_:)): return undoManager?.canRedo == true
-        default: return false
+        case #selector(performCut(_:)):
+            return validatesStandardAction("cut:", menuItem: menuItem)
+        case #selector(performCopy(_:)):
+            return validatesStandardAction("copy:", menuItem: menuItem)
+        case #selector(performPaste(_:)):
+            return validatesStandardAction("paste:", menuItem: menuItem)
+        case #selector(performDelete(_:)):
+            return validatesStandardAction("delete:", menuItem: menuItem)
+        case #selector(performSelectAll(_:)):
+            return validatesStandardAction("selectAll:", menuItem: menuItem)
+        default:
+            return false
         }
+    }
+
+    private func performStandardAction(_ action: String, sender: Any?) {
+        NSApplication.shared.sendAction(
+            Selector((action)),
+            to: nil,
+            from: sender
+        )
+    }
+
+    private func validatesStandardAction(
+        _ action: String,
+        menuItem: NSMenuItem
+    ) -> Bool {
+        let selector = Selector((action))
+        guard let target = NSApplication.shared.target(
+            forAction: selector,
+            to: nil,
+            from: menuItem
+        ) else {
+            return false
+        }
+
+        let validationItem = NSMenuItem(
+            title: menuItem.title,
+            action: selector,
+            keyEquivalent: menuItem.keyEquivalent
+        )
+        if let validator = target as? NSMenuItemValidation {
+            return validator.validateMenuItem(validationItem)
+        }
+        if let validator = target as? NSUserInterfaceValidations {
+            return validator.validateUserInterfaceItem(validationItem)
+        }
+        return true
     }
 }
 
+@MainActor
 enum AppMainMenuPruner {
     private static let editActions: Set<String> = [
-        "undo:", "redo:", "cut:", "copy:", "paste:", "delete:", "selectAll:"
+        "undo:", "redo:", "cut:", "copy:", "paste:", "delete:", "selectAll:",
+        "performUndo:", "performRedo:", "performCut:", "performCopy:",
+        "performPaste:", "performDelete:", "performSelectAll:"
     ]
     private static let windowActions: Set<String> = [
         "performMiniaturize:", "performZoom:", "toggleFullScreen:", "arrangeInFront:"
     ]
     private static let editMenuSignature = [
-        "performUndo:", "performRedo:", "-", "cut:", "copy:", "paste:", "delete:", "selectAll:"
+        "performUndo:", "performRedo:", "-", "performCut:", "performCopy:",
+        "performPaste:", "performDelete:", "performSelectAll:"
     ]
     private static let windowMenuSignature = [
         "performMiniaturize:", "performZoom:", "toggleFullScreen:", "-", "arrangeInFront:"
@@ -140,6 +261,10 @@ enum AppMainMenuPruner {
         guard let mainMenu, mainMenu.items.count == 3 else { return false }
         return containsAction(in: mainMenu.items[1].submenu, matching: editActions) &&
             containsAction(in: mainMenu.items[2].submenu, matching: windowActions)
+    }
+
+    static func configureEditCommands(manager: DownloadManager) {
+        LocalizedEditMenuActionForwarder.shared.configure(manager: manager)
     }
 
     static func hasRequiredMenus(_ mainMenu: NSMenu?) -> Bool {
@@ -226,6 +351,7 @@ enum AppMainMenuPruner {
         appName: String = "Hitomi Badayo"
     ) {
         localizeItems(in: menu, language: language, appName: appName)
+        updateTrackedEditMenuPresentation(in: menu, language: language)
     }
 
     private static func localize(
@@ -243,6 +369,7 @@ enum AppMainMenuPruner {
             if menuSignature(menu) != editMenuSignature {
                 rebuildEditMenu(menu, language: language)
             }
+            menu.delegate = LocalizedEditMenuActionForwarder.shared
         }
         if let windowItem {
             let title = AppLocalization.text("Window", language: language)
@@ -259,6 +386,9 @@ enum AppMainMenuPruner {
         localizeItems(in: applicationItem.submenu, language: language, appName: appName)
         localizeItems(in: editItem?.submenu, language: language, appName: appName)
         localizeItems(in: windowItem?.submenu, language: language, appName: appName)
+        if let editMenu = editItem?.submenu {
+            updateEditMenuPresentation(editMenu, language: language)
+        }
     }
 
     private static func rebuildEditMenu(
@@ -267,6 +397,7 @@ enum AppMainMenuPruner {
     ) {
         guard let menu else { return }
         menu.removeAllItems()
+        menu.delegate = LocalizedEditMenuActionForwarder.shared
         menu.addItem(forwardedEditItem(
             "Undo",
             action: #selector(LocalizedEditMenuActionForwarder.performUndo(_:)),
@@ -281,11 +412,102 @@ enum AppMainMenuPruner {
             language: language
         ))
         menu.addItem(.separator())
-        menu.addItem(actionItem("Cut", action: "cut:", key: "x", language: language))
-        menu.addItem(actionItem("Copy", action: "copy:", key: "c", language: language))
-        menu.addItem(actionItem("Paste", action: "paste:", key: "v", language: language))
-        menu.addItem(actionItem("Delete", action: "delete:", language: language))
-        menu.addItem(actionItem("Select All", action: "selectAll:", key: "a", language: language))
+        menu.addItem(forwardedEditItem(
+            "Cut",
+            action: #selector(LocalizedEditMenuActionForwarder.performCut(_:)),
+            key: "x",
+            language: language
+        ))
+        menu.addItem(forwardedEditItem(
+            "Copy",
+            action: #selector(LocalizedEditMenuActionForwarder.performCopy(_:)),
+            key: "c",
+            language: language
+        ))
+        menu.addItem(forwardedEditItem(
+            "Paste",
+            action: #selector(LocalizedEditMenuActionForwarder.performPaste(_:)),
+            key: "v",
+            language: language
+        ))
+        menu.addItem(forwardedEditItem(
+            "Delete",
+            action: #selector(LocalizedEditMenuActionForwarder.performDelete(_:)),
+            key: "",
+            language: language
+        ))
+        menu.addItem(forwardedEditItem(
+            "Select All",
+            action: #selector(LocalizedEditMenuActionForwarder.performSelectAll(_:)),
+            key: "a",
+            language: language
+        ))
+    }
+
+    fileprivate static func updateEditMenuPresentation(
+        _ menu: NSMenu,
+        language: AppInterfaceLanguage
+    ) {
+        let queueMode = LocalizedEditMenuActionForwarder.shared.usesQueueCommands
+        for item in menu.items {
+            if item.isSeparatorItem {
+                item.isHidden = queueMode
+                continue
+            }
+
+            let action = item.action.map(NSStringFromSelector) ?? ""
+            switch action {
+            case "performUndo:", "performRedo:", "performCut:":
+                item.isHidden = queueMode
+            case "performCopy:":
+                item.isHidden = false
+                item.title = AppLocalization.text(
+                    queueMode ? "Copy Link Address" : "Copy",
+                    language: language
+                )
+            case "performPaste:":
+                item.isHidden = false
+                item.title = AppLocalization.text(
+                    queueMode ? "Paste and Download" : "Paste",
+                    language: language
+                )
+            case "performDelete:":
+                item.isHidden = false
+                item.title = AppLocalization.text(
+                    queueMode ? "Remove from List Only" : "Delete",
+                    language: language
+                )
+            case "performSelectAll:":
+                item.isHidden = false
+                item.title = AppLocalization.text(
+                    "Select All",
+                    language: language
+                )
+            default:
+                break
+            }
+        }
+    }
+
+    private static func updateTrackedEditMenuPresentation(
+        in menu: NSMenu,
+        language: AppInterfaceLanguage
+    ) {
+        let directlyContainsEditActions = menu.items.contains { item in
+            guard let action = item.action else { return false }
+            return editActions.contains(NSStringFromSelector(action))
+        }
+        if directlyContainsEditActions {
+            updateEditMenuPresentation(menu, language: language)
+        }
+        for item in menu.items {
+            if let submenu = item.submenu {
+                updateTrackedEditMenuPresentation(
+                    in: submenu,
+                    language: language
+                )
+            }
+        }
     }
 
     private static func rebuildWindowMenu(
@@ -399,11 +621,11 @@ enum AppMainMenuPruner {
         switch action {
         case "undo:", "performUndo:": key = "Undo"
         case "redo:", "performRedo:": key = "Redo"
-        case "cut:": key = "Cut"
-        case "copy:": key = "Copy"
-        case "paste:", "pasteAsPlainText:": key = "Paste"
-        case "delete:": key = "Delete"
-        case "selectAll:": key = "Select All"
+        case "cut:", "performCut:": key = "Cut"
+        case "copy:", "performCopy:": key = "Copy"
+        case "paste:", "pasteAsPlainText:", "performPaste:": key = "Paste"
+        case "delete:", "performDelete:": key = "Delete"
+        case "selectAll:", "performSelectAll:": key = "Select All"
         case "performMiniaturize:": key = "Minimize"
         case "performZoom:": key = "Zoom"
         case "toggleFullScreen:":

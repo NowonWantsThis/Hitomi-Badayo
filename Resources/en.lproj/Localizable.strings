@@ -229,6 +229,8 @@
 "Download Folder" = "Download Folder";
 "Download Folder Layout" = "Download Folder Layout";
 "Download Folder..." = "Download Folder...";
+"Download Path History" = "Download Path History";
+"Download Path History..." = "Download Path History...";
 "Download PSD Originals" = "Download PSD Originals";
 "Download Source" = "Download Source";
 "Download Thumbnail" = "Download Thumbnail";
@@ -878,6 +880,7 @@
 "Copy Artist" = "Copy Artist";
 "Copy artist" = "Copy artist";
 "Dirs (%@)" = "Dirs (%@)";
+"Download Path History (%@)" = "Download Path History (%@)";
 "Disk" = "Disk";
 "Download Date" = "Download Date";
 "Download Limit" = "Download Limit";
@@ -1038,7 +1041,7 @@
 "Copy Version" = "Copy Version";
 "Current: %@" = "Current: %@";
 "Hitomi Badayo is released under the MIT License. The bundled aria2c helper remains GPL-2.0-or-later, the bundled SpoofDPI helper remains Apache-2.0, and managed tools retain their respective upstream licenses. See Third-Party Notices in the app resources." = "Hitomi Badayo is released under the MIT License. The bundled aria2c helper remains GPL-2.0-or-later, the bundled SpoofDPI helper remains Apache-2.0, and managed tools retain their respective upstream licenses. See Third-Party Notices in the app resources.";
-"Initial beta release with native queue, downloader, preview, login, and media workflows." = "Initial beta release with native queue, downloader, preview, login, and media workflows.";
+"Version 0.5.0 completes the maintainability refactor while preserving existing behavior, settings, saved data, and download output." = "Version 0.5.0 completes the maintainability refactor while preserving existing behavior, settings, saved data, and download output.";
 "Latest: %@" = "Latest: %@";
 "Licenses" = "Licenses";
 "Native macOS build" = "Native macOS build";

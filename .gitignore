@@ -3,7 +3,7 @@
 .AppleDouble
 .LSOverride
 
-.build/
+.build*/
 .swiftpm/
 DerivedData/
 Build/
@@ -38,4 +38,3 @@ hitomi_downloaded/
 cookies*.json
 user-data.json
 queue*.json
-

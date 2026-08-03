@@ -30,11 +30,19 @@ struct StatusBarPresentationState: Equatable {
 @MainActor
 final class StatusBarController: NSObject {
     private let manager: DownloadManager
+    private let queueStore: QueueStore
+    private let settingsStore: SettingsStore
     private let statusItem: NSStatusItem
     private var cancellables: Set<AnyCancellable> = []
 
-    init(manager: DownloadManager) {
+    init(
+        manager: DownloadManager,
+        queueStore: QueueStore,
+        settingsStore: SettingsStore
+    ) {
         self.manager = manager
+        self.queueStore = queueStore
+        self.settingsStore = settingsStore
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
 
@@ -43,11 +51,11 @@ final class StatusBarController: NSObject {
             button.imagePosition = .imageOnly
         }
 
-        manager.$jobs
+        queueStore.$jobs
             .combineLatest(
-                manager.$isRunning,
-                manager.$clipboardMonitorEnabled,
-                manager.$interfaceLanguage
+                queueStore.$isRunning,
+                settingsStore.$clipboardMonitorEnabled,
+                settingsStore.$interfaceLanguage
             )
             .map { jobs, isRunning, clipboardEnabled, language in
                 StatusBarPresentationState(
@@ -172,7 +180,7 @@ final class StatusBarController: NSObject {
 
     private func item(_ title: String, action: Selector, localize: Bool = true) -> NSMenuItem {
         let displayedTitle = localize
-            ? AppLocalization.text(title, language: manager.interfaceLanguage)
+            ? AppLocalization.text(title, language: settingsStore.interfaceLanguage)
             : title
         let item = NSMenuItem(title: displayedTitle, action: action, keyEquivalent: "")
         item.target = self
@@ -202,11 +210,16 @@ final class StatusBarController: NSObject {
     }
 
     @objc private func openDownloadFolder() {
-        NSWorkspace.shared.open(URL(fileURLWithPath: manager.destinationPath, isDirectory: true))
+        NSWorkspace.shared.open(
+            URL(
+                fileURLWithPath: settingsStore.destinationPath,
+                isDirectory: true
+            )
+        )
     }
 
     @objc private func toggleClipboardMonitor() {
-        manager.setClipboardMonitorEnabled(!manager.clipboardMonitorEnabled)
+        manager.setClipboardMonitorEnabled(!settingsStore.clipboardMonitorEnabled)
     }
 
     @objc private func quit() {

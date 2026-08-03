@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 private final class OutputPreviewWindow: NSWindow {
     var requestClose: (() -> Void)?
+    var selectAdjacentImage: ((Int) -> Void)?
 
     override func performClose(_ sender: Any?) {
         guard let requestClose else {
@@ -31,21 +32,57 @@ private final class OutputPreviewWindow: NSWindow {
         }
         return super.performKeyEquivalent(with: event)
     }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown {
+            let modifiers = event.modifierFlags
+                .intersection(.deviceIndependentFlagsMask)
+            let commandModifiers = modifiers
+                .intersection([.command, .option, .control, .shift])
+            if commandModifiers.isEmpty {
+                switch event.keyCode {
+                case 126:
+                    selectAdjacentImage?(-1)
+                    return
+                case 125:
+                    selectAdjacentImage?(1)
+                    return
+                default:
+                    break
+                }
+            }
+        }
+        super.sendEvent(event)
+    }
 }
 
 @MainActor
 final class OutputPreviewWindowController: NSObject, NSWindowDelegate {
     private let manager: DownloadManager
+    private let presentation: AppPresentationStore
+    private let queueStore: QueueStore
+    private let settingsStore: SettingsStore
+    private let pythonRuntimeStore: PythonRuntimeStore
     private var window: NSWindow?
     private var isCorrectingWindowFrame = false
     private var presentationGeneration = 0
     private var cancellables: Set<AnyCancellable> = []
 
-    init(manager: DownloadManager) {
+    init(
+        manager: DownloadManager,
+        presentation: AppPresentationStore,
+        queueStore: QueueStore,
+        settingsStore: SettingsStore,
+        pythonRuntimeStore: PythonRuntimeStore
+    ) {
         self.manager = manager
+        self.presentation = presentation
+        self.queueStore = queueStore
+        self.settingsStore = settingsStore
+        self.pythonRuntimeStore = pythonRuntimeStore
         super.init()
 
-        manager.$showingOutputPreview
+        presentation.$showingOutputPreview
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] isVisible in
@@ -53,22 +90,43 @@ final class OutputPreviewWindowController: NSObject, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
-        manager.$outputPreviewJobID
+        presentation.$outputPreviewJobID
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.window?.title = self.windowTitle
-                if self.manager.showingOutputPreview {
+                if self.presentation.showingOutputPreview {
                     self.show()
                 }
+            }
+            .store(in: &cancellables)
+
+        queueStore.$jobs
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.window?.title = self?.windowTitle ?? "Output Preview"
             }
             .store(in: &cancellables)
     }
 
     private var windowTitle: String {
-        let title = manager.outputPreviewTitle.trimmed
+        let title = OutputPreviewPresentationService.snapshot(
+            jobs: queueStore.jobs,
+            selectedJobID: presentation.outputPreviewJobID,
+            files: presentation.outputPreviewFiles,
+            selectedFileIndex: presentation.outputPreviewSelectedFileIndex,
+            isLoading: presentation.outputPreviewIsLoading
+        ).title.trimmed
         return title.isEmpty || title == "Output Preview" ? "Output Preview" : "Output Preview - \(title)"
+    }
+
+    private var themePresentation: ThemePresentationSnapshot {
+        ThemePresentationService.snapshot(
+            plugins: pythonRuntimeStore.scriptPlugins,
+            selectedThemeKey: settingsStore.selectedPythonThemeKey,
+            appearanceMode: settingsStore.appAppearanceMode
+        )
     }
 
     private func setVisible(_ isVisible: Bool) {
@@ -109,16 +167,21 @@ final class OutputPreviewWindowController: NSObject, NSWindowDelegate {
         window.requestClose = { [weak self] in
             self?.closePreview()
         }
+        window.selectAdjacentImage = { [weak manager] direction in
+            manager?.selectAdjacentOutputPreviewImage(direction: direction)
+        }
         window.standardWindowButton(.closeButton)?.isEnabled = true
         let hostingController = NSHostingController(
             rootView: OutputPreviewWindowView(
                 manager: manager,
+                presentation: presentation,
+                queueStore: queueStore,
                 requestClose: { [weak self] in
                     self?.closePreview()
                 }
             )
-                .preferredColorScheme(manager.preferredColorScheme)
-                .tint(manager.activeThemeTintColor)
+                .preferredColorScheme(themePresentation.preferredColorScheme)
+                .tint(themePresentation.tintColor)
         )
         hostingController.sizingOptions = []
         window.contentViewController = hostingController

@@ -441,7 +441,7 @@ enum AppShortcutCommand: String, CaseIterable, Codable, Hashable, Identifiable {
         case .statistics: return "Info & Statistics"
         case .activityLog: return "Activity Log"
         case .historyWindow: return "History"
-        case .directories: return "Download Folder"
+        case .directories: return "Download Path History"
         case .metadataFinder: return "Metadata Finder"
         case .metadataAnalysis: return "Metadata Analysis"
         case .searcher: return "Searcher"
@@ -549,11 +549,19 @@ enum AppShortcutCommand: String, CaseIterable, Codable, Hashable, Identifiable {
 @MainActor
 final class AppShortcutController {
     weak var manager: DownloadManager?
+    private let settingsStore: SettingsStore
+    private let presentation: AppPresentationStore
 
     private var isStarted = false
 
-    init(manager: DownloadManager) {
+    init(
+        manager: DownloadManager,
+        settingsStore: SettingsStore,
+        presentation: AppPresentationStore
+    ) {
         self.manager = manager
+        self.settingsStore = settingsStore
+        self.presentation = presentation
     }
 
     func start() {
@@ -586,13 +594,15 @@ final class AppShortcutController {
             return true
         }
         if shortcut == AppShortcut(key: .t, modifiers: [.option]) {
-            manager.setQueueThumbnailsHidden(!manager.queueThumbnailsHidden)
+            manager.setQueueThumbnailsHidden(
+                !manager.settingsStore.queueThumbnailsHidden
+            )
             return true
         }
 
         guard let command = Self.command(
                 matching: shortcut,
-                assignments: manager.appShortcutAssignments
+                assignments: settingsStore.appShortcutAssignments
               ) else {
             return false
         }
@@ -605,7 +615,9 @@ final class AppShortcutController {
             guard !MainWindowIdentity.hasEditableTextFirstResponder(window) else {
                 return false
             }
-            guard Self.shouldHandleGlobalPaste(isURLInputFocused: manager.isURLInputFocused) else {
+            guard Self.shouldHandleGlobalPaste(
+                isURLInputFocused: presentation.isURLInputFocused
+            ) else {
                 return false
             }
             return manager.pasteAndDownloadURLs()
@@ -652,59 +664,80 @@ enum AppTerminationCoordinator {
 @MainActor
 extension DownloadManager {
     func performShortcutCommand(_ command: AppShortcutCommand) {
-        switch command {
-        case .help:
-            showingHelp = true
-        case .settings:
-            openSettingsWindow()
-        case .shortcuts:
-            openShortcutSettings()
-        case .pasteURLs:
-            pasteAndDownloadURLs()
-        case .startQueue:
-            startQueue()
-        case .progressWindow:
-            openProgressWindow()
-        case .moveSelectedJobsUp:
-            moveSelectedJobsUp()
-        case .moveSelectedJobsDown:
-            moveSelectedJobsDown()
-        case .statistics:
-            showingStatistics = true
-        case .activityLog:
-            showingActivityLog = true
-        case .historyWindow:
-            showingHistoryWindow = true
-        case .directories:
-            showingDirectories = true
-        case .metadataFinder:
-            showingMetadataFinder = true
-        case .metadataAnalysis:
-            showingMetadataAnalysis = true
-        case .searcher:
-            showingSearcher = true
-        case .browserWindow:
-            openBrowserWindow()
-        case .textViewer:
-            openTextViewer()
-        case .outputPreview:
-            openOutputPreviewForSelectedJobs()
-        case .statusColors:
-            beginEditingStatusColors()
-        case .fontSettings:
-            openFontSettings()
-        case .floatingMonitor:
-            toggleFloatingMonitor()
-        case .duplicateImageFinder:
-            openDuplicateImageFinder()
-        case .clipboardViewer:
-            openClipboardViewer()
-        case .openDuplicateImageFolder:
-            openSelectedDuplicateImageFolder()
-        case .artistRecommendations:
-            showingArtistRecommendations = true
-        case .hitomiTaster:
-            openHitomiTaster()
-        }
+        appShortcutCommandService.perform(
+            command,
+            actions: AppShortcutCommandActions(
+                showHelp: {
+                    self.appCommandService.openAuxiliaryWindow(.help)
+                },
+                openSettings: {
+                    self.appCommandService.openSettingsWindow(category: .general)
+                },
+                openShortcutSettings: {
+                    self.openShortcutSettings()
+                },
+                pasteURLs: { _ = self.pasteAndDownloadURLs() },
+                startQueue: { self.startQueue() },
+                openProgress: {
+                    self.appCommandService.openProgressWindow()
+                },
+                moveSelectedJobsUp: {
+                    self.moveSelectedJobsUp()
+                },
+                moveSelectedJobsDown: {
+                    self.moveSelectedJobsDown()
+                },
+                showStatistics: {
+                    self.appCommandService.openAuxiliaryWindow(.statistics)
+                },
+                showActivityLog: {
+                    self.appCommandService.openAuxiliaryWindow(.activityLog)
+                },
+                showHistory: {
+                    self.appCommandService.openAuxiliaryWindow(.history)
+                },
+                showDirectories: {
+                    self.appCommandService.openAuxiliaryWindow(.directories)
+                },
+                showMetadataFinder: {
+                    self.appCommandService.openAuxiliaryWindow(.metadataFinder)
+                },
+                showMetadataAnalysis: {
+                    self.appCommandService.openAuxiliaryWindow(.metadataAnalysis)
+                },
+                showSearcher: {
+                    self.appCommandService.openAuxiliaryWindow(.searcher)
+                },
+                openBrowser: { self.openBrowserWindow() },
+                openTextViewer: { self.openTextViewer() },
+                openOutputPreview: {
+                    self.openOutputPreviewForSelectedJobs()
+                },
+                editStatusColors: {
+                    self.beginEditingStatusColors()
+                },
+                openFontSettings: {
+                    self.appCommandService.openAuxiliaryWindow(.fontSettings)
+                },
+                toggleFloatingMonitor: {
+                    self.toggleFloatingMonitor()
+                },
+                openDuplicateImageFinder: {
+                    self.appCommandService.openDuplicateImageFinder()
+                },
+                openClipboardViewer: {
+                    self.openClipboardViewer()
+                },
+                openDuplicateImageFolder: {
+                    self.openSelectedDuplicateImageFolder()
+                },
+                showArtistRecommendations: {
+                    self.appCommandService.openAuxiliaryWindow(.artistRecommendations)
+                },
+                openHitomiTaster: {
+                    self.openHitomiTaster()
+                }
+            )
+        )
     }
 }

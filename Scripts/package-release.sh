@@ -27,6 +27,10 @@ for item in \
     LICENSE \
     LICENSES \
     README.md \
+    README.ja.md \
+    README.ko.md \
+    README.zh-Hans.md \
+    README.zh-Hant.md \
     Resources \
     Sources \
     build.sh; do

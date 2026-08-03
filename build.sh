@@ -8,6 +8,12 @@ CONTENTS="${APP}/Contents"
 ARCH="${HITOMI_BADAYO_ARCH:-${HITOMI_NATIVE_ARCH:-arm64}}"
 DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
 SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+source_files=("${ROOT}"/Sources/**/*.swift(N.))
+
+if (( ${#source_files[@]} == 0 )); then
+    print -u2 -- "No Swift sources found under ${ROOT}/Sources."
+    exit 1
+fi
 
 rm -rf "${APP}"
 mkdir -p "${CONTENTS}/MacOS" "${CONTENTS}/Resources"
@@ -15,7 +21,7 @@ mkdir -p "${CONTENTS}/MacOS" "${CONTENTS}/Resources"
 swiftc -O -parse-as-library \
     -sdk "${SDKROOT}" \
     -target "${ARCH}-apple-macos${DEPLOYMENT_TARGET}" \
-    "${ROOT}"/Sources/*.swift \
+    "${source_files[@]}" \
     -o "${CONTENTS}/MacOS/HitomiBadayo"
 
 install -m 644 "${ROOT}/Info.plist" "${CONTENTS}/Info.plist"

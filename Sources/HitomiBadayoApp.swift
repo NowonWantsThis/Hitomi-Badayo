@@ -10,6 +10,7 @@ private extension NSWindow {
 @MainActor
 final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate, ApplicationTerminationPreparing {
     weak var manager: DownloadManager?
+    weak var settingsStore: SettingsStore?
     var shortcutController: AppShortcutController?
     private var sheetObservers: [NSObjectProtocol] = []
     private var menuObservers: [NSObjectProtocol] = []
@@ -111,7 +112,9 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate, Ap
             },
             completion: { [weak manager] restored in
                 if !restored {
-                    manager?.addSummary = "Restore network settings before quitting"
+                    manager?.appStatusStore.setSummary(
+                        "Restore network settings before quitting"
+                    )
                 }
                 completion(restored)
             }
@@ -135,14 +138,14 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate, Ap
         defer { isApplyingMainMenuLocalization = false }
         AppMainMenuPruner.simplify(
             NSApplication.shared.mainMenu,
-            language: self.manager?.interfaceLanguage ?? .english
+            language: settingsStore?.interfaceLanguage ?? .english
         )
         guard let menu = AppMainMenuPruner.makeStableMainMenu(
             from: NSApplication.shared.mainMenu
         ) else { return }
         AppMainMenuPruner.simplify(
             menu,
-            language: self.manager?.interfaceLanguage ?? .english
+            language: settingsStore?.interfaceLanguage ?? .english
         )
         if let application = NSApplication.shared as? HitomiBadayoApplication {
             application.installStableMainMenu(menu)
@@ -158,7 +161,7 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate, Ap
         let appName = NSApplication.shared.mainMenu?.items.first?.title ?? "Hitomi Badayo"
         AppMainMenuPruner.localizeTrackedMenu(
             menu,
-            language: manager?.interfaceLanguage ?? .english,
+            language: settingsStore?.interfaceLanguage ?? .english,
             appName: appName
         )
     }
@@ -226,45 +229,118 @@ final class HitomiBadayoApplicationDelegate: NSObject, NSApplicationDelegate, Ap
 @main
 struct HitomiBadayoApp: App {
     @NSApplicationDelegateAdaptor(HitomiBadayoApplicationDelegate.self) private var appDelegate
-    @StateObject private var manager: DownloadManager
-    private let statusBarController: StatusBarController
-    private let floatingMonitorController: FloatingMonitorController
-    private let outputPreviewWindowController: OutputPreviewWindowController
-    private let dockTileController: DockTileController
-    private let shortcutController: AppShortcutController
+    @StateObject private var presentation: AppPresentationStore
+    @StateObject private var appStatusStore: AppStatusStore
+    @StateObject private var settingsStore: SettingsStore
+    @StateObject private var searchStore: SearchStore
+    @StateObject private var libraryStore: LibraryStore
+    @StateObject private var queueStore: QueueStore
+    @StateObject private var queueEditorStore: QueueEditorStore
+    @StateObject private var duplicateImageStore: DuplicateImageStore
+    @StateObject private var outputOperationStore: OutputOperationStore
+    @StateObject private var externalToolStore: ExternalToolStore
+    @StateObject private var aria2Store: Aria2Store
+    @StateObject private var pythonRuntimeStore: PythonRuntimeStore
+    @StateObject private var autoRecordStore: AutoRecordStore
+    @StateObject private var networkStore: NetworkStore
+    @StateObject private var cookieStatusStore: CookieStatusStore
+    private let container: AppContainer
 
     init() {
         AppPaths.migrateLegacyApplicationSupportIfNeeded()
         LegacyPreferencesMigrator.migrateIfNeeded()
         HitomiBadayoApplication.install()
-        let manager = DownloadManager()
-        _manager = StateObject(wrappedValue: manager)
-        statusBarController = StatusBarController(manager: manager)
-        floatingMonitorController = FloatingMonitorController(manager: manager)
-        outputPreviewWindowController = OutputPreviewWindowController(manager: manager)
-        dockTileController = DockTileController(manager: manager)
-        shortcutController = AppShortcutController(manager: manager)
-        appDelegate.manager = manager
-        appDelegate.shortcutController = shortcutController
-        DispatchQueue.main.async { [shortcutController] in
-            shortcutController.start()
+        let container = AppContainer()
+        self.container = container
+        _presentation = StateObject(wrappedValue: container.presentation)
+        _appStatusStore = StateObject(wrappedValue: container.appStatusStore)
+        _settingsStore = StateObject(wrappedValue: container.settingsStore)
+        _searchStore = StateObject(wrappedValue: container.searchStore)
+        _libraryStore = StateObject(wrappedValue: container.libraryStore)
+        _queueStore = StateObject(wrappedValue: container.queueStore)
+        _queueEditorStore = StateObject(
+            wrappedValue: container.queueEditorStore
+        )
+        _duplicateImageStore = StateObject(
+            wrappedValue: container.duplicateImageStore
+        )
+        _outputOperationStore = StateObject(
+            wrappedValue: container.outputOperationStore
+        )
+        _externalToolStore = StateObject(
+            wrappedValue: container.externalToolStore
+        )
+        _aria2Store = StateObject(wrappedValue: container.aria2Store)
+        _pythonRuntimeStore = StateObject(
+            wrappedValue: container.pythonRuntimeStore
+        )
+        _autoRecordStore = StateObject(
+            wrappedValue: container.autoRecordStore
+        )
+        _networkStore = StateObject(
+            wrappedValue: container.networkStore
+        )
+        _cookieStatusStore = StateObject(
+            wrappedValue: container.cookieStatusStore
+        )
+        appDelegate.manager = container.manager
+        appDelegate.settingsStore = container.settingsStore
+        appDelegate.shortcutController = container.shortcutController
+        AppMainMenuPruner.configureEditCommands(manager: container.manager)
+        DispatchQueue.main.async { [container] in
+            container.shortcutController.start()
         }
+    }
+
+    private var themePresentation: ThemePresentationSnapshot {
+        ThemePresentationService.snapshot(
+            plugins: pythonRuntimeStore.scriptPlugins,
+            selectedThemeKey: settingsStore.selectedPythonThemeKey,
+            appearanceMode: settingsStore.appAppearanceMode
+        )
     }
 
     var body: some Scene {
         WindowGroup("Hitomi Badayo") {
-            ContentView()
-                .environmentObject(manager)
-                .environment(\.locale, manager.interfaceLanguage.locale)
-                .preferredColorScheme(manager.preferredColorScheme)
-                .tint(manager.activeThemeTintColor)
+            ContentView(
+                manager: container.manager,
+                queueScheduler: container.queueScheduler
+            )
+                .environmentObject(presentation)
+                .environmentObject(presentation.settingsWindow)
+                .environmentObject(appStatusStore)
+                .environmentObject(settingsStore)
+                .environmentObject(searchStore)
+                .environmentObject(libraryStore)
+                .environmentObject(queueStore)
+                .environmentObject(queueEditorStore)
+                .environmentObject(duplicateImageStore)
+                .environmentObject(outputOperationStore)
+                .environmentObject(externalToolStore)
+                .environmentObject(aria2Store)
+                .environmentObject(pythonRuntimeStore)
+                .environmentObject(autoRecordStore)
+                .environmentObject(networkStore)
+                .environmentObject(cookieStatusStore)
+                .environment(
+                    \.appNavigationCommands,
+                    container.navigationCommands
+                )
+                .environment(
+                    \.queueControlCommands,
+                    container.queueControlCommands
+                )
+                .environment(\.inputCommands, container.inputCommands)
+                .environment(\.locale, settingsStore.interfaceLanguage.locale)
+                .preferredColorScheme(themePresentation.preferredColorScheme)
+                .tint(themePresentation.tintColor)
                 .frame(
                     minWidth: MainWindowLayout.minimumSize.width,
                     minHeight: MainWindowLayout.minimumSize.height
                 )
                 .background(MainWindowFrameRestorer(
-                    opacity: manager.mainWindowOpacity,
-                    alwaysOnTop: manager.mainWindowAlwaysOnTop
+                    opacity: settingsStore.mainWindowOpacity,
+                    alwaysOnTop: settingsStore.mainWindowAlwaysOnTop
                 ))
         }
         .windowStyle(.titleBar)
@@ -275,19 +351,27 @@ struct HitomiBadayoApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button {
-                    manager.showingAbout = true
+                    container.navigationCommands.open(.about)
                 } label: {
-                    Text(AppLocalization.text("About Hitomi Badayo", language: manager.interfaceLanguage))
+                    Text(AppLocalization.text(
+                        "About Hitomi Badayo",
+                        language: settingsStore.interfaceLanguage
+                    ))
                 }
             }
 
             CommandGroup(replacing: .appSettings) {
                 Button {
-                    manager.openSettingsWindow()
+                    container.navigationCommands.openSettings()
                 } label: {
-                    Text(AppLocalization.text("Settings...", language: manager.interfaceLanguage))
+                    Text(AppLocalization.text(
+                        "Settings...",
+                        language: settingsStore.interfaceLanguage
+                    ))
                 }
-                .keyboardShortcut(manager.keyboardShortcut(for: .settings))
+                .keyboardShortcut(
+                    settingsStore.keyboardShortcut(for: .settings)
+                )
             }
         }
     }

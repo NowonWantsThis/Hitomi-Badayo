@@ -230,6 +230,8 @@
 "Download Folder" = "下載資料夾";
 "Download Folder Layout" = "下載資料夾佈局";
 "Download Folder..." = "下載資料夾...";
+"Download Path History" = "下載路徑記錄";
+"Download Path History..." = "下載路徑記錄...";
 "Download PSD Originals" = "下載 PSD 原始檔案";
 "Download Source" = "下載來源";
 "Download Thumbnail" = "下載縮圖";
@@ -879,6 +881,7 @@
 "Copy Artist" = "拷貝作者";
 "Copy artist" = "拷貝作者";
 "Dirs (%@)" = "目錄（%@）";
+"Download Path History (%@)" = "下載路徑記錄（%@）";
 "Disk" = "磁碟";
 "Download Date" = "下載日期";
 "Download Limit" = "下載限速";
@@ -1038,7 +1041,7 @@
 "Copy Version" = "複製版本號";
 "Current: %@" = "目前：%@";
 "Hitomi Badayo is released under the MIT License. The bundled aria2c helper remains GPL-2.0-or-later, the bundled SpoofDPI helper remains Apache-2.0, and managed tools retain their respective upstream licenses. See Third-Party Notices in the app resources." = "Hitomi Badayo 依 MIT License 發布。隨附的 aria2c 輔助程式仍採用 GPL-2.0-or-later，SpoofDPI 輔助程式仍採用 Apache-2.0，受管理的工具保留各自的上游授權條款。詳情請參閱 App 資源中的 Third-Party Notices。";
-"Initial beta release with native queue, downloader, preview, login, and media workflows." = "首個測試版，包含原生佇列、下載器、預覽、登入和媒體處理流程。";
+"Version 0.5.0 completes the maintainability refactor while preserving existing behavior, settings, saved data, and download output." = "0.5.0 版完成了可維護性重構，同時保留現有行為、設定、已儲存資料和下載結果。";
 "Latest: %@" = "最新：%@";
 "Licenses" = "授權條款";
 "Native macOS build" = "原生 macOS 版本";
