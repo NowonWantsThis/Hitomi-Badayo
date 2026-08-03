@@ -1,5 +1,13 @@
 # Hitomi Badayo
 
+<p align="center">
+  <strong><a href="README.md"><kbd>English</kbd></a></strong>
+  <a href="README.ja.md"><kbd>日本語</kbd></a>
+  <a href="README.zh-Hans.md"><kbd>简体中文</kbd></a>
+  <a href="README.zh-Hant.md"><kbd>繁體中文</kbd></a>
+  <a href="README.ko.md"><kbd>한국어</kbd></a>
+</p>
+
 Hitomi Badayo is a native download manager for Apple silicon Macs. It combines
 a queue-oriented macOS interface with source-specific naming, folders,
 authentication, previews, archiving, and media download workflows.
@@ -8,13 +16,16 @@ The application is an independent native implementation informed by observed
 behavior from an existing desktop downloader. No original executable or
 decompiled bytecode is included in this repository.
 
-Version 0.4.1 is a beta test release.
+Version 0.5.0 completes the maintainability refactor while preserving the
+user-facing behavior, settings, saved data, and download output of version
+0.4.2.
 
 ## Highlights
 
 - Native SwiftUI and AppKit interface for macOS
 - Concurrent queue with reordering, cancellation, retry, and per-item progress
-- Hitomi, YouTube, and other supported site handlers
+- Hitomi, Pixiv, YouTube, Kemono-style archives, Booru sites, and other
+  supported source handlers
 - Source-specific output folders, naming templates, ZIP and CBZ options
 - Embedded login windows and local cookie storage for sources that require them
 - Optional app-only or app-and-browser DPI bypass through a loopback-only SpoofDPI proxy
@@ -38,7 +49,7 @@ maintenance when its source site changes.
 4. If macOS still blocks it, use **System Settings > Privacy & Security > Open
    Anyway**.
 
-The beta build is ad-hoc signed, not Developer ID signed or notarized.
+The distributed build is ad-hoc signed, not Developer ID signed or notarized.
 Do not disable Gatekeeper globally. See [INSTALLATION.md](docs/INSTALLATION.md) for
 data locations and first-run details.
 
