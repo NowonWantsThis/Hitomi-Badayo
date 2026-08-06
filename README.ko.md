@@ -1,5 +1,9 @@
 # Hitomi Badayo
 
+
+<img width="687" height="431" alt="sc" src="https://github.com/user-attachments/assets/f00c054a-5cf5-4d4a-8b3d-6119d8aea315" />
+
+
 <p align="center">
   <a href="README.md"><kbd>English</kbd></a>
   <a href="README.ja.md"><kbd>日本語</kbd></a>
