@@ -11,6 +11,7 @@
 
 <img width="687" height="431" alt="sc" src="https://github.com/user-attachments/assets/7105eceb-33c9-441b-976b-b40a1492f79e" />
 
+<br>
 
 Hitomi Badayo is a native download manager for Apple silicon Macs. It combines
 a queue-oriented macOS interface with source-specific naming, folders,
