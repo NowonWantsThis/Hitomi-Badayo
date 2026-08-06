@@ -8,7 +8,9 @@
   <strong><a href="README.ko.md"><kbd>한국어</kbd></a></strong>
 </p>
 
+<p>
 <img width="687" height="431" alt="sc" src="https://github.com/user-attachments/assets/7105eceb-33c9-441b-976b-b40a1492f79e" />
+</p>
 
 Hitomi Badayo는 Apple Silicon Mac용 네이티브 다운로드 관리자입니다. 대기열 중심의 macOS 인터페이스에서 소스별 이름과 저장 폴더, 인증, 미리보기, 압축, 미디어 다운로드 작업을 함께 관리할 수 있습니다.
 
