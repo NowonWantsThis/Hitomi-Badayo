@@ -8,8 +8,9 @@
   <a href="README.ko.md"><kbd>한국어</kbd></a>
 </p>
 
+<p>
 <img width="687" height="431" alt="sc" src="https://github.com/user-attachments/assets/1c45d909-7818-4dc3-938a-0b6b50293a9e" />
-
+</p>
 
 Hitomi Badayoは、Appleシリコン搭載Mac向けのネイティブダウンロードマネージャーです。キューを中心としたmacOSインターフェースに、配信元ごとの命名規則と保存フォルダ、認証、プレビュー、アーカイブ作成、メディアダウンロード機能をまとめています。
 
