@@ -8,6 +8,8 @@
   <a href="README.ko.md"><kbd>한국어</kbd></a>
 </p>
 
+<img width="687" height="431" alt="sc" src="https://github.com/user-attachments/assets/7105eceb-33c9-441b-976b-b40a1492f79e" />
+
 Hitomi Badayo 是一款面向 Apple 芯片 Mac 的原生下载管理器。它将以队列为中心的 macOS 界面与按来源命名、来源文件夹、身份验证、预览、归档以及媒体下载工作流程整合在一起。
 
 本应用是参考现有桌面下载器中可观察到的行为而独立完成的原生实现。本仓库不包含原应用的可执行文件或反编译字节码。
